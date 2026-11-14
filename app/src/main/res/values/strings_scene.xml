@@ -3,7 +3,7 @@
     <string name="scene_stash">보관함</string>
     <string name="scene_stash_empty">모두 꺼내 두었어요.</string>
     <string name="scene_put_away">보관함에 넣기</string>
-    <string name="scene_friend_note">친구 섬에서는 가구를 놓을 수 없어요.</string>
+    <string name="scene_friend_note">친구 섬과 집에서는 가구를 놓을 수 없어요.</string>
     <string name="scene_pose_prev">앞 포즈 보기</string>
     <string name="scene_pose_next">다음 포즈 보기</string>
 </resources>
