@@ -150,7 +150,7 @@ fun IslandScreen(onOpen: (IslandPlace) -> Unit) {
         if (stage == IslandStage.ISLAND && board && !driving && !guestbookOpen && notice > 0) {
             GuestbookNoticeDialog(
                 notice,
-                onListen = { notice = 0; unread = false; guestbookOpen = true },
+                onOpen = { notice = 0; unread = false; guestbookOpen = true },
                 onLater = { notice = 0 },
             )
         }

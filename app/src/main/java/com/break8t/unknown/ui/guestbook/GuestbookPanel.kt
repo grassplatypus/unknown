@@ -1,9 +1,5 @@
 package com.break8t.unknown.ui.guestbook
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,37 +10,40 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.maxLength
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,64 +51,34 @@ import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.data.LocalDemoState
+import com.break8t.unknown.drive.LocalUxLimits
 import com.break8t.unknown.ui.account.Avatar
 import com.break8t.unknown.ui.components.AppDialog
 import com.break8t.unknown.ui.components.ControlShape
-import com.break8t.unknown.ui.components.PixelBusy
 import com.break8t.unknown.ui.components.PrimaryButton
 import com.break8t.unknown.ui.components.SecondaryButton
 import com.break8t.unknown.ui.shop.DangerButton
 import com.break8t.unknown.ui.shop.DialogTitle
+import com.break8t.unknown.ui.shop.DisabledButton
 import com.break8t.unknown.ui.shop.ShopDialog
 import com.break8t.unknown.ui.shop.TileShape
 import com.break8t.unknown.ui.theme.AppColors
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.UUID
 
-/** 목록이 그리는 소리 상태. 미리보기는 기기 없이 이것만 만들어 넣는다. */
-data class GuestbookPlayback(val sound: GuestbookSound, val tts: TtsStatus, val now: Long)
-
-/** 친구 섬 아래쪽 녹음 칸의 단계. */
-enum class RecordStep { IDLE, RECORDING, RECORDED, SAVING }
-
-fun recordStep(sound: GuestbookSound, draft: GuestbookDraft?, saving: Boolean): RecordStep = when {
-    saving -> RecordStep.SAVING
-    sound is GuestbookSound.Recording -> RecordStep.RECORDING
-    draft != null -> RecordStep.RECORDED
-    else -> RecordStep.IDLE
-}
-
-/** 녹음 칸에 넘기는 것. [secondsLeft]는 녹음 중, [draftSec]은 녹음한 뒤에 쓴다. */
-data class RecordUi(
-    val step: RecordStep,
-    val secondsLeft: Int = 0,
-    val draftSec: Int = 0,
-    val playingDraft: Boolean = false,
-    val micDenied: Boolean = false,
-    val maxSec: Int = BalanceConfig.DEFAULT.guestbookMaxSec,
-)
-
 /**
- * 내 섬 게시판을 누르면 여는 방명록. 친구가 남긴 것을 듣고 지운다. [newSince]보다 뒤에 온 것에 "새 방명록"을 붙인다.
- * 화면에서 빠지면(닫기, 주행 덮개) 재생을 멈춘다.
+ * 내 섬 게시판을 누르면 여는 방명록. 친구가 남긴 글을 읽고 지운다. [newSince]보다 뒤에 온 것에 "새 방명록"을 붙인다.
  */
 @Composable
 fun MyGuestbookPanel(newSince: Long, onClose: () -> Unit) {
-    val audio = rememberGuestbookAudio()
     val state = LocalDemoState.current
     val all by GuestbookStore.entries.collectAsState()
     val entries = all[GuestbookStore.MY_ISLAND].orEmpty()
     var deleteId by rememberSaveable { mutableStateOf<String?>(null) }
     var askStore by rememberSaveable { mutableStateOf(false) }
-    MyGuestbookContent(
-        entries, newSince, rememberPlayback(audio),
-        onPlay = audio::playEntry, onStop = audio::stop, onDelete = { deleteId = it.id }, onStore = { askStore = true }, onClose = onClose,
-    )
+    MyGuestbookContent(entries, newSince, System.currentTimeMillis(), onDelete = { deleteId = it.id }, onStore = { askStore = true }, onClose = onClose)
     entries.firstOrNull { it.id == deleteId }?.let { e ->
         DeleteDialog(e, onCancel = { deleteId = null }) {
             GuestbookStore.remove(GuestbookStore.MY_ISLAND, e.id)
-            audio.delete(e)
             deleteId = null
         }
     }
@@ -123,77 +92,30 @@ fun MyGuestbookPanel(newSince: Long, onClose: () -> Unit) {
     }
 }
 
-/**
- * 친구 섬 게시판을 누르면 여는 방명록. 남긴 것을 듣고, 녹음해서 남기고, 내가 남긴 것만 지운다.
- * 화면에서 빠지면(닫기, 주행 덮개) 녹음과 재생을 멈추고 남기지 않은 녹음을 지운다.
- */
+/** 친구 섬 게시판을 누르면 여는 방명록. 남긴 글을 읽고, 글을 써서 남기고, 내가 남긴 것만 지운다. */
 @Composable
 fun FriendGuestbookPanel(friendId: String, friendNickname: String, onClose: () -> Unit) {
-    val config = BalanceConfig.DEFAULT
-    val audio = rememberGuestbookAudio()
     val profile by LocalDemoState.current.profile.collectAsState()
     val all by GuestbookStore.entries.collectAsState()
     val entries = all[friendId].orEmpty()
-    val draft by audio.draft.collectAsState()
-    val playback = rememberPlayback(audio)
-    var saving by remember { mutableStateOf(false) }
-    var micDenied by rememberSaveable { mutableStateOf(false) }
     var deleteId by rememberSaveable { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        micDenied = !ok
-        if (ok) audio.record()
-    }
-    val recording = playback.sound as? GuestbookSound.Recording
-    // The countdown on screen is what ends a recording; the recorder's own limit is only a backstop.
-    LaunchedEffect(recording) {
-        while (recording != null) {
-            if (recordSecondsLeft(System.currentTimeMillis() - recording.startedMs, config) == 0) { audio.stop(); break }
-            delay(TICK_MS)
+    var writing by rememberSaveable { mutableStateOf(false) }
+    FriendGuestbookContent(
+        friendNickname, friendBoardShown(friendId), entries, System.currentTimeMillis(),
+        canDelete = { canDelete(friendId, it) }, onDelete = { deleteId = it.id }, onWrite = { writing = true }, onClose = onClose,
+    )
+    if (writing) {
+        WriteDialog(friendNickname, onCancel = { writing = false }) { text ->
+            GuestbookStore.add(
+                friendId,
+                GuestbookEntry("g_${UUID.randomUUID()}", GuestbookStore.ME, profile.nickname, profile.selectedCharacterId, System.currentTimeMillis(), text),
+            )
+            writing = false
         }
     }
-    val record = RecordUi(
-        recordStep(playback.sound, draft, saving),
-        secondsLeft = recording?.let { recordSecondsLeft(playback.now - it.startedMs, config) } ?: 0,
-        draftSec = draft?.lengthSec ?: 0,
-        playingDraft = (playback.sound as? GuestbookSound.Playing)?.key == DRAFT_KEY,
-        micDenied = micDenied,
-        maxSec = config.guestbookMaxSec,
-    )
-    FriendGuestbookContent(
-        friendId, friendNickname, friendBoardShown(friendId), entries, playback, record,
-        onPlay = audio::playEntry, onStop = audio::stop, onDelete = { deleteId = it.id }, onClose = onClose,
-        onRecord = {
-            if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                micDenied = false
-                audio.record()
-            } else {
-                ask.launch(Manifest.permission.RECORD_AUDIO)
-            }
-        },
-        onReplay = { d -> if (d) audio.stop() else draft?.let { audio.play(DRAFT_KEY, it.path) } },
-        onRerecord = audio::record,
-        onLeave = {
-            scope.launch {
-                saving = true
-                audio.keepDraft()?.let { kept ->
-                    GuestbookStore.add(
-                        friendId,
-                        GuestbookEntry(
-                            "g_${UUID.randomUUID()}", GuestbookStore.ME, profile.nickname, profile.selectedCharacterId,
-                            System.currentTimeMillis(), kept.lengthSec, audioPath = kept.path,
-                        ),
-                    )
-                }
-                saving = false
-            }
-        },
-    )
     entries.firstOrNull { it.id == deleteId }?.let { e ->
         DeleteDialog(e, onCancel = { deleteId = null }) {
             GuestbookStore.remove(friendId, e.id)
-            audio.delete(e)
             deleteId = null
         }
     }
@@ -201,16 +123,16 @@ fun FriendGuestbookPanel(friendId: String, friendNickname: String, onClose: () -
 
 /** 섬에 들어올 때 지난 방문 뒤 새 방명록이 있으면 띄운다. 바깥을 누르면 나중에와 같다. */
 @Composable
-fun GuestbookNoticeDialog(count: Int, onListen: () -> Unit, onLater: () -> Unit) =
-    ShopDialog(onLater) { GuestbookNoticeBody(count, onListen, onLater) }
+fun GuestbookNoticeDialog(count: Int, onOpen: () -> Unit, onLater: () -> Unit) =
+    ShopDialog(onLater) { GuestbookNoticeBody(count, onOpen, onLater) }
 
 @Composable
-internal fun ColumnScope.GuestbookNoticeBody(count: Int, onListen: () -> Unit, onLater: () -> Unit) {
+internal fun ColumnScope.GuestbookNoticeBody(count: Int, onOpen: () -> Unit, onLater: () -> Unit) {
     DialogTitle(stringResource(R.string.guestbook_notice_title, count))
     Text(stringResource(R.string.guestbook_notice_body), color = AppColors.TextSub, fontSize = 36.sp, lineHeight = 55.sp)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(35.dp)) {
         SecondaryButton(stringResource(R.string.guestbook_notice_later), onLater, Modifier.weight(1f))
-        PrimaryButton(stringResource(R.string.guestbook_notice_listen), onListen, Modifier.weight(1f))
+        PrimaryButton(stringResource(R.string.guestbook_notice_open), onOpen, Modifier.weight(1f))
     }
 }
 
@@ -231,12 +153,66 @@ internal fun ColumnScope.DeleteBody(entry: GuestbookEntry, onCancel: () -> Unit,
 }
 
 @Composable
+private fun WriteDialog(friendNickname: String, onCancel: () -> Unit, onLeave: (String) -> Unit) {
+    val field = rememberTextFieldState()
+    ShopDialog(onCancel) { WriteBody(friendNickname, field, onCancel, onLeave) }
+}
+
+/** 글 쓰는 창. 열리면 바로 입력 칸에 커서를 두어 키보드가 뜬다. 비어 있으면 남기기를 누를 수 없다. */
+@Composable
+internal fun ColumnScope.WriteBody(
+    friendNickname: String,
+    field: TextFieldState,
+    onCancel: () -> Unit,
+    onLeave: (String) -> Unit,
+    config: BalanceConfig = BalanceConfig.DEFAULT,
+) {
+    val noKeyboard = LocalUxLimits.current.noKeyboard
+    val focus = remember { FocusRequester() }
+    val preview = LocalInspectionMode.current
+    LaunchedEffect(Unit) { if (!preview) focus.requestFocus() }
+    val text = guestbookText(field.text.toString(), config)
+    DialogTitle(stringResource(R.string.guestbook_write_title, friendNickname))
+    BasicTextField(
+        state = field,
+        modifier = Modifier.fillMaxWidth().focusRequester(focus),
+        readOnly = noKeyboard,
+        inputTransformation = InputTransformation.maxLength(config.guestbookMaxChars),
+        textStyle = TextStyle(color = AppColors.Text, fontSize = 40.sp, lineHeight = 56.sp),
+        lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 4),
+        cursorBrush = SolidColor(AppColors.Text),
+        decorator = { inner ->
+            Column(
+                Modifier
+                    .clip(TileShape)
+                    .background(AppColors.Background)
+                    .border(6.dp, if (noKeyboard) AppColors.Disabled else AppColors.Selected, TileShape)
+                    .padding(horizontal = 25.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box {
+                    if (field.text.isEmpty()) Text(stringResource(R.string.guestbook_write_hint), color = AppColors.TextSub, fontSize = 40.sp, lineHeight = 56.sp)
+                    inner()
+                }
+                Text(
+                    stringResource(R.string.guestbook_write_counter, field.text.length, config.guestbookMaxChars),
+                    Modifier.align(Alignment.End), color = AppColors.TextSub, fontSize = 31.sp,
+                )
+            }
+        },
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(35.dp)) {
+        SecondaryButton(stringResource(R.string.guestbook_cancel), onCancel, Modifier.weight(1f))
+        if (text != null) PrimaryButton(stringResource(R.string.guestbook_leave), { onLeave(text) }, Modifier.weight(1f))
+        else DisabledButton(stringResource(R.string.guestbook_leave), Modifier.weight(1f))
+    }
+}
+
+@Composable
 internal fun MyGuestbookContent(
     entries: List<GuestbookEntry>,
     newSince: Long,
-    playback: GuestbookPlayback,
-    onPlay: (GuestbookEntry) -> Unit,
-    onStop: () -> Unit,
+    now: Long,
     onDelete: (GuestbookEntry) -> Unit,
     onStore: () -> Unit,
     onClose: () -> Unit,
@@ -246,35 +222,29 @@ internal fun MyGuestbookContent(
 ) {
     val fresh = newSince(entries, newSince).map { it.id }.toSet()
     EntryList(entries, Modifier.weight(1f)) { e ->
-        EntryRow(e, isNew = e.id in fresh, playback, onPlay, onStop, onDelete.takeIf { canDelete(GuestbookStore.MY_ISLAND, e) })
+        EntryRow(e, isNew = e.id in fresh, now, onDelete.takeIf { canDelete(GuestbookStore.MY_ISLAND, e) })
     }
 }
 
 @Composable
 internal fun FriendGuestbookContent(
-    friendId: String,
     friendNickname: String,
     boardShown: Boolean,
     entries: List<GuestbookEntry>,
-    playback: GuestbookPlayback,
-    record: RecordUi,
-    onPlay: (GuestbookEntry) -> Unit,
-    onStop: () -> Unit,
+    now: Long,
+    canDelete: (GuestbookEntry) -> Boolean,
     onDelete: (GuestbookEntry) -> Unit,
+    onWrite: () -> Unit,
     onClose: () -> Unit,
-    onRecord: () -> Unit,
-    onReplay: (playing: Boolean) -> Unit,
-    onRerecord: () -> Unit,
-    onLeave: () -> Unit,
-) = PanelFrame(stringResource(R.string.guestbook_friend_title, friendNickname), onClose) {
+) = PanelFrame(
+    stringResource(R.string.guestbook_friend_title, friendNickname), onClose,
+    actions = { if (boardShown) PrimaryButton(stringResource(R.string.guestbook_write), onWrite) },
+) {
     if (!boardShown) {
         Text(stringResource(R.string.guestbook_board_off), color = AppColors.TextSub, fontSize = 39.sp)
         return@PanelFrame
     }
-    EntryList(entries, Modifier.weight(1f)) { e ->
-        EntryRow(e, isNew = false, playback, onPlay, onStop, onDelete.takeIf { canDelete(friendId, e) })
-    }
-    RecordBar(record, onRecord, onStop, onReplay, onRerecord, onLeave)
+    EntryList(entries, Modifier.weight(1f)) { e -> EntryRow(e, isNew = false, now, onDelete.takeIf { canDelete(e) }) }
 }
 
 /** 패널 틀. 아래 섬을 누르지 않게 화면 전체를 덮고, 가운데에 카드를 둔다. */
@@ -340,64 +310,30 @@ private fun EntryList(
 }
 
 @Composable
-private fun EntryRow(
-    entry: GuestbookEntry,
-    isNew: Boolean,
-    playback: GuestbookPlayback,
-    onPlay: (GuestbookEntry) -> Unit,
-    onStop: () -> Unit,
-    onDelete: ((GuestbookEntry) -> Unit)?,
+private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, onDelete: ((GuestbookEntry) -> Unit)?) = Row(
+    Modifier
+        .fillMaxWidth()
+        .heightIn(min = 128.dp)
+        .clip(TileShape)
+        .background(AppColors.Background)
+        .border(if (isNew) 6.dp else 3.dp, if (isNew) AppColors.Selected else AppColors.Line, TileShape)
+        .padding(20.dp),
+    horizontalArrangement = Arrangement.spacedBy(20.dp),
 ) {
-    val playing = (playback.sound as? GuestbookSound.Playing)?.takeIf { it.key == entry.id }
-    val sample = entry.audioPath == null
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(TileShape)
-            .background(AppColors.Background)
-            .border(if (isNew) 6.dp else 3.dp, if (isNew) AppColors.Selected else AppColors.Line, TileShape)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Avatar(entry.characterId, 88.dp, 13.dp)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        entry.nickname, Modifier.weight(1f, fill = false), color = AppColors.Text, fontSize = 40.sp,
-                        fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
-                    if (isNew) Tag(stringResource(R.string.guestbook_new), AppColors.Selected)
-                    if (entry.authorId == GuestbookStore.ME) Tag(stringResource(R.string.guestbook_mine), AppColors.Accent)
-                }
-                Text(
-                    stringResource(R.string.guestbook_meta, agoText(playback.now, entry.atMs), entry.lengthSec),
-                    color = AppColors.TextSub, fontSize = 31.sp,
-                )
-                if (playing != null) PlayingText(playing, playback.now)
-            }
-            PlayButton(
-                playing = playing != null,
-                waiting = sample && playback.tts == TtsStatus.STARTING,
-                enabled = !sample || playback.tts == TtsStatus.READY,
-                onClick = { if (playing != null) onStop() else onPlay(entry) },
+    Avatar(entry.characterId, 88.dp, 13.dp)
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                entry.nickname, Modifier.weight(1f, fill = false), color = AppColors.Text, fontSize = 40.sp,
+                fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
-            if (onDelete != null) DangerButton(stringResource(R.string.guestbook_delete), { onDelete(entry) })
+            if (isNew) Tag(stringResource(R.string.guestbook_new), AppColors.Selected)
+            if (entry.authorId == GuestbookStore.ME) Tag(stringResource(R.string.guestbook_mine), AppColors.Accent)
+            Text(agoText(now, entry.atMs), color = AppColors.TextSub, fontSize = 31.sp)
         }
-        // Without a Korean voice on the car the sample is shown as text instead.
-        if (sample && playback.tts == TtsStatus.UNAVAILABLE && entry.sampleText != null) {
-            Text(stringResource(R.string.guestbook_sample_text, entry.sampleText), color = AppColors.Text, fontSize = 34.sp, lineHeight = 48.sp)
-        }
+        Text(entry.text, color = AppColors.Text, fontSize = 36.sp, lineHeight = 52.sp)
     }
-}
-
-@Composable
-private fun PlayingText(playing: GuestbookSound.Playing, now: Long) {
-    val text = playing.lengthMs?.let { len ->
-        val left = ((len - (now - playing.startedMs) + 999) / 1000).coerceAtLeast(0)
-        stringResource(R.string.guestbook_playing_left, left.toInt())
-    } ?: stringResource(R.string.guestbook_playing)
-    Text(text, color = AppColors.Success, fontSize = 31.sp, fontWeight = FontWeight.Bold)
+    if (onDelete != null) DangerButton(stringResource(R.string.guestbook_delete), { onDelete(entry) }, Modifier.align(Alignment.CenterVertically))
 }
 
 @Composable
@@ -408,116 +344,9 @@ private fun Tag(text: String, fill: androidx.compose.ui.graphics.Color) = Text(
 )
 
 @Composable
-private fun PlayButton(playing: Boolean, waiting: Boolean, enabled: Boolean, onClick: () -> Unit) = Box(
-    Modifier
-        .size(100.dp)
-        .clip(ControlShape)
-        .background(if (enabled) AppColors.Card else AppColors.Disabled)
-        .border(3.dp, if (enabled) AppColors.Line else AppColors.Disabled, ControlShape)
-        .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
-    contentAlignment = Alignment.Center,
-) {
-    if (waiting) {
-        PixelBusy(block = 8.dp)
-    } else {
-        Icon(
-            painterResource(if (playing) R.drawable.shop_ic_pause else R.drawable.shop_ic_play),
-            contentDescription = stringResource(if (playing) R.string.guestbook_stop else R.string.guestbook_play),
-            Modifier.size(52.dp),
-            tint = if (enabled) AppColors.Text else AppColors.DisabledText,
-        )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun RecordBar(
-    ui: RecordUi,
-    onRecord: () -> Unit,
-    onStop: () -> Unit,
-    onReplay: (playing: Boolean) -> Unit,
-    onRerecord: () -> Unit,
-    onLeave: () -> Unit,
-) = Column(
-    Modifier.fillMaxWidth().clip(TileShape).background(AppColors.Accent).padding(24.dp),
-    verticalArrangement = Arrangement.spacedBy(16.dp),
-) {
-    val row = @Composable { content: @Composable FlowRowScope.() -> Unit ->
-        FlowRow(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(22.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) { content() }
-    }
-    when (ui.step) {
-        RecordStep.IDLE -> {
-            row {
-                PrimaryButton(stringResource(R.string.guestbook_record), onRecord)
-                Text(
-                    stringResource(R.string.guestbook_record_hint, ui.maxSec), Modifier.align(Alignment.CenterVertically),
-                    color = AppColors.TextSub, fontSize = 31.sp,
-                )
-            }
-            if (ui.micDenied) Text(stringResource(R.string.guestbook_mic_denied), color = AppColors.Error, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-        }
-        RecordStep.RECORDING -> row {
-            Row(Modifier.align(Alignment.CenterVertically), Arrangement.spacedBy(14.dp), Alignment.CenterVertically) {
-                // A still red dot: the screen stays static, the seconds count down beside it.
-                Box(Modifier.size(28.dp).clip(ControlShape).background(AppColors.Error))
-                Text(stringResource(R.string.guestbook_recording, ui.secondsLeft), color = AppColors.Text, fontSize = 39.sp, fontWeight = FontWeight.Bold)
-            }
-            SecondaryButton(stringResource(R.string.guestbook_record_stop), onStop)
-        }
-        RecordStep.RECORDED -> {
-            Text(stringResource(R.string.guestbook_recorded, ui.draftSec), color = AppColors.Text, fontSize = 39.sp, fontWeight = FontWeight.Bold)
-            row {
-                SecondaryButton(
-                    stringResource(if (ui.playingDraft) R.string.guestbook_stop else R.string.guestbook_replay),
-                    { onReplay(ui.playingDraft) },
-                )
-                SecondaryButton(stringResource(R.string.guestbook_rerecord), onRerecord)
-                PrimaryButton(stringResource(R.string.guestbook_leave), onLeave)
-            }
-        }
-        RecordStep.SAVING -> Box(Modifier.fillMaxWidth().padding(vertical = 30.dp), Alignment.Center) { PixelBusy() }
-    }
-}
-
-@Composable
 private fun agoText(now: Long, at: Long): String = when (val a = ago(now, at)) {
     Ago.JustNow -> stringResource(R.string.guestbook_just_now)
     is Ago.Minutes -> stringResource(R.string.guestbook_minutes_ago, a.n.toInt())
     is Ago.Hours -> stringResource(R.string.guestbook_hours_ago, a.n.toInt())
     is Ago.Days -> stringResource(R.string.guestbook_days_ago, a.n.toInt())
 }
-
-private fun GuestbookAudio.playEntry(e: GuestbookEntry) {
-    val path = e.audioPath
-    if (path != null) play(e.id, path) else e.sampleText?.let { speak(e.id, it) }
-}
-
-/** 패널마다 하나. 화면에서 빠지면 놓아서, 주행 덮개가 섬을 치우는 순간 소리도 멈춘다. */
-@Composable
-private fun rememberGuestbookAudio(): GuestbookAudio {
-    val context = LocalContext.current
-    val audio = remember { GuestbookAudio(context) }
-    DisposableEffect(audio) { onDispose { audio.release() } }
-    return audio
-}
-
-@Composable
-private fun rememberPlayback(audio: GuestbookAudio): GuestbookPlayback {
-    val sound by audio.sound.collectAsState()
-    val tts by audio.tts.collectAsState()
-    val ticking = sound is GuestbookSound.Recording || sound is GuestbookSound.Playing
-    val now by produceState(System.currentTimeMillis(), ticking) {
-        value = System.currentTimeMillis()
-        while (ticking) {
-            delay(TICK_MS)
-            value = System.currentTimeMillis()
-        }
-    }
-    return GuestbookPlayback(sound, tts, now)
-}
-
-private const val TICK_MS = 200L
