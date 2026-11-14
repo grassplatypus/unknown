@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
@@ -27,13 +29,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.playground.jeongche.ui.theme.AppColors
 
-// Figma S-11-b. Sizes are Figma px x 1.3, see SideRail.kt.
+// Figma S-11-b. 크기는 Figma px × 1.3이다(SideRail.kt 참고).
 private val PillShape = RoundedCornerShape(16.dp)
 
 /** Figma S-11-b: 반투명 덮개와 아래쪽 안내. 덮개 아래로 가는 터치는 모두 여기서 소비한다. */
 @Composable
 fun DrivingCover(hint: String, modifier: Modifier = Modifier) {
-    // Below API 31 the content is not blurred, so the Figma 0.6 scrim would leave it readable.
+    // API 31 미만에서는 본문이 흐려지지 않아서, Figma 값 0.6이면 본문이 그대로 읽힌다.
     val scrim = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 0.6f else 0.92f
     Box(
         modifier
@@ -71,8 +73,14 @@ fun Modifier.drivingBlur(active: Boolean): Modifier =
         this
             .blur(18.dp)
             .clearAndSetSemantics {}
-            .onPreviewKeyEvent { true }
+            .onPreviewKeyEvent { it.key !in EscapeKeys }
             .onPreRotaryScrollEvent { true }
             .focusProperties { onEnter = { cancelFocusChange() } }
             .focusGroup()
     }
+
+// 포커스가 이미 본문 안에 있어도 뒤로 가기와 방향 이동으로는 빠져나갈 수 있어야 한다.
+private val EscapeKeys = setOf(
+    Key.Back, Key.Tab, Key.NavigateNext, Key.NavigatePrevious,
+    Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight,
+)
