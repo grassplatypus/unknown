@@ -144,7 +144,8 @@ private fun SettingsContent(
     val nicknameSaved = stringResource(R.string.settings_nickname_saved)
     val voiceChanged = stringResource(R.string.settings_voice_changed)
 
-    Box(Modifier.fillMaxSize()) {
+    // imePadding here, not per page, so the save toast also stays above the keyboard.
+    Box(Modifier.fillMaxSize().imePadding()) {
         when (page) {
             Page.MAIN -> MainPage(
                 p,
@@ -187,8 +188,10 @@ private fun SettingsContent(
                 packs = ownedVoicePacks(p.owned),
                 selectedId = p.voicePackId,
                 onSelect = { pack ->
-                    demo.update { it.copy(voicePackId = pack.id) }
-                    toast = voiceChanged.format(withRo(pack.name))
+                    if (pack.id != p.voicePackId) {
+                        demo.update { it.copy(voicePackId = pack.id) }
+                        toast = voiceChanged.format(withRo(pack.name))
+                    }
                 },
                 onOpenShop = onOpenShop,
                 onBack = back,
@@ -225,7 +228,7 @@ private fun SettingsContent(
 @Composable
 private fun PageColumn(content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(35.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(35.dp),
         verticalArrangement = Arrangement.spacedBy(21.dp),
     ) { content() }
 }
@@ -450,7 +453,10 @@ private fun VoicePage(
 }
 
 @Composable
-private fun VoicePackRow(pack: CatalogItem, selected: Boolean, onSelect: () -> Unit, onPreview: () -> Unit) {
+private fun VoicePackRow(pack: CatalogItem, selected: Boolean, onSelect: () -> Unit, onPreview: () -> Unit) = BoxWithConstraints {
+    // 화면을 나눠 좁으면 "사용 중"을 이름 아래로 내려서 이름이 한 글자씩 꺾이지 않게 한다.
+    val narrow = maxWidth < 760.dp
+    val inUse = @Composable { Text(stringResource(R.string.settings_in_use), color = AppColors.Success, fontSize = 34.sp, fontWeight = FontWeight.Bold) }
     Row(
         Modifier
             .fillMaxWidth()
@@ -480,8 +486,9 @@ private fun VoicePackRow(pack: CatalogItem, selected: Boolean, onSelect: () -> U
             if (pack.id == "voice_default") {
                 Text(stringResource(R.string.settings_voice_default_desc), color = AppColors.TextSub, fontSize = 31.sp)
             }
+            if (selected && narrow) inUse()
         }
-        if (selected) Text(stringResource(R.string.settings_in_use), color = AppColors.Success, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+        if (selected && !narrow) inUse()
         Box(
             Modifier.size(57.dp).clip(CircleShape).background(AppColors.Card).border(4.dp, AppColors.Primary, CircleShape),
             contentAlignment = Alignment.Center,
