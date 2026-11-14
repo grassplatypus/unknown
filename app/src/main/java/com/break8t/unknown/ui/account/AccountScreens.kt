@@ -433,7 +433,6 @@ internal fun QrCancelledContent(canLeave: Boolean, onLeave: () -> Unit) {
 @Composable
 internal fun ProfilesContent(
     accounts: List<Account>,
-    currentId: String?,
     maxAccounts: Int,
     blocked: Boolean,
     onBack: () -> Unit,
@@ -455,7 +454,7 @@ internal fun ProfilesContent(
                     verticalArrangement = Arrangement.spacedBy(31.dp),
                 ) {
                     accounts.forEach {
-                        ProfileRow(it, current = !canDelete(it, currentId), wide, { onPinSet(it) }, { onPinOff(it) }, { onDelete(it) })
+                        ProfileRow(it, wide, { onPinSet(it) }, { onPinOff(it) }, { onDelete(it) })
                     }
                     Row(
                         Modifier.padding(top = 21.dp, bottom = 24.dp),
@@ -478,16 +477,15 @@ internal fun ProfilesContent(
 }
 
 @Composable
-private fun ProfileRow(account: Account, current: Boolean, wide: Boolean, onPinSet: () -> Unit, onPinOff: () -> Unit, onDelete: () -> Unit) {
-    val sub = listOfNotNull(
-        stringResource(R.string.account_current).takeIf { current },
-        stringResource(R.string.account_pin_on).takeIf { account.pin != null },
-    ).joinToString(" · ")
+private fun ProfileRow(account: Account, wide: Boolean, onPinSet: () -> Unit, onPinOff: () -> Unit, onDelete: () -> Unit) {
     val info = @Composable {
         AccountAvatar(account, 99.dp)
-        Column {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(account.nickname, color = AppColors.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
-            if (sub.isNotEmpty()) Text(sub, color = AppColors.TextSub, fontSize = 31.sp)
+            // 계정 선택 카드와 같은 자물쇠로 PIN이 걸린 계정을 알린다.
+            if (account.pin != null) {
+                Icon(painterResource(R.drawable.account_ic_lock), stringResource(R.string.account_locked), Modifier.size(42.dp), tint = AppColors.Text)
+            }
         }
     }
     val buttons = @Composable {
@@ -500,7 +498,6 @@ private fun ProfileRow(account: Account, current: Boolean, wide: Boolean, onPinS
             stringResource(R.string.account_delete),
             onDelete,
             Modifier.widthIn(min = 212.dp),
-            enabled = !current,
             danger = true,
         )
     }

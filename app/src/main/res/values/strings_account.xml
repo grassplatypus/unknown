@@ -46,8 +46,6 @@
     <string name="account_qr_cancelled_body">주차(P)한 뒤에 다시 연결해 주세요.</string>
 
     <!-- S-05 프로필 관리, D-01, T-01, T-02 -->
-    <string name="account_current">지금 쓰는 계정</string>
-    <string name="account_pin_on">PIN 켬</string>
     <string name="account_pin_set">PIN 설정</string>
     <string name="account_pin_off">PIN 끄기</string>
     <string name="account_delete">계정 삭제</string>

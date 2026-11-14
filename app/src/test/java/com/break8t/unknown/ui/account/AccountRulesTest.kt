@@ -169,11 +169,6 @@ class AccountRulesTest {
         DemoAccounts.forEach { assertTrue(it.nickname, it.nickname.length <= config.nicknameMax) }
     }
 
-    @Test fun currentAccountCannotBeDeleted() {
-        assertFalse(canDelete(accounts[0], accounts[0].id))
-        assertTrue(canDelete(accounts[1], accounts[0].id))
-    }
-
     @Test fun pinAlertEveryThirdFailure() {
         val c = BalanceConfig(pinFailAlertCount = 3)
         assertEquals(listOf(false, false, false, true, false, false, true), (0..6).map { pinAlertDue(it, c) })

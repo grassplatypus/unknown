@@ -30,9 +30,6 @@ fun nextDemoAccount(accounts: List<Account>, config: BalanceConfig): Account? =
     if (!canAddAccount(accounts, config)) null
     else DemoAccounts.firstOrNull { d -> accounts.none { it.id == d.id } }?.copy(pin = null)
 
-/** 지금 쓰는 계정은 삭제하지 않는다(Figma S-05). */
-fun canDelete(account: Account, currentId: String?): Boolean = account.id != currentId
-
 /** 눌러 둔 PIN 숫자와 틀린 횟수. 틀린 횟수가 쌓여도 잠그지 않고, [pinAlertDue]일 때 휴대폰 알림 창만 띄운다. */
 data class PinInput(val digits: String = "", val error: Boolean = false, val failures: Int = 0) {
     fun press(digit: Char, length: Int): PinInput =

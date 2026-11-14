@@ -40,9 +40,12 @@ object AccountStore {
     fun add(config: BalanceConfig): Account? =
         nextDemoAccount(accounts, config)?.also { accounts = accounts + it }
 
+    /** 프로필 관리는 로그인 전에 열리므로 어느 계정이든 지울 수 있다. 마지막으로 쓴 계정이면 자동 시작도 거둔다. */
     fun delete(id: String) {
         val account = find(id) ?: return
-        if (canDelete(account, lastUsedId)) accounts = accounts - account
+        accounts = accounts - account
+        if (lastUsedId == id) lastUsedId = null
+        if (autoLogin?.targetId == id) autoLogin = null
     }
 
     /** 설정에서 닉네임을 바꾸면 계정 선택 카드에도 같은 이름이 보인다. */

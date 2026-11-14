@@ -90,7 +90,7 @@ private fun S04cQrCancelled() = Frame {
 
 @Composable
 private fun Profiles(blocked: Boolean = false, toast: String? = null) = Frame {
-    ProfilesContent(seeded, farmer.id, config.maxAccounts, blocked, {}, {}, {}, {}, {})
+    ProfilesContent(seeded, config.maxAccounts, blocked, {}, {}, {}, {}, {})
     if (toast != null) AppToast(toast, Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp))
 }
 

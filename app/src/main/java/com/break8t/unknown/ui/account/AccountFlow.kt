@@ -94,7 +94,6 @@ fun AccountFlow(mode: DriveMode, onSignedIn: () -> Unit, skipSplash: Boolean = f
             Step.QR -> QrStep(mode, limits, config, canLeave = true, onLeave = { step = Step.SELECT }, onLinked = { signIn(it) })
             Step.PROFILES -> ProfilesContent(
                 accounts = store.accounts,
-                currentId = store.lastUsedId,
                 maxAccounts = config.maxAccounts,
                 blocked = limits.noSetup,
                 onBack = { step = Step.SELECT },
