@@ -21,6 +21,7 @@ import com.break8t.unknown.drive.DriveMode
 import com.break8t.unknown.ui.components.DrivingCover
 import com.break8t.unknown.ui.components.SideRail
 import com.break8t.unknown.ui.components.drivingBlur
+import com.break8t.unknown.ui.home.HomeScreen
 import com.break8t.unknown.ui.theme.AppColors
 
 /** 사이드 메뉴와 본문. 주행 중이면 허용되지 않은 화면 위에 DrivingCover를 덮는다. */
@@ -35,15 +36,18 @@ fun AppShell(mode: DriveMode) {
             val focus = LocalFocusManager.current
             // 덮이는 순간 본문 안에 있던 포커스를 빼서 로터리 입력이 가려진 화면에 닿지 않게 한다.
             LaunchedEffect(covered) { if (covered) focus.clearFocus(force = true) }
-            Box(Modifier.fillMaxSize().drivingBlur(covered)) { ScreenFor(route, mode) }
+            Box(Modifier.fillMaxSize().drivingBlur(covered)) { ScreenFor(route, mode) { route = it } }
             if (covered && hint != null) DrivingCover(stringResource(hint))
         }
     }
 }
 
 @Composable
-private fun ScreenFor(route: Route, mode: DriveMode) {
-    Box(Modifier.fillMaxSize(), Alignment.Center) {
-        Text(stringResource(R.string.screen_coming), color = AppColors.TextSub)
+private fun ScreenFor(route: Route, mode: DriveMode, onNavigate: (Route) -> Unit) {
+    when (route) {
+        Route.HOME -> HomeScreen(mode, onNavigate)
+        else -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            Text(stringResource(R.string.screen_coming), color = AppColors.TextSub)
+        }
     }
 }
