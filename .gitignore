@@ -13,3 +13,6 @@ captures/
 !.claude/hooks/
 !.claude/skills/
 !.claude/agents/
+
+# Claude Code work log, local only
+docs/trajectory.jsonl

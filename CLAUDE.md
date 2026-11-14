@@ -16,7 +16,7 @@ app/src/main/java/com/break8t/unknown/
   drive/       기어 상태 (DriveMode, DriveStateSource)
   reward/      보상 계산
   ui/          AppShell, Route, theme/, components/, 화면별 패키지
-docs/trajectory.jsonl   훅이 남기는 작업 기록
+docs/trajectory.jsonl   훅이 남기는 작업 기록 (로컬 전용, 커밋하지 않음)
 ```
 
 @.claude/rules/00-tooling.md
