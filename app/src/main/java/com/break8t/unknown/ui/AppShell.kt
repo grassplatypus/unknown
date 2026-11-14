@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import com.break8t.unknown.data.LocalDemoState
@@ -50,6 +51,9 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
     val demo = LocalDemoState.current
     // 어느 메뉴에 있든 기어 변화를 홈 상태에 알려서, P로 바꾼 순간 보상이 들어가게 한다.
     LaunchedEffect(mode) { HomeStore.controller.onMode(mode, demo) }
+    // 홈을 열지 않아도 정체를 받도록 내비 연결은 앱 틀에서 한다. 두 번 불러도 한 번만 연결된다.
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { HomeStore.controller.attachNavi(context) }
     val holder = rememberSaveableStateHolder()
     // 공유 화면은 도감, 내 정보, 홈 알림이 함께 쓴다. 열려 있으면 본문 대신 보인다.
     var shareKind by rememberSaveable { mutableStateOf<ShareKind?>(null) }
