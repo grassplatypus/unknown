@@ -111,7 +111,23 @@ internal fun IslandEntrance(scene: IslandSceneState, coins: Int, onEnter: () -> 
 @Composable
 internal fun IslandMain(scene: IslandSceneState, coins: Int, farmReady: Boolean, onOpen: (IslandPlace) -> Unit, onFarm: () -> Unit) =
     Box(Modifier.fillMaxSize()) {
-        IslandScene(scene, Modifier.fillMaxSize())
+        val open: (IslandSpot) -> Unit = { spot ->
+            when (spot) {
+                IslandSpot.HOUSE -> onOpen(IslandPlace.HOUSE)
+                IslandSpot.SHOP -> onOpen(IslandPlace.SHOP)
+                IslandSpot.FARM -> onFarm()
+            }
+        }
+        IslandScene(scene, Modifier.fillMaxSize(), onSpot = open, spotLabel = { spot ->
+            val text = when (spot) {
+                IslandSpot.HOUSE -> R.string.island_house
+                IslandSpot.SHOP -> R.string.island_shop
+                IslandSpot.FARM -> R.string.island_farm
+            }
+            // Chips stand on their objects (Figma S-12): a gap above the roof, below the farm's front edge.
+            val gap = if (spot == IslandSpot.FARM) Modifier.padding(top = 12.dp) else Modifier.padding(bottom = 16.dp)
+            IslandChip(stringResource(text), gap, badge = spot == IslandSpot.FARM && farmReady, onClick = { open(spot) })
+        })
         IslandTopBar(
             coins,
             start = { IslandChip(stringResource(R.string.island_title), selected = true) },
@@ -120,16 +136,6 @@ internal fun IslandMain(scene: IslandSceneState, coins: Int, farmReady: Boolean,
                 IslandChip(stringResource(R.string.island_photo), icon = R.drawable.island_ic_cam, onClick = { onOpen(IslandPlace.PHOTO) })
             },
         )
-        // Figma pins these on the illustration; until the scene exists they sit in one row near the bottom.
-        FlowRow(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 35.dp, vertical = 72.dp),
-            horizontalArrangement = Arrangement.spacedBy(35.dp, Alignment.CenterHorizontally),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            IslandChip(stringResource(R.string.island_house), onClick = { onOpen(IslandPlace.HOUSE) })
-            IslandChip(stringResource(R.string.island_shop), onClick = { onOpen(IslandPlace.SHOP) })
-            IslandChip(stringResource(R.string.island_farm), badge = farmReady, onClick = onFarm)
-        }
     }
 
 /** 위쪽 칩 줄. 화면을 나눠 좁아지면 오른쪽 칩이 다음 줄로 내려간다. */

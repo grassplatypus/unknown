@@ -110,16 +110,4 @@ class HouseLayoutTest {
     @Test fun encodeRoundTrips() {
         assertEquals(DefaultLayout, decode(encode(DefaultLayout)))
     }
-
-    @Test fun unfoldedGridHitsTheCellsItDraws() {
-        for (p in DefaultLayout + Placed("it_picture", Surface.LEFT_WALL, 2, 3)) {
-            val r = UnfoldedGrid.rectOf(p, cfg)
-            for (c in r.col until r.col + r.w) for (row in r.row until r.row + r.h) {
-                val cell = UnfoldedGrid.cellAt(c, row, cfg)
-                assertNotNull(cell)
-                assertTrue("$p at $cell", cell in cellsOf(p))
-            }
-        }
-        assertNull(UnfoldedGrid.cellAt(0, 0, cfg))
-    }
 }

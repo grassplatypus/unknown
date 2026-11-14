@@ -66,6 +66,11 @@ import com.break8t.unknown.ui.house.WindowPreviews
 import com.break8t.unknown.ui.house.characterImage
 import com.break8t.unknown.ui.house.presetLabel
 import com.break8t.unknown.ui.house.trimToOwned
+import com.break8t.unknown.config.BalanceConfig
+import com.break8t.unknown.ui.island.FarmStore
+import com.break8t.unknown.ui.island.IslandMap
+import com.break8t.unknown.ui.island.plotViews
+import com.break8t.unknown.ui.iso.IsoHit
 import com.break8t.unknown.ui.theme.AppColors
 import java.time.LocalTime
 
@@ -79,6 +84,7 @@ fun PhotoScreen(inHouse: Boolean, onClose: () -> Unit) = PhotoScreenImpl(inHouse
 internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: PhotoState = PhotoState(), night: Boolean? = null) {
     val profile by LocalDemoState.current.profile.collectAsState()
     val layout by HouseStore.layout.collectAsState()
+    val plots by FarmStore.plots.collectAsState()
     var s by rememberSaveable(stateSaver = PhotoStateSaver) { mutableStateOf(start) }
     val isNight = night ?: remember { isNight(profile.islandRealTime, profile.islandNight, LocalTime.now().hour) }
     val scene = RoomSceneState(
@@ -87,7 +93,11 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
         camera = s.camera,
         night = isNight,
         character = s.character,
+        plots = plotViews(plots, remember { System.currentTimeMillis() }),
+        carId = profile.selectedCarId,
     )
+    val grid = if (inHouse) BalanceConfig.DEFAULT.houseGridSize else IslandMap.SIZE
+    val extra = listOfNotNull(s.character?.let { characterObject(it, grid) })
     BackHandler {
         when {
             s.shot -> s = s.copy(shot = false)
@@ -98,22 +108,18 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
     if (s.shot) {
         ShareQrLayout(ShareKind.PHOTO, onClose, onRetake = { s = s.copy(shot = false) }) {
             // 카메라 화면과 같은 비율(1144x901)이라 찍을 때 본 구도가 그대로 보인다.
-            RoomScene(scene, Modifier.aspectRatio(1144f / 901f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(10.dp)))
+            RoomScene(scene, Modifier.aspectRatio(1144f / 901f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(10.dp)), extra = extra)
         }
         return
     }
     val options = poseOptions(profile.selectedCharacterId, profile.owned)
     Box(Modifier.fillMaxSize()) {
+        // The scene takes drags for panning, so while editing a tap on the ground moves the character there.
         RoomScene(
             scene,
-            Modifier.fillMaxSize().then(
-                if (!s.editing) Modifier else Modifier.pointerInput(Unit) {
-                    detectDragGestures { change, drag ->
-                        change.consume()
-                        s = s.moved(drag.x / size.width, drag.y / size.height)
-                    }
-                },
-            ),
+            Modifier.fillMaxSize(),
+            extra = extra,
+            onTapCell = { hit -> if (s.editing && hit is IsoHit.Cell) s = s.placedAt(hit.x, hit.y, grid) },
         )
         // 찍히는 범위. Figma S-16의 흰 테두리(760x640 / 1144x901)와 같은 비율이다.
         Box(Modifier.align(Alignment.Center).fillMaxWidth(0.66f).fillMaxHeight(0.71f).border(5.dp, Color.White))
@@ -221,7 +227,7 @@ private fun Labeled(label: String, content: @Composable () -> Unit) {
     }
 }
 
-// S-16 상태마다 하나씩. 그림은 RoomScene 자리 표시용 렌더러로 그려진다.
+// S-16 상태마다 하나씩. 그림은 복셀 엔진이 그린다.
 @WindowPreviews @Composable private fun ObliquePreview() = PreviewFrame { PhotoScreenImpl(false, {}, night = false) }
 @WindowPreviews @Composable private fun RotatedPreview() = PreviewFrame { PhotoScreenImpl(false, {}, PhotoState(rotation = 1), night = false) }
 @WindowPreviews @Composable private fun TopPreview() = PreviewFrame { PhotoScreenImpl(false, {}, PhotoState(preset = CameraPreset.TOP), night = false) }

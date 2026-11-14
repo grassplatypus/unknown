@@ -90,11 +90,11 @@ class Projection(
             val cx = scene.width / 2f
             val cy = scene.depth / 2f
             val p = Projection(camera, 1f, 0f, 0f, cx, cy)
-            val top = maxOf(scene.wallHeight, HEADROOM)
+            val b = scene.frame ?: FrameBox(0f, 0f, scene.width.toFloat(), scene.depth.toFloat(), -scene.floorDepth, maxOf(scene.wallHeight, HEADROOM))
             var minU = Float.MAX_VALUE; var maxU = -Float.MAX_VALUE
             var minV = Float.MAX_VALUE; var maxV = -Float.MAX_VALUE
-            for (x in floatArrayOf(0f, scene.width.toFloat())) for (y in floatArrayOf(0f, scene.depth.toFloat()))
-                for (z in floatArrayOf(-scene.floorDepth, top)) {
+            for (x in floatArrayOf(b.x0, b.x1)) for (y in floatArrayOf(b.y0, b.y1))
+                for (z in floatArrayOf(b.z0, b.z1)) {
                     val u = p.screenX(x, y, z); val v = p.screenY(x, y, z)
                     minU = min(minU, u); maxU = maxOf(maxU, u); minV = min(minV, v); maxV = maxOf(maxV, v)
                 }

@@ -35,8 +35,8 @@ object IsoSamples {
             IsoObject("shelf", IsoShapes.shelf, 3, 0),
             IsoObject("rug", IsoShapes.rug, 1, 2),
             IsoObject("plant", IsoShapes.plant, 4, 4),
-            IsoObject("picture", IsoShapes.picture, 0, 2, wall = WallSide.WEST),
-            IsoObject("picture2", IsoShapes.picture, 1, 0, wall = WallSide.NORTH),
+            IsoObject("picture", IsoShapes.picture, 0, 2, wall = WallSide.WEST, z = 1.5f),
+            IsoObject("picture2", IsoShapes.picture, 1, 0, wall = WallSide.NORTH, z = 1.5f),
             IsoObject("cat", IsoShapes.cat, 2, 3),
         ),
     )

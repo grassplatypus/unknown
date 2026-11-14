@@ -192,7 +192,7 @@ internal fun FarmContent(
 /** 칸 그림은 장면이 그리고, 남은 시간과 다 자람 표시는 여기서 칸 위에 얹는다. */
 @Composable
 private fun FarmScene(scene: IslandSceneState, plots: List<Plot>, now: Long, target: Int, onPlot: (Int) -> Unit, modifier: Modifier) {
-    IslandScene(scene, modifier, onPlot) { i -> plots.getOrNull(i)?.let { PlotOverlay(it, now, picked = i == target) } }
+    IslandScene(scene, modifier, onPlot, plotOverlay = { i -> plots.getOrNull(i)?.let { PlotOverlay(it, now, picked = i == target) } })
 }
 
 @Composable

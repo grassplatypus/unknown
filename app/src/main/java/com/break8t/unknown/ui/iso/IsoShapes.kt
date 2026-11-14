@@ -23,20 +23,22 @@ object IsoPalette {
     const val WaterLight = 0xFF8FD0F5.toInt()
     const val Road = 0xFF6B6A70.toInt()
     const val RoadLight = 0xFF8A8990.toInt()
-    const val Floor = 0xFFD77634.toInt()
-    const val FloorGrain = 0xFFC96C31.toInt()
-    const val FloorSeam = 0xFFA9572A.toInt()
-    const val WallWood = 0xFFD87934.toInt()
-    const val WallGrain = 0xFFC1692F.toInt()
-    const val WallSeam = 0xFF9A5426.toInt()
-    const val WallTop = 0xFFEE8E3D.toInt()
-    const val Baseboard = 0xFFB19489.toInt()
-    const val BaseboardDark = 0xFF967C76.toInt()
+    const val Vine = 0xFF4E8A2E.toInt()
+    const val VineLight = 0xFF7DB443.toInt()
+    const val Floor = 0xFFC6743C.toInt()
+    const val FloorGrain = 0xFFB86A36.toInt()
+    const val FloorSeam = 0xFF8A4A26.toInt()
+    const val WallWood = 0xFFDC8239.toInt()
+    const val WallGrain = 0xFFC9733A.toInt()
+    const val WallSeam = 0xFFA35B34.toInt()
+    const val WallTop = 0xFFE68E41.toInt()
+    const val Baseboard = 0xFFA6A29C.toInt() // grey stone blocks of S-14
+    const val BaseboardDark = 0xFF6F6B66.toInt()
     const val SelectFrame = 0xFFFFFAF0.toInt() // AppColors.Card
     const val GhostOk = 0xFFFFFFFF.toInt()
 
     /** Behind the scene at night; the scene itself darkens toward this color. */
-    val Night = Color(0xFF1B2440)
+    val Night = Color(0xFF011043) // Figma S-12-b sky
 
     internal val T = Color.Transparent
     internal val Ink = AppColors.Text
@@ -46,6 +48,12 @@ object IsoPalette {
     internal val WoodDark = Color(0xFF8A4F2A)
     internal val WoodDeep = Color(0xFF5D3727)
     internal val Trunk = Color(0xFFAC5D31)
+    internal val TrunkDark = Color(0xFF7A3F22)
+    internal val GlassLight = Color(0xFFC8E4F6)
+    internal val RoadKerb = Color(0xFFB4B2B6)
+    internal val GrassC = Color(Grass)
+    internal val DirtC = Color(Dirt)
+    internal val WindowWarm = Color(0xFFF6C453)
     internal val Leaf = Color(0xFF578730)
     internal val LeafLight = Color(0xFF9EC540)
     internal val LeafDark = Color(0xFF39652B)
@@ -104,20 +112,25 @@ object IsoShapes {
         c(0, 2, 4, 2, 6, 1, P.SofaLight), c(14, 2, 4, 2, 6, 1, P.SofaLight),
     ))
 
-    /** 8 x 8 x 11. */
-    val plant = IsoShape(1, 1, listOf(
-        c(2, 2, 0, 4, 4, 3, P.Pot), c(2, 2, 3, 4, 4, 1, P.PotRim), c(3, 3, 3, 2, 2, 1, P.SoilDarkC),
-        c(3, 3, 4, 2, 2, 1, P.Trunk),
-        c(1, 1, 5, 6, 6, 1, P.LeafDark), c(1, 1, 6, 6, 6, 2, P.PlantLeaf), c(2, 2, 8, 4, 4, 2, P.PlantLight),
-        c(3, 3, 10, 2, 2, 1, P.PlantLight),
-        c(1, 1, 5, 1, 1, 3, P.T), c(6, 1, 5, 1, 1, 3, P.T), c(1, 6, 5, 1, 1, 3, P.T), c(6, 6, 5, 1, 1, 3, P.T),
-        c(1, 3, 7, 1, 1, 1, P.PlantLight), c(4, 6, 6, 1, 1, 1, P.PlantLight), c(6, 4, 7, 1, 1, 1, P.LeafDark),
-    ))
+    /** 8 x 8 x 18: a leafy indoor tree in a clay pot, like the S-14 plant. */
+    val plant = IsoShape(1, 1, buildList {
+        fun lump(x: Int, y: Int, z: Int, w: Int, d: Int, h: Int, color: Color) {
+            add(c(x + 1, y, z, w - 2, d, h, color)); add(c(x, y + 1, z, 1, d - 2, h, color)); add(c(x + w - 1, y + 1, z, 1, d - 2, h, color))
+        }
+        add(c(2, 2, 0, 4, 4, 3, P.Pot)); add(c(2, 2, 3, 4, 4, 1, P.PotRim)); add(c(3, 3, 3, 2, 2, 1, P.SoilDarkC))
+        add(c(4, 4, 4, 1, 1, 5, P.Trunk))
+        lump(1, 1, 7, 6, 6, 3, P.LeafDark)
+        lump(0, 1, 9, 8, 6, 4, P.PlantLeaf); lump(1, 0, 10, 6, 8, 4, P.PlantLeaf)
+        lump(1, 1, 13, 6, 6, 3, P.PlantLight); lump(2, 2, 16, 4, 4, 2, P.PlantLeaf)
+        for ((x, y, z) in listOf(Triple(0, 3, 11), Triple(7, 4, 10), Triple(3, 7, 12), Triple(5, 0, 12), Triple(2, 6, 15))) {
+            add(c(x, y, z, 1, 1, 1, P.PlantLight))
+        }
+    })
 
-    /** 8 x 1 x 6 on the wall, 12 voxels up. */
+    /** 8 x 1 x 6 on the wall; its height on the wall comes from the object's z. */
     val picture = IsoShape(1, 1, listOf(
-        c(1, 0, 12, 6, 1, 6, P.Wood),
-        c(2, 0, 13, 4, 1, 2, P.PlantLight), c(2, 0, 15, 4, 1, 2, Color(0xFF74BDF7)), c(4, 0, 16, 1, 1, 1, P.White),
+        c(1, 0, 0, 6, 1, 6, P.Wood),
+        c(2, 0, 1, 4, 1, 2, P.PlantLight), c(2, 0, 3, 4, 1, 2, Color(0xFF74BDF7)), c(4, 0, 4, 1, 1, 1, P.White),
     ), wallMounted = true)
 
     /** 16 x 16 x 1, an oval with diagonal stripes like the item art. */
@@ -160,11 +173,12 @@ object IsoShapes {
         for (z in intArrayOf(4, 7, 10)) add(c(1, 1, z, 22, 22, 1, P.WoodDark))
         for ((x, y) in listOf(1 to 1, 22 to 1, 1 to 22, 22 to 22)) add(c(x, y, 2, 1, 1, 10, P.WoodDeep))
         add(c(10, 22, 2, 4, 1, 7, P.WoodDeep)); add(c(9, 23, 0, 6, 1, 1, P.StoneLight))
+        add(c(8, 22, 7, 1, 1, 2, P.Light, P.Light)) // porch lantern
         fun window(x: Int, y: Int, alongX: Boolean) {
             if (alongX) {
-                add(c(x, y, 6, 4, 1, 3, P.Glass, P.Light)); add(c(x + 2, y, 6, 1, 1, 3, P.WoodDeep))
+                add(c(x, y, 6, 4, 1, 3, P.WindowWarm, P.Light)); add(c(x + 2, y, 6, 1, 1, 3, P.WoodDeep))
             } else {
-                add(c(x, y, 6, 1, 4, 3, P.Glass, P.Light)); add(c(x, y + 2, 6, 1, 1, 3, P.WoodDeep))
+                add(c(x, y, 6, 1, 4, 3, P.WindowWarm, P.Light)); add(c(x, y + 2, 6, 1, 1, 3, P.WoodDeep))
             }
         }
         window(3, 22, true); window(17, 22, true); window(10, 1, true)
@@ -176,39 +190,78 @@ object IsoShapes {
         add(c(16, 5, 14, 3, 3, 10, P.StoneC)); add(c(16, 5, 23, 3, 3, 1, P.StoneLight))
     })
 
-    /** 8 x 8 soil bed with one plant that fills the cell, as in Figma S-13. Ripe crops differ in form, not just color. */
-    fun plot(stage: PlotStage, crop: Crop = Crop.CARROT): IsoShape = IsoShape(1, 1, buildList {
+    /** Soil bed with a plant drawn like the S-13 art: a pixel sprite two voxels deep standing across the cell. Cached. */
+    fun plot(stage: PlotStage, crop: Crop = Crop.CARROT): IsoShape = plotCache.getValue(stage to crop)
+
+    /**
+     * The farm screen's close-up plot: 2 x 2 cells of 16-wide sprite, meant to be drawn at scale 0.5 so it
+     * fills one cell with twice the detail. Rows are two voxels tall against the steep camera's squash.
+     */
+    fun farmPlot(stage: PlotStage, crop: Crop): IsoShape = farmCache.getValue(stage to crop)
+
+    private val plotCache: Map<Pair<PlotStage, Crop>, IsoShape> by lazy {
+        PlotStage.entries.flatMap { st -> Crop.entries.map { st to it } }.associateWith { (st, cr) -> buildPlot(st, cr) }
+    }
+    private val farmCache: Map<Pair<PlotStage, Crop>, IsoShape> by lazy {
+        PlotStage.entries.flatMap { st -> Crop.entries.map { st to it } }.associateWith { (st, cr) -> buildFarmPlot(st, cr) }
+    }
+
+    private val spriteColors = mapOf(
+        'l' to P.LeafLight, 'L' to P.Leaf, 'd' to P.LeafDark, 'O' to P.Carrot, 'o' to P.Stripe,
+        'P' to P.Purple, 'p' to P.Pink, 'Y' to P.Yellow, 's' to P.Shade, 'w' to P.Orange, 'g' to P.Sprout,
+    )
+
+    private fun sprite(stage: PlotStage, crop: Crop): List<String> = when {
+        stage == PlotStage.EMPTY -> emptyList()
+        stage == PlotStage.SPROUT -> listOf("..l..l..", ".lL..Ll.", "..L..L..")
+        crop == Crop.CARROT -> listOf(".l....l.", "lLl..lLl", ".Ld..dL.", "lLl..lLl", ".dL..Ld.", "OOO..OOO", "oOO..OOo") +
+            if (stage == PlotStage.GROWN) listOf(".OO..OO.", "..O..O..") else emptyList()
+        crop == Crop.SWEET_POTATO -> listOf("..lLLl..", ".lLLLLl.", "lLLdLLLl", ".dLLLLd.", "..dLLd..") +
+            if (stage == PlotStage.GROWN) listOf(".PP..PP.", "PpPP.PpP", ".PP..PP.") else listOf("..P..P..")
+        stage == PlotStage.GROWN -> listOf("YY.YY.YY", "Ys.Ys.Ys", "YY.YY.YY", "Ys.Ys.Ys", ".w..w..w", ".w..w..w", ".w..w..w")
+        else -> listOf("ll.ll.ll", "lg.lg.lg", "ll.ll.ll", ".L..L..L", ".L..L..L", ".L..L..L")
+    }
+
+    private fun MutableList<Cuboid>.sprite(rows: List<String>, y: Int, rowH: Int) = rows.forEachIndexed { r, line ->
+        val z = 1 + (rows.size - 1 - r) * rowH
+        line.forEachIndexed { x, ch -> spriteColors[ch]?.let { add(c(x, y, z, 1, 2, rowH, it)) } }
+    }
+
+    private fun buildPlot(stage: PlotStage, crop: Crop): IsoShape = IsoShape(1, 1, buildList {
         add(c(0, 0, 0, 8, 8, 1, P.SoilC))
-        add(c(0, 2, 0, 8, 1, 1, P.SoilDarkC)); add(c(0, 5, 0, 8, 1, 1, P.SoilDarkC))
-        when (stage) {
-            PlotStage.EMPTY -> Unit
-            PlotStage.SPROUT -> {
-                add(c(3, 3, 1, 2, 2, 1, P.Sprout)); add(c(2, 3, 2, 1, 1, 1, P.Sprout)); add(c(5, 4, 2, 1, 1, 1, P.Sprout))
-            }
-            PlotStage.GROWING -> {
-                add(c(2, 2, 1, 4, 4, 2, P.Leaf)); add(c(3, 3, 3, 2, 2, 1, P.LeafLight))
-                add(c(2, 2, 1, 1, 1, 2, P.T)); add(c(5, 5, 1, 1, 1, 2, P.T))
-            }
-            PlotStage.GROWN -> when (crop) {
-                Crop.CARROT -> {
-                    add(c(3, 3, 1, 2, 2, 2, P.Carrot))
-                    add(c(2, 2, 3, 4, 4, 2, P.Leaf)); add(c(3, 3, 5, 2, 2, 2, P.LeafLight))
-                    add(c(1, 3, 4, 1, 2, 2, P.LeafLight)); add(c(6, 3, 4, 1, 2, 2, P.LeafLight))
-                    add(c(2, 2, 3, 1, 1, 2, P.T)); add(c(5, 5, 3, 1, 1, 2, P.T))
-                }
-                Crop.SWEET_POTATO -> {
-                    add(c(1, 4, 1, 3, 3, 2, P.Purple)); add(c(4, 1, 1, 3, 3, 2, P.Purple))
-                    add(c(1, 1, 3, 6, 6, 1, P.LeafDark)); add(c(2, 2, 4, 4, 4, 1, P.Leaf)); add(c(3, 3, 5, 2, 2, 1, P.LeafLight))
-                    add(c(1, 1, 3, 1, 1, 1, P.T)); add(c(6, 6, 3, 1, 1, 1, P.T))
-                }
-                Crop.WHEAT -> for ((x, y) in listOf(1 to 1, 4 to 1, 6 to 2, 2 to 4, 5 to 4, 1 to 6, 4 to 6, 6 to 6)) {
-                    add(c(x, y, 1, 1, 1, 4, P.LeafLight)); add(c(x, y, 5, 1, 1, 2, P.Yellow))
-                }
-            }
-        }
+        add(c(0, 2, 0, 8, 1, 1, P.SoilDarkC)); add(c(0, 6, 0, 8, 1, 1, P.SoilDarkC))
+        sprite(sprite(stage, crop), 3, 1)
     })
 
-    private val plots = PlotStage.entries.associateWith { plot(it) }
+    private fun bigSprite(stage: PlotStage, crop: Crop): List<String> {
+        val grown = stage == PlotStage.GROWN
+        return when {
+            stage == PlotStage.EMPTY -> emptyList()
+            stage == PlotStage.SPROUT -> listOf("....l......l....", "...lLl....lLl...", "....L......L....")
+            crop == Crop.CARROT -> listOf(
+                "...l.l....l.l...", "..lLlLl..lLlLl..", ".lLdLdLl.lLdLdLl", ".LdLLLdL.LdLLLdL", "..lLdLl...lLdLl.",
+                "...dLd.....dLd..", "..OOOOO...OOOOO.", "..OoOOO...OoOOO.",
+            ) + if (grown) listOf("...OOOo....OOOo.", "...OOO.....OOO..", "....Oo......Oo..", "....O.......O...") else emptyList()
+            crop == Crop.SWEET_POTATO -> listOf(
+                "...lLl....lLl...", "..lLLLl..lLLLl..", ".lLLdLLllLLdLLl.", ".LLdddLLLLdddLL.", "..LLdLL..LLdLL..",
+                "...dLd....dLd...",
+            ) + if (grown) listOf("..PPPPP..PPPPP..", ".PPpPPPPPPpPPPP.", ".PPPPPP..PPPPPP.", "..PPPP....PPPP..")
+            else listOf("...PPP....PPP...")
+            else -> {
+                val rows = listOf(
+                    "..Y....Y....Y...", ".YsY..YsY..YsY..", ".YYY..YYY..YYY..", ".YsY..YsY..YsY..", ".YYY..YYY..YYY..",
+                    "..w....w....w...", ".LwL..LwL..LwL..", "..w....w....w...", "..w....w....w...", ".www..www..www..",
+                )
+                if (grown) rows else rows.map { it.replace('Y', 'l').replace('s', 'g').replace('w', 'L') }
+            }
+        }
+    }
+
+    private fun buildFarmPlot(stage: PlotStage, crop: Crop): IsoShape = IsoShape(2, 2, buildList {
+        add(c(0, 0, 0, 16, 16, 1, P.SoilC))
+        for (y in intArrayOf(3, 7, 11, 15)) add(c(0, y, 0, 16, 1, 1, P.SoilDarkC))
+        sprite(bigSprite(stage, crop), 8, 2)
+    })
 
     /** 8 x 8 x 12, a round canopy over a short trunk. */
     val tree = IsoShape(1, 1, listOf(
@@ -292,6 +345,24 @@ object IsoShapes {
         c(2, 3, 6, 1, 1, 2, P.Ink), c(5, 3, 6, 1, 1, 2, P.Ink), c(2, 3, 8, 1, 1, 1, P.Yellow), c(5, 3, 8, 1, 1, 1, P.Yellow),
     ))
 
+    /**
+     * Pose items as small changes to a character model: an arm up, both arms up, feet forward.
+     * Side and back poses keep the model and turn it, see [poseTurns].
+     */
+    fun posed(base: IsoShape, pose: String?, body: Color = P.SproutBody): IsoShape = when (pose) {
+        "pose_wave" -> base.copy(parts = base.parts + listOf(c(7, 4, 3, 1, 1, 5, body), c(0, 4, 1, 1, 1, 2, body)))
+        "pose_jump" -> base.copy(parts = base.parts + listOf(c(0, 4, 4, 1, 1, 4, body), c(7, 4, 4, 1, 1, 4, body)))
+        "pose_sit" -> base.copy(parts = base.parts + listOf(c(2, 7, 0, 1, 1, 1, body), c(5, 7, 0, 1, 1, 1, body)))
+        else -> base
+    }
+
+    /** Quarter turns for the pose items that show the character from another side. */
+    fun poseTurns(pose: String?): Int = when (pose) {
+        "pose_side" -> 1
+        "pose_back" -> 2
+        else -> 0
+    }
+
     private val cars = mapOf("car_red" to car(P.Red), "car_blue" to car(P.Blue), "car_yellow" to car(P.Yellow))
 
     /** Shape for a catalog or island id, or null for ids this library does not know. */
@@ -303,10 +374,10 @@ object IsoShapes {
         "it_lamp" -> lamp
         "it_shelf" -> shelf
         "house" -> house
-        "farm_empty" -> plots[PlotStage.EMPTY]
-        "farm_sprout" -> plots[PlotStage.SPROUT]
-        "farm_growing" -> plots[PlotStage.GROWING]
-        "farm_grown" -> plots[PlotStage.GROWN]
+        "farm_empty" -> plot(PlotStage.EMPTY)
+        "farm_sprout" -> plot(PlotStage.SPROUT)
+        "farm_growing" -> plot(PlotStage.GROWING)
+        "farm_grown" -> plot(PlotStage.GROWN)
         "tree" -> tree
         "fence" -> fence
         "path" -> path

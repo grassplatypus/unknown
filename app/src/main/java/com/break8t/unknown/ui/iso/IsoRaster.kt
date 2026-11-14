@@ -9,7 +9,10 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** One low-resolution frame: ARGB pixels, the object id under each pixel, and the projection used. */
+/**
+ * One low-resolution frame: ARGB pixels, the object id under each pixel, and the projection used.
+ * It is the window at ([ox], [oy]) of the [fullW] x [fullH] buffer the scene was framed for.
+ */
 class IsoFrame(
     val w: Int,
     val h: Int,
@@ -17,6 +20,10 @@ class IsoFrame(
     val ids: IntArray,
     val projection: Projection,
     private val names: Array<String?>,
+    val ox: Int = 0,
+    val oy: Int = 0,
+    val fullW: Int = w,
+    val fullH: Int = h,
 ) {
     /** The object under buffer pixel ([bx], [by]); null for floor, walls, the ghost and empty sky. */
     fun objectAt(bx: Int, by: Int): String? {
@@ -26,9 +33,13 @@ class IsoFrame(
     }
 }
 
+/** A pixel rectangle of the zoom-1 buffer, [x0] and [y0] inclusive, [x1] and [y1] exclusive. */
+data class Window(val x0: Int, val y0: Int, val x1: Int, val y1: Int)
+
 /**
- * Renders [scene] into a [w] x [h] buffer with a depth buffer, so any camera is correct without
- * sorting. Pure Kotlin: runs off the main thread and in unit tests.
+ * Renders [scene] framed for a [w] x [h] buffer with a depth buffer, so any camera is correct without
+ * sorting. [window] draws only (or beyond) part of that buffer, for panned and zoomed views.
+ * Pure Kotlin: runs off the main thread and in unit tests.
  */
 fun renderScene(
     scene: IsoScene,
@@ -38,15 +49,18 @@ fun renderScene(
     night: Boolean = false,
     selectedId: String? = null,
     ghost: Ghost? = null,
+    window: Window = Window(0, 0, w, h),
 ): IsoFrame {
-    val p = Projection.framing(scene, camera, w.toFloat(), h.toFloat(), 1f, androidx.compose.ui.geometry.Offset.Zero)
-    val r = Raster(w, h, p, night)
+    val full = Projection.framing(scene, camera, w.toFloat(), h.toFloat(), 1f, androidx.compose.ui.geometry.Offset.Zero)
+    val p = Projection(camera, full.unit, full.originX - window.x0, full.originY - window.y0, full.cx, full.cy)
+    val r = Raster(window.x1 - window.x0, window.y1 - window.y0, p, night)
     val names = arrayOfNulls<String>(scene.objects.size + 1)
     if (scene.wallHeight > 0f) r.walls(scene)
     val ghostObj = ghost?.let { g -> scene.find(g.placement.id)?.moved(g.placement) }
     r.floor(scene, ghostObj, ghost?.valid ?: true)
+    for (road in scene.roads) r.road(road, scene)
     scene.objects.forEachIndexed { i, o ->
-        names[i] = o.id
+        names[i] = if (o.pickable) o.id else null
         if (o.wall != null && !(scene.wallHeight > 0f && wallVisible(o.wall, p))) return@forEachIndexed
         r.model(o, scene.baseZ(o), i + 1)
     }
@@ -57,8 +71,26 @@ fun renderScene(
         r.model(ghostObj, scene.baseZ(ghostObj), names.size)
     }
     val selected = selectedId?.let { id -> scene.objects.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.plus(1) } ?: 0
-    return IsoFrame(w, h, r.finish(selected), r.ids, p, names)
+    return IsoFrame(r.w, r.h, r.finish(selected), r.ids, p, names, window.x0, window.y0, w, h)
 }
+
+/** Cells of [road] whose centre lies within one cell of the frame, counted from its start: 0 until this. */
+internal fun roadLength(road: RoadRay, p: Projection, w: Int, h: Int): Int {
+    val sx = p.screenX(road.x + 0.5f, road.y + 0.5f, 0f); val sy = p.screenY(road.x + 0.5f, road.y + 0.5f, 0f)
+    val vx = p.screenX(road.x + 0.5f + road.dx, road.y + 0.5f + road.dy, 0f) - sx
+    val vy = p.screenY(road.x + 0.5f + road.dx, road.y + 0.5f + road.dy, 0f) - sy
+    // Steps until the centre is a cell's length past the far edge along each axis it moves on.
+    val pad = p.unit * 2f
+    fun steps(s: Float, v: Float, size: Int) = when {
+        v > 1e-3f -> (size + pad - s) / v
+        v < -1e-3f -> (-pad - s) / v
+        else -> Float.MAX_VALUE
+    }
+    val k = min(steps(sx, vx, w), steps(sy, vy, h))
+    return if (k == Float.MAX_VALUE) MAX_ROAD else ceil(k).toInt().coerceIn(0, MAX_ROAD)
+}
+
+private const val MAX_ROAD = 4096
 
 /** Walls are drawn only where they stand behind the room, so they never hide it; all four from the top. */
 internal fun wallVisible(side: WallSide, p: Projection): Boolean {
@@ -73,8 +105,10 @@ internal fun wallVisible(side: WallSide, p: Projection): Boolean {
 }
 
 private const val E = 1e-4f
+/** Ids of road ray cells count down from here, below every floor cell id. */
+internal const val ROAD_ID = -1_000_000
 private const val EDGE_DEPTH = 0.2f // depth jump (cells) inside one object that still gets an outline
-private const val OUTLINE = 0.55f
+private const val OUTLINE = 0.4f // the art outlines in near black
 private const val WALL_T = 0.25f
 
 /** Faces lit from the upper left of the screen: top, left-facing and right-facing tones. */
@@ -191,11 +225,11 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
 
     /** Floor columns. Sides are only drawn where they are exposed, which also saves fill time. */
     fun floor(scene: IsoScene, ghost: IsoObject?, ghostValid: Boolean) {
-        val bot = -scene.floorDepth
         val mark = if (ghostValid) AppColors.Success.toArgb() else AppColors.Error.toArgb()
         for (y in 0 until scene.depth) for (x in 0 until scene.width) {
             val cell = scene.cell(x, y)
             if (cell.floor == FloorType.NONE) continue
+            val bot = scene.bottom(x, y)
             val id = -(y * scene.width + x) - 1
             val seed = x * 7919 + y * 104729
             val inGhost = ghost != null && ghost.wall == null &&
@@ -205,19 +239,38 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
             face(4, x.toFloat(), y.toFloat(), bot, x + 1f, y + 1f, cell.height, 0, id, Textures.top(cell.floor), seed)
             for (dir in 0 until 4) {
                 val nx = x + VoxelModel.DX[dir]; val ny = y + VoxelModel.DY[dir]
+                // A shallower neighbour leaves the lower part of this side open, which steps the island's underside.
                 val exposed = !scene.inside(nx, ny) || scene.cell(nx, ny).floor == FloorType.NONE ||
-                    scene.cell(nx, ny).height < cell.height
+                    scene.cell(nx, ny).height < cell.height || scene.bottom(nx, ny) > bot
                 if (exposed) face(dir, x.toFloat(), y.toFloat(), bot, x + 1f, y + 1f, cell.height, 0, id, Textures.side(cell.floor), seed)
             }
         }
         tint = 0; tintAmount = 0f
     }
 
+    /** The cells of [road] this frame can see: a thin road slab each, with its paint on top. */
+    fun road(road: RoadRay, scene: IsoScene) {
+        val n = roadLength(road, p, w, h)
+        for (k in 0 until n) {
+            val x = road.x + k * road.dx; val y = road.y + k * road.dy
+            if (scene.inside(x, y)) continue
+            val id = ROAD_ID - k
+            val seed = x * 7919 + y * 104729
+            face(4, x.toFloat(), y.toFloat(), -road.depth, x + 1f, y + 1f, 0f, 0, id, Textures.top(FloorType.ROAD), seed)
+            for (dir in 0 until 4) {
+                if (VoxelModel.DX[dir] == road.dx && VoxelModel.DY[dir] == road.dy) continue
+                if (VoxelModel.DX[dir] == -road.dx && VoxelModel.DY[dir] == -road.dy && k > 0) continue
+                face(dir, x.toFloat(), y.toFloat(), -road.depth, x + 1f, y + 1f, 0f, 0, id, Textures.side(FloorType.ROAD), seed)
+            }
+            road.paint?.let { model(IsoObject("road", it, x, y), 0f, id) }
+        }
+    }
+
     /** Exposed voxel faces of [o], rotated and placed. Emissive voxels keep their glow color at night. */
     fun model(o: IsoObject, baseZ: Float, id: Int) {
         val m = o.shape.model
         val r = o.rot
-        val s = 1f / VPC
+        val s = o.scale / VPC
         val rdx = IntArray(5); val rdy = IntArray(5); val vis = BooleanArray(5)
         val cols = IntArray(m.day.size * 5)
         for (dir in 0 until 5) {
@@ -237,7 +290,7 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
             if (!vis[dir]) continue
             val rx = when (r) { 1 -> m.sy - vy - 1; 2 -> m.sx - vx - 1; 3 -> vy; else -> vx }
             val ry = when (r) { 1 -> vx; 2 -> m.sy - vy - 1; 3 -> m.sx - vx - 1; else -> vy }
-            val wx = o.x + rx * s; val wy = o.y + ry * s; val wz = baseZ + vz * s
+            val wx = o.x + o.ox + rx * s; val wy = o.y + o.oy + ry * s; val wz = baseZ + vz * s
             val c = cols[k * 5 + dir]
             when {
                 dir == 4 -> quad(wx, wy, wz + s, s, 0f, 0f, 0f, s, 0f, c, 1f, id, lit = true)
@@ -290,10 +343,10 @@ internal fun argb(r: Float, g: Float, b: Float): Int =
 internal fun shade(c: Int, f: Float): Int =
     argb((c shr 16 and 0xFF) * f, (c shr 8 and 0xFF) * f, (c and 0xFF) * f)
 
-private const val NIGHT_R = 0x1B.toFloat()
-private const val NIGHT_G = 0x24.toFloat()
-private const val NIGHT_B = 0x40.toFloat()
-private const val NIGHT_AMOUNT = 0.55f
+private const val NIGHT_R = 0x01.toFloat()
+private const val NIGHT_G = 0x10.toFloat()
+private const val NIGHT_B = 0x43.toFloat()
+private const val NIGHT_AMOUNT = 0.6f
 
 private fun hash(i: Int, j: Int, seed: Int): Int {
     var x = seed * 73856093 xor i * 19349663 xor j * 83492791
@@ -318,8 +371,9 @@ private object Textures {
         val h = hash(i, j, seed)
         when { h % 19 == 0 -> P.GrassDark; h % 23 == 1 -> P.GrassLight; else -> P.Grass }
     }
+    // One plank tile per cell with dark seams on its edges, like the S-14 floor.
     private val wood = Texture { i, j, _, nj, seed ->
-        if (j == nj / 2) P.FloorSeam else if (hash(i / 2, j, seed) % 9 == 0) P.FloorGrain else P.Floor
+        if (i == 0 || j == 0) P.FloorSeam else if (j == nj / 2 || hash(i / 2, j, seed) % 9 == 0) P.FloorGrain else P.Floor
     }
     private val soil = Texture { _, j, _, _, _ -> if (j % 3 == 1) P.SoilDark else P.Soil }
     private val sand = Texture { i, j, _, _, seed -> if (hash(i, j, seed) % 11 == 0) P.SandDark else P.Sand }
@@ -352,7 +406,10 @@ private object Textures {
             else -> P.Grass
         }
         return Texture { i, j, _, nj, seed ->
+            // Vines hang from the grass down the dirt and stone, a few columns per side.
+            val vine = t == FloorType.GRASS && hash(i, 1, seed) % 7 == 0 && nj - j < 3 + hash(i, 2, seed) % 14
             when {
+                vine && j < nj - 2 -> if ((nj - j) % 3 == 0) P.VineLight else P.Vine
                 j >= nj - 2 -> if (t == FloorType.GRASS && j == nj - 2 && hash(i, 0, seed) % 3 == 0) P.GrassDark else surface
                 j >= nj - 7 -> if (hash(i, j, seed) % 9 == 0) P.DirtDark else P.Dirt
                 j % 3 == 0 || (i + (j / 3) * 2) % 5 == 0 -> P.StoneDark

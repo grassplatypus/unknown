@@ -78,9 +78,10 @@ class IsoRasterTest {
     fun ghostTintsItsFootprintAndIsNotHitTestable() {
         val room = IsoSamples.room()
         val cam = IsoCamera.of(ViewPreset.OBLIQUE, 0)
-        val g = Ghost(Placement("plant", 3, 3, 0), valid = false)
+        // Front-left corner: nothing stands between it and the camera now that the plant is a tall tree.
+        val g = Ghost(Placement("plant", 0, 4, 0), valid = false)
         val f = renderScene(room, cam, 300, 220, ghost = g)
-        assertEquals(null, idAt(f, 3.5f, 3.5f, 10.5f / VPC)) // ghost pixels carry no object id
+        assertEquals(null, idAt(f, 0.5f, 4.5f, 10.5f / VPC)) // ghost pixels carry no object id
         assertEquals(IsoHit.Item("plant"), hitTest(room, f, f.projection.screenX(4.5f, 4.5f, 10.5f / VPC), f.projection.screenY(4.5f, 4.5f, 10.5f / VPC)))
     }
 }

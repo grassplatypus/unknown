@@ -5,6 +5,8 @@ import com.break8t.unknown.config.ItemKind
 import com.break8t.unknown.ui.house.CameraPreset
 import com.break8t.unknown.ui.house.SceneCamera
 import com.break8t.unknown.ui.house.SceneCharacter
+import com.break8t.unknown.ui.iso.IsoObject
+import com.break8t.unknown.ui.iso.IsoShapes
 import kotlin.random.Random
 
 /** 공유 QR을 열 수 있는 시간. 팀이 아직 정하지 않아서 시연용으로 5분을 쓴다. */
@@ -35,6 +37,9 @@ data class PhotoState(
     fun rotated() = copy(rotation = camera.rotated().rotation)
     fun resized(delta: Int) = copy(sizeIndex = (sizeIndex + delta).coerceIn(0, CharacterSizes.lastIndex))
     fun moved(dx: Float, dy: Float) = copy(x = (x + dx).coerceIn(0f, 1f), y = (y + dy).coerceIn(0f, 1f))
+
+    /** Stands the character in the middle of cell ([cx], [cy]) of a [grid] x [grid] floor. */
+    fun placedAt(cx: Int, cy: Int, grid: Int) = copy(x = ((cx + 0.5f) / grid).coerceIn(0f, 1f), y = ((cy + 0.5f) / grid).coerceIn(0f, 1f))
 
     /** 캐릭터 버튼: 아직 없으면 첫 포즈로 세우고, 편집 카드를 연다. */
     fun startCharacter(options: List<String>) = copy(poseId = poseId ?: options.first(), editing = true)
@@ -78,3 +83,22 @@ fun qrModules(seed: Int, size: Int = 25): List<BooleanArray> {
     }
     return grid
 }
+
+/**
+ * The character as a voxel model standing in the scene. [SceneCharacter.x] and y are fractions of a
+ * [grid] x [grid] floor; size 0.071 (the Figma sample) is the model at its own scale.
+ */
+fun characterObject(c: SceneCharacter, grid: Int): IsoObject {
+    val pose = c.imageId.takeIf { it.startsWith("pose_") }
+    val base = if (pose != null) IsoShapes.sprout else IsoShapes.of(c.imageId) ?: IsoShapes.sprout
+    val scale = c.size / CharacterSizes[1]
+    val turns = IsoShapes.poseTurns(pose) + if (c.flipped) FLIP_TURNS else 0
+    return IsoObject(
+        "character", IsoShapes.posed(base, pose), 0, 0, turns.mod(4),
+        ox = c.x * grid - scale / 2f, oy = c.y * grid - scale / 2f,
+        z = if (pose == "pose_jump") JUMP_CELLS else 0f, scale = scale, pickable = false,
+    )
+}
+
+private const val FLIP_TURNS = 3 // the model faces +y; three quarter turns make it face +x, the mirrored side on screen
+private const val JUMP_CELLS = 0.3f

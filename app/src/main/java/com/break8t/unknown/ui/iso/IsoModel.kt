@@ -88,13 +88,18 @@ enum class WallSide { NORTH, EAST, SOUTH, WEST }
 
 enum class FloorType { NONE, GRASS, SAND, SOIL, WATER, WOOD, ROAD }
 
+/** [depth] is how far this cell's slab reaches below its top; negative means the scene's floorDepth. */
 @Immutable
-data class Cell(val floor: FloorType = FloorType.GRASS, val height: Float = 0f)
+data class Cell(val floor: FloorType = FloorType.GRASS, val height: Float = 0f, val depth: Float = -1f)
 
 @Immutable
 data class Placement(val id: String, val x: Int, val y: Int, val rotation: Int, val wall: WallSide? = null)
 
-/** [id] is unique in the scene and is what taps report. [x], [y] is the footprint's minimum corner. */
+/**
+ * [id] is unique in the scene and is what taps report. [x], [y] is the footprint's minimum corner.
+ * [ox], [oy], [z] shift the drawing (cells) without moving the footprint; [scale] resizes it.
+ * Objects that are not [pickable] (scenery) are drawn but taps fall through to the floor.
+ */
 @Immutable
 data class IsoObject(
     val id: String,
@@ -103,6 +108,11 @@ data class IsoObject(
     val y: Int,
     val rotation: Int = 0,
     val wall: WallSide? = null,
+    val ox: Float = 0f,
+    val oy: Float = 0f,
+    val z: Float = 0f,
+    val scale: Float = 1f,
+    val pickable: Boolean = true,
 ) {
     val rot: Int get() = wall?.ordinal ?: rotation.mod(4)
     val footW: Int get() = if (rot % 2 == 0) shape.w else shape.d
@@ -114,6 +124,7 @@ data class IsoObject(
 /**
  * Row-major [cells]; the floor slab reaches [floorDepth] cells below each cell's height.
  * [wallHeight] > 0 puts walls on the sides facing away from the camera.
+ * [frame], when set, is the world box the camera fits instead of the whole grid.
  */
 @Immutable
 data class IsoScene(
@@ -123,6 +134,8 @@ data class IsoScene(
     val objects: List<IsoObject> = emptyList(),
     val wallHeight: Float = 0f,
     val floorDepth: Float = 0.5f,
+    val frame: FrameBox? = null,
+    val roads: List<RoadRay> = emptyList(),
 ) {
     init {
         require(cells.size == width * depth) { "cells must be width * depth" }
@@ -131,7 +144,10 @@ data class IsoScene(
     fun inside(x: Int, y: Int) = x in 0 until width && y in 0 until depth
     fun cell(x: Int, y: Int): Cell = cells[y * width + x]
     fun find(id: String): IsoObject? = objects.firstOrNull { it.id == id }
-    fun baseZ(o: IsoObject): Float = if (inside(o.x, o.y)) cell(o.x, o.y).height else 0f
+    fun baseZ(o: IsoObject): Float = (if (inside(o.x, o.y)) cell(o.x, o.y).height else 0f) + o.z
+
+    /** Bottom of the slab under cell ([x], [y]). */
+    fun bottom(x: Int, y: Int): Float = cell(x, y).let { if (it.depth < 0f) -floorDepth else it.height - it.depth }
 
     fun with(p: Placement): IsoScene = copy(objects = objects.map { if (it.id == p.id) it.moved(p) else it })
 
@@ -144,7 +160,7 @@ data class IsoScene(
             val f = cell(cx, cy).floor
             if (o.wall == null && (f == FloorType.NONE || f == FloorType.WATER)) return false
         }
-        return objects.none { it.id != o.id && sameLayer(it, o) && overlaps(it, o) }
+        return objects.none { it.id != o.id && it.pickable && sameLayer(it, o) && overlaps(it, o) }
     }
 
     /** Forces a wall object onto its wall's edge row or column. */
@@ -175,3 +191,14 @@ data class IsoScene(
     private fun overlaps(a: IsoObject, b: IsoObject) =
         a.x < b.x + b.footW && b.x < a.x + a.footW && a.y < b.y + b.footD && b.y < a.y + a.footD
 }
+
+/**
+ * A road that starts at cell ([x], [y]), usually just outside the grid, and runs on in direction ([dx], [dy])
+ * for as long as the frame being drawn can see it, whatever its size, camera or pan. [paint] is drawn on each cell.
+ */
+@Immutable
+data class RoadRay(val x: Int, val y: Int, val dx: Int, val dy: Int, val depth: Float, val paint: IsoShape? = null)
+
+/** A world box in cells, x east, y south, z up. */
+@Immutable
+data class FrameBox(val x0: Float, val y0: Float, val x1: Float, val y1: Float, val z0: Float, val z1: Float)

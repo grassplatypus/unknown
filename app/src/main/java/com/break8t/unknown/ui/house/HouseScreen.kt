@@ -51,6 +51,7 @@ import com.break8t.unknown.ui.components.BorderWidth
 import com.break8t.unknown.ui.components.ControlShape
 import com.break8t.unknown.ui.components.DialogPanel
 import com.break8t.unknown.ui.theme.AppColors
+import com.break8t.unknown.ui.iso.rememberIsoViewState
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** 저장한 배치. Profile에 자리가 없어서 DemoStore처럼 프로세스에 하나만 둔다(시연용). */
@@ -88,17 +89,22 @@ internal fun HouseScreenImpl(
     var askExit by rememberSaveable { mutableStateOf(false) }
     var askReset by rememberSaveable { mutableStateOf(false) }
     var toast by remember { mutableStateOf(startToast) }
-    var grab by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val view = rememberIsoViewState()
+    remember(view) { if (startSelected >= 0) view.selectedId = RoomMap.idOf(startSelected) }
 
     val noSpace = stringResource(R.string.house_no_space)
     val noTurn = stringResource(R.string.house_no_turn)
     val resetDone = stringResource(R.string.house_reset_done)
 
     fun setDraft(l: List<Placed>?) { draftCodes = l?.let(::encode) }
+    fun select(i: Int) {
+        selected = i
+        view.selectedId = if (i >= 0) RoomMap.idOf(i) else null
+    }
     fun finish(save: Boolean) {
         if (draft != null) HouseStore.layout.value = resolveExit(saved, draft, save)
         setDraft(null)
-        selected = -1
+        select(-1)
         askExit = false
     }
     fun tryExit() {
@@ -133,58 +139,46 @@ internal fun HouseScreenImpl(
                 }
             }
             if (draft == null) {
-                RoomScene(RoomSceneState(ScenePlace.HOUSE, saved), Modifier.weight(1f).fillMaxWidth(), config)
+                RoomScene(RoomSceneState(ScenePlace.HOUSE, saved), Modifier.weight(1f).fillMaxWidth(), config, view)
             } else {
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    RoomScene(
-                        RoomSceneState(ScenePlace.HOUSE, draft, selected = selected),
-                        Modifier.fillMaxSize(),
-                        config,
-                        onTapCell = { c ->
-                            val hit = c?.let { itemAt(draft, it) } ?: -1
-                            when {
-                                hit >= 0 -> selected = if (hit == selected) -1 else hit
-                                selected >= 0 && c != null -> setDraft(moveTo(draft, selected, c, config))
-                                else -> selected = -1
-                            }
-                        },
-                        onDragStartCell = { c ->
-                            val hit = c?.let { itemAt(draft, it) } ?: -1
-                            grab = if (hit >= 0 && c != null) {
-                                selected = hit
-                                (c.x - draft[hit].x) to (c.y - draft[hit].y)
-                            } else null
-                        },
-                        onDragCell = { c ->
-                            val g = grab
-                            val current = draftCodes?.let(::decode)
-                            if (g != null && c != null && current != null && selected >= 0) {
-                                val sameSurface = current[selected].surface == c.surface
-                                val target = if (sameSurface) c.copy(x = c.x - g.first, y = c.y - g.second) else c
-                                setDraft(moveTo(current, selected, target, config))
-                            }
-                        },
-                    )
-                    // 고른 가구 바로 아래에 두면 옮길 칸을 가려서, 장면 오른쪽 아래에 고정한다.
-                    if (selected in draft.indices) {
-                        Row(Modifier.align(Alignment.BottomEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (!specOf(draft[selected].itemId).onWall) {
+                RoomScene(
+                    RoomSceneState(ScenePlace.HOUSE, draft, selected = selected),
+                    Modifier.weight(1f).fillMaxWidth(),
+                    config,
+                    view,
+                    editMode = true,
+                    onSelect = { selected = it },
+                    canPlace = { pl -> placeAt(draft, RoomMap.indexOf(pl.id), pl, config) != null },
+                    onPlace = { pl ->
+                        val current = draftCodes?.let(::decode)
+                        val i = RoomMap.indexOf(pl.id)
+                        current?.let { placeAt(it, i, pl, config) }?.let { setDraft(it); select(i) }
+                    },
+                ) {
+                    // Under the selected piece, as in S-15-a; the engine projects its front corner.
+                    draft.getOrNull(selected)?.let { p ->
+                        val (x, y, z) = RoomMap.buttonAnchor(p, config)
+                        Row(
+                            Modifier.isoAnchor(x, y, z, Alignment.TopCenter).padding(top = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            if (!specOf(p.itemId).onWall) {
                                 SquareIconButton(R.drawable.house_ic_turn, stringResource(R.string.house_turn), {
-                                    rotate(draft, selected, config)?.let(::setDraft) ?: run { toast = noTurn }
+                                    rotateInRoom(draft, selected, config)?.let(::setDraft) ?: run { toast = noTurn }
                                 })
                             }
                             SquareIconButton(R.drawable.house_ic_box, stringResource(R.string.house_put_away), {
                                 setDraft(storeBack(draft, selected))
-                                selected = -1
+                                select(-1)
                             })
                         }
                     }
                 }
                 StorageCard(profile.items, draft, tab, { tab = it }) { id ->
-                    val placed = placeNew(draft, id, config)
+                    val placed = placeNewInRoom(draft, id, config)
                     if (placed == null) toast = noSpace else {
                         setDraft(placed)
-                        selected = placed.lastIndex
+                        select(placed.lastIndex)
                     }
                 }
             }
@@ -210,7 +204,7 @@ internal fun HouseScreenImpl(
             stringResource(R.string.house_reset),
             onConfirm = {
                 setDraft(reset())
-                selected = -1
+                select(-1)
                 askReset = false
                 toast = resetDone
             },

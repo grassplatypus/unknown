@@ -37,14 +37,28 @@ class IsoModelTest {
         assertEquals(3, IsoObject("p", IsoShapes.picture, 0, 1, rotation = 0, wall = WallSide.WEST).rot)
     }
 
+    /** Every scenery model stays inside its footprint, so hit tests and placement match what is drawn. */
+    @Test
+    fun sceneryModelsStayInsideTheirFootprints() {
+        val all = listOf(
+            IsoScenery.bigTree, IsoScenery.tree, IsoScenery.appleTree, IsoScenery.bush, IsoScenery.redFlowers,
+            IsoScenery.stall, IsoScenery.lightFence, IsoScenery.fencePost, IsoScenery.laneY, IsoScenery.parking,
+            IsoScenery.cloud, IsoScenery.islet, IsoScenery.window, IsoScenery.lantern, IsoScenery.tuft, IsoScenery.post(24),
+        ) + PlotStage.entries.flatMap { s -> Crop.entries.map { IsoShapes.plot(s, it) } }
+        for (s in all) for (c in s.parts) {
+            assertTrue("$c", c.x >= 0 && c.y >= 0 && c.z >= 0 && c.x + c.w <= s.w * VPC && c.y + c.d <= s.d * VPC)
+        }
+        assertTrue(IsoShapes.plot(PlotStage.GROWN, Crop.WHEAT) === IsoShapes.plot(PlotStage.GROWN, Crop.WHEAT))
+    }
+
     /** Voxel sizes the report quotes; a shape that outgrows its footprint fails here. */
     @Test
     fun voxelModelsHaveTheirFootprintAndExpectedHeight() {
         val expected = mapOf(
-            "it_sofa" to Triple(16, 8, 7), "it_plant" to Triple(8, 8, 11), "it_picture" to Triple(8, 8, 18),
+            "it_sofa" to Triple(16, 8, 7), "it_plant" to Triple(8, 8, 18), "it_picture" to Triple(8, 8, 6),
             "it_rug" to Triple(16, 16, 1), "it_lamp" to Triple(8, 8, 14), "it_shelf" to Triple(16, 8, 18),
-            "house" to Triple(24, 24, 24), "farm_empty" to Triple(8, 8, 1), "farm_sprout" to Triple(8, 8, 3),
-            "farm_growing" to Triple(8, 8, 4), "farm_grown" to Triple(8, 8, 7), "tree" to Triple(8, 8, 12),
+            "house" to Triple(24, 24, 24), "farm_empty" to Triple(8, 8, 1), "farm_sprout" to Triple(8, 8, 4),
+            "farm_growing" to Triple(8, 8, 8), "farm_grown" to Triple(8, 8, 10), "tree" to Triple(8, 8, 12),
             "fence" to Triple(8, 8, 6), "path" to Triple(8, 8, 1), "water" to Triple(16, 16, 1),
             "car" to Triple(16, 8, 8), "ch_sprout" to Triple(8, 8, 9), "ch_cat" to Triple(8, 8, 9),
             "ch_mush" to Triple(8, 8, 8), "ch_cloud" to Triple(8, 8, 6), "ch_firefly" to Triple(8, 8, 9),
