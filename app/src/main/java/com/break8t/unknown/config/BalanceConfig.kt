@@ -32,8 +32,8 @@ data class BalanceConfig(
     // 필드 드랍, 섬, 상점
     val mushroomDailyLimit: Int = 10,
     val mushroomRadiusM: Int = 20,
-    // 필드 드랍 지도를 처음 열 때와 현재 위치 버튼을 누를 때의 배율. 축척 막대가 이 거리를 가리킨다.
-    val fieldDropScaleM: Int = 100,
+    // 필드 드랍 지도를 처음 열 때와 현재 위치 버튼을 누를 때 카메라 높이(위에서 내려다봄, 기울이지 않음).
+    val fieldDropAltitudeM: Int = 50,
     val farmGridSize: Int = 3,
     val houseGridSize: Int = 5,
     val houseWallHeight: Int = 4,
