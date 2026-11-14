@@ -104,6 +104,28 @@ fun characterObject(
     )
 }
 
+/** 친구 섬 사진에서 친구 캐릭터의 엔진 id. 내 캐릭터는 "character"라서 둘이 겹치지 않는다. */
+const val FRIEND_CHARACTER_ID = "friend_character"
+
+/**
+ * 사진 장면에 세우는 캐릭터. [mine]은 내 캐릭터라 조종 중에만 고를 수 있고,
+ * [friend]는 친구 섬에 꺼내 둔 친구 캐릭터라 그 자리에 고정된다.
+ */
+fun photoObjects(
+    mine: SceneCharacter?, myCharacterId: String, grid: Int, baseScale: Float, editing: Boolean,
+    friend: SceneCharacter? = null, friendCharacterId: String = "",
+): List<IsoObject> = listOfNotNull(
+    friend?.let { characterObject(it, grid, baseScale, pickable = false, characterId = friendCharacterId).copy(id = FRIEND_CHARACTER_ID) },
+    mine?.let { characterObject(it, grid, baseScale, editing, myCharacterId) },
+)
+
+/** 친구 섬 사진에서 내 캐릭터가 처음 서는 곳: 섬 길 위, 친구 캐릭터가 처음 서는 곳보다 앞이라 겹치지 않는다. */
+fun friendPhotoSpawn(grid: Int): Pair<Float, Float> = MY_SPAWN_X / grid to MY_SPAWN_Y / grid
+
+// The road cell (IslandMap.ROAD_X = 4, y = 7): fixed in cells, since every island size keeps the road there.
+private const val MY_SPAWN_X = 4.5f
+private const val MY_SPAWN_Y = 7.5f
+
 /** A rectangle in dp. */
 data class FrameRect(val left: Float, val top: Float, val width: Float, val height: Float)
 

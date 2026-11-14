@@ -66,7 +66,7 @@ import com.break8t.unknown.ui.island.IslandMap
 import com.break8t.unknown.ui.island.plotViews
 import com.break8t.unknown.ui.island.PlotView
 import com.break8t.unknown.ui.scene.CharacterCard
-import com.break8t.unknown.ui.scene.allPoseOptions
+import com.break8t.unknown.ui.house.SceneCharacter
 import com.break8t.unknown.ui.iso.IsoHit
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -82,7 +82,7 @@ internal const val ISLAND_CHARACTER_SCALE = 1.6f // the island is framed smaller
 
 // Where a new character first stands: open ground in front of the house (S-16-f) or the room (S-16-g).
 internal val ISLAND_SPAWN = 0.27f to 0.36f
-private val HOUSE_SPAWN = 0.5f to 0.7f
+internal val HOUSE_SPAWN = 0.5f to 0.7f
 
 private val PhotoStateSaver = listSaver<PhotoState, Any>({ it.toList() }, { PhotoState.fromList(it) })
 
@@ -90,13 +90,18 @@ private val PhotoStateSaver = listSaver<PhotoState, Any>({ it.toList() }, { Phot
 @Composable
 fun PhotoScreen(inHouse: Boolean, onClose: () -> Unit) = PhotoScreenImpl(inHouse, onClose)
 
-/** 친구 섬에서 찍을 때의 섬과 캐릭터. 섬은 친구의 차와 크기로, 캐릭터는 친구 캐릭터(모든 포즈)로 그린다. */
-data class PhotoVisit(val carId: String, val islandSize: Int, val characterId: String, val plots: List<PlotView>, val night: Boolean)
+/**
+ * 친구 섬의 모습. 섬은 친구의 차, 크기, 게시판으로 그린다. [characterId]는 친구 캐릭터이고,
+ * [friendCharacter]는 친구 섬에 꺼내 둔 그 캐릭터의 자리, 크기, 포즈다(없으면 사진에 나오지 않는다).
+ */
+data class PhotoVisit(
+    val carId: String, val islandSize: Int, val characterId: String, val plots: List<PlotView>, val night: Boolean,
+    val board: Boolean = true, val friendCharacter: SceneCharacter? = null,
+)
 
-/** 친구 섬 사진 찍기. [start]는 친구 섬에 꺼내 둔 캐릭터 그대로다. 열 때마다 찍기 화면부터 보인다. */
+/** 친구 섬 사진 찍기. 친구 캐릭터는 둔 그대로 서 있고, "캐릭터"로는 내 캐릭터를 세운다. 열 때마다 찍기 화면부터 보인다. */
 @Composable
-fun FriendPhotoScreen(visit: PhotoVisit, start: PhotoState, onClose: () -> Unit) =
-    PhotoScreenImpl(false, onClose, start.copy(editing = false, shot = false), visit.night, visit)
+fun FriendPhotoScreen(visit: PhotoVisit, onClose: () -> Unit) = PhotoScreenImpl(false, onClose, PhotoState(), visit.night, visit)
 
 @Composable
 internal fun PhotoScreenImpl(
@@ -112,7 +117,7 @@ internal fun PhotoScreenImpl(
     var s by rememberSaveable(stateSaver = PhotoStateSaver) { mutableStateOf(start) }
     val isNight = night ?: remember { isNight(profile.islandRealTime, profile.islandNight, LocalTime.now().hour) }
     val islandGrid = visit?.islandSize ?: islandSize(profile.islandLevel, BalanceConfig.DEFAULT)
-    val characterId = visit?.characterId ?: profile.selectedCharacterId
+    val characterId = profile.selectedCharacterId
     val scene = RoomSceneState(
         place = if (inHouse) ScenePlace.HOUSE else ScenePlace.ISLAND,
         layout = if (inHouse) trimToOwned(layout, profile.items) else emptyList(),
@@ -122,11 +127,14 @@ internal fun PhotoScreenImpl(
         plots = visit?.plots ?: plotViews(plots, remember { System.currentTimeMillis() }),
         carId = visit?.carId ?: profile.selectedCarId,
         islandSize = islandGrid,
+        board = visit?.board,
     )
     // The house photo shows the room at the size the player bought; the island photo at the size the island was grown to.
     val config = BalanceConfig.DEFAULT.copy(houseGridSize = profile.houseGridSize)
     val grid = if (inHouse) config.houseGridSize else islandGrid
-    val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, s.editing, characterId) })
+    val extra = photoObjects(
+        s.character, characterId, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, s.editing, visit?.friendCharacter, visit?.characterId.orEmpty(),
+    )
     val view = rememberIsoViewState()
     // Inside the house the view stays where it is framed: dragging the screen does nothing (11/15 feedback).
     LaunchedEffect(view, inHouse) { if (inHouse) view.resetView() }
@@ -156,7 +164,12 @@ internal fun PhotoScreenImpl(
         }
         return
     }
-    val options = if (visit != null) allPoseOptions(visit.characterId) else poseOptions(profile.selectedCharacterId, profile.owned)
+    val options = poseOptions(profile.selectedCharacterId, profile.owned)
+    val spawn = when {
+        inHouse -> HOUSE_SPAWN
+        visit != null -> friendPhotoSpawn(grid)
+        else -> ISLAND_SPAWN
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // While editing, a tap on the ground moves the character there and dragging it carries it along.
         // The character's cell stays (0, 0) with its spot in ox/oy, so a dropped placement is the move in cells.
@@ -191,7 +204,7 @@ internal fun PhotoScreenImpl(
                 )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TopChip(stringResource(R.string.photo_character), { s = s.startCharacter(options, if (inHouse) HOUSE_SPAWN else ISLAND_SPAWN) })
+                    TopChip(stringResource(R.string.photo_character), { s = s.startCharacter(options, spawn) })
                     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         PrimaryIconButton(
                             stringResource(R.string.photo_shoot),
