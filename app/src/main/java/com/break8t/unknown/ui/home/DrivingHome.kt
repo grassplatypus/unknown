@@ -1,6 +1,5 @@
 package com.break8t.unknown.ui.home
 
-import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -116,7 +115,10 @@ private fun TopBar(showQr: Boolean, showEnd: Boolean, onQr: () -> Unit, onEnd: (
     verticalArrangement = Arrangement.spacedBy(12.fdp),
     itemVerticalAlignment = Alignment.CenterVertically,
 ) {
-    ScreenTitle(stringResource(R.string.route_home))
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.fdp)) {
+        Box(Modifier.size(48.fdp).clip(RoundedCornerShape(10.fdp)).background(AppColors.Success))
+        HomeText(stringResource(R.string.app_name), 34, weight = FontWeight.Bold)
+    }
     Spacer(Modifier.weight(1f))
     if (showQr) SecondaryButton(stringResource(R.string.home_passenger_qr), onQr)
     Tag(AppColors.Accent, Modifier.widthIn(min = 220.fdp)) {

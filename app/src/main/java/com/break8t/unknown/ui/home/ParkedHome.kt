@@ -159,7 +159,7 @@ private fun WeekRow(label: String, value: String) = Row(Modifier.fillMaxWidth(),
 }
 
 @Composable
-private fun VoiceGuideButton(on: Boolean, onChange: (Boolean) -> Unit) {
+internal fun VoiceGuideButton(on: Boolean, onChange: (Boolean) -> Unit) {
     val shape = RoundedCornerShape(16.fdp)
     val content = if (on) AppColors.Text else AppColors.TextSub
     Row(
