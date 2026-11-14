@@ -39,7 +39,7 @@ import com.break8t.unknown.ui.shop.ShopScreen
 import com.break8t.unknown.ui.theme.AppColors
 
 /** 섬 안에서 들어가는 화면. 사이드 메뉴에는 없고 섬 메뉴 아래에 쌓인다. */
-enum class IslandSub { SHOP, INVENTORY, HOUSE, PHOTO_ISLAND, PHOTO_HOUSE }
+enum class IslandSub { SHOP, INVENTORY, HOUSE, PHOTO_ISLAND, PHOTO_HOUSE, SHOP_FROM_SETTINGS }
 
 /**
  * 사이드 메뉴와 본문. 덮어야 하면 본문을 아예 그리지 않는다. 대화상자는 별도 창이라
@@ -122,6 +122,8 @@ private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav) 
     when {
         route == Route.ISLAND && sub == IslandSub.SHOP ->
             ShopScreen(onBack = nav.back, onOpenInventory = { nav.open(IslandSub.INVENTORY) })
+        route == Route.ISLAND && sub == IslandSub.SHOP_FROM_SETTINGS ->
+            ShopScreen(onBack = { nav.go(Route.SETTINGS) }, onOpenInventory = { nav.open(IslandSub.INVENTORY) }, fromVoicePacks = true)
         route == Route.ISLAND && sub == IslandSub.INVENTORY ->
             InventoryScreen(onBack = nav.back, onOpenShop = { nav.open(IslandSub.SHOP) }, onPlaceFurniture = { nav.open(IslandSub.HOUSE) })
         route == Route.ISLAND && sub == IslandSub.HOUSE ->
@@ -141,6 +143,6 @@ private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav) 
         route == Route.HOME -> HomeScreen(mode, nav.go, nav.share)
         route == Route.FIELD_DROP -> FieldDropScreen()
         route == Route.SETTINGS ->
-            SettingsScreen(onSwitchAccount = nav.signOut, onLogout = nav.signOut, onOpenShop = { nav.open(IslandSub.SHOP) })
+            SettingsScreen(onSwitchAccount = nav.signOut, onLogout = nav.signOut, onOpenShop = { nav.open(IslandSub.SHOP_FROM_SETTINGS) })
     }
 }

@@ -15,13 +15,12 @@ import com.break8t.unknown.data.Profile
 @Composable
 private fun Shop(
     tab: ShopTab,
-    playingId: String? = null,
     profile: Profile = Profile(),
     toast: String? = null,
     dialog: (@Composable ColumnScope.() -> Unit)? = null,
 ) = PreviewFrame(dialog) {
     Box(Modifier.fillMaxSize()) {
-        ShopContent(profile, tab, playingId, {}, {}, {}, {}, {})
+        ShopContent(profile, tab, {}, {}, {}, {})
         ToastHost(toast) {}
     }
 }
@@ -32,18 +31,19 @@ private fun buyBody(id: String, qty: Int = 1, coins: Int = Profile().coins): @Co
 
 @ScreenPreviews @Composable private fun S19aFurniture() = Shop(ShopTab.FURNITURE)
 @ScreenPreviews @Composable private fun S19bSeed() = Shop(ShopTab.SEED)
-@ScreenPreviews @Composable private fun S19cVoice() = Shop(ShopTab.VOICE)
-@ScreenPreviews @Composable private fun S19dVoicePreview() = Shop(ShopTab.VOICE, playingId = "voice_sprout")
 @ScreenPreviews @Composable private fun S19eCharacter() = Shop(ShopTab.CHARACTER)
+@ScreenPreviews @Composable private fun S19ePose() = Shop(ShopTab.POSE)
+@ScreenPreviews @Composable
+private fun S19eFireflyOwned() = Shop(ShopTab.CHARACTER, Profile(owned = Profile().owned + "ch_firefly"))
+@ScreenPreviews @Composable
+private fun S19FromVoicePacks() = PreviewFrame {
+    ShopContent(Profile(), ShopTab.CHARACTER, {}, {}, {}, {}, backLabel = R.string.shop_back_voice)
+}
 @ScreenPreviews @Composable private fun D14aBuy() = Shop(ShopTab.FURNITURE, dialog = buyBody("it_rug", qty = 2))
 @ScreenPreviews @Composable private fun D14bShort() = Shop(ShopTab.FURNITURE, dialog = buyBody("it_rug", qty = 4))
-@ScreenPreviews @Composable private fun D15Voice() = Shop(ShopTab.VOICE, dialog = buyBody("voice_sprout"))
 @ScreenPreviews @Composable private fun D17aCharacter() = Shop(ShopTab.CHARACTER, dialog = buyBody("ch_firefly"))
 @ScreenPreviews @Composable private fun D17bShort() = Shop(ShopTab.CHARACTER, dialog = buyBody("ch_firefly", coins = 150))
-@ScreenPreviews @Composable private fun D19Pose() = Shop(ShopTab.CHARACTER, dialog = buyBody("pose_jump"))
-
-@ScreenPreviews @Composable
-private fun D16SwitchVoice() = Shop(ShopTab.VOICE, dialog = { SwitchDialogBody(Catalog.item("voice_sprout")!!, {}, {}) })
+@ScreenPreviews @Composable private fun D19Pose() = Shop(ShopTab.POSE, dialog = buyBody("pose_jump"))
 
 @ScreenPreviews @Composable
 private fun D18SwitchCharacter() = Shop(ShopTab.CHARACTER, dialog = { SwitchDialogBody(Catalog.item("ch_firefly")!!, {}, {}) })
@@ -52,4 +52,4 @@ private fun D18SwitchCharacter() = Shop(ShopTab.CHARACTER, dialog = { SwitchDial
 private fun T08Bought() = Shop(ShopTab.FURNITURE, toast = stringResource(R.string.shop_toast_bought, "러그", 2))
 
 @ScreenPreviews @Composable
-private fun T09Pose() = Shop(ShopTab.CHARACTER, toast = stringResource(R.string.shop_toast_pose, "점프"))
+private fun T09Pose() = Shop(ShopTab.POSE, toast = stringResource(R.string.shop_toast_pose, "점프"))

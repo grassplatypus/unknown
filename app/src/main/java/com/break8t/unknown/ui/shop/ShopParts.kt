@@ -74,7 +74,7 @@ internal fun shopImage(id: String): Int? = when (id) {
     "it_rug" -> R.drawable.shop_it_rug
     "it_lamp" -> R.drawable.shop_it_lamp
     "it_shelf" -> R.drawable.shop_it_shelf
-    "ch_sprout", "voice_default", "voice_sprout" -> R.drawable.shop_ch_sprout
+    "ch_sprout" -> R.drawable.shop_ch_sprout
     "ch_cloud" -> R.drawable.shop_ch_cloud
     "pose_wave" -> R.drawable.shop_pose_wave
     "pose_jump" -> R.drawable.shop_pose_jump

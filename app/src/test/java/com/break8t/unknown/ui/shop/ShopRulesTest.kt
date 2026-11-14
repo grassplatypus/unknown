@@ -2,6 +2,7 @@ package com.break8t.unknown.ui.shop
 
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.config.Catalog
+import com.break8t.unknown.config.ItemKind
 import com.break8t.unknown.data.DemoState
 import com.break8t.unknown.data.Profile
 import org.junit.Assert.assertEquals
@@ -11,7 +12,7 @@ class ShopRulesTest {
     private val config = BalanceConfig(shopMaxQty = 3)
     private val rug = Catalog.item("it_rug")!! // 80
     private val firefly = Catalog.item("ch_firefly")!! // 200
-    private val voice = Catalog.item("voice_sprout")!! // 200
+    private val pose = Catalog.item("pose_jump")!! // 50
 
     private fun state(coins: Int = 1000) = DemoState(Profile(coins = coins))
 
@@ -66,26 +67,55 @@ class ShopRulesTest {
         assertEquals(1000, s.profile.value.coins)
     }
 
-    @Test fun switchingAfterPurchaseSetsTheRightField() {
+    @Test fun voicePacksAreNotSoldAlone() {
         val s = state()
-        buy(s, voice, 1, config)
-        switchTo(s, voice)
-        assertEquals("voice_sprout", s.profile.value.voicePackId)
+        for (v in Catalog.ofKind(ItemKind.VOICE_PACK)) assertEquals(BuyResult.NOT_FOR_SALE, buy(s, v, 1, config))
+        assertEquals(1000, s.profile.value.coins)
+        assertEquals(false, ShopTab.entries.any { it.kind == ItemKind.VOICE_PACK })
+    }
+
+    @Test fun sellableCharactersComeWithTheirOwnVoice() {
+        for (c in Catalog.ofKind(ItemKind.CHARACTER).filter { it.price != null }) {
+            val v = Catalog.item(c.voiceId!!)!!
+            assertEquals(ItemKind.VOICE_PACK, v.kind)
+            assertEquals(c, Catalog.characterOf(v.id))
+        }
+    }
+
+    @Test fun switchingToABoughtCharacterAlsoSwitchesItsVoice() {
+        val s = state()
         buy(s, firefly, 1, config)
         switchTo(s, firefly)
         assertEquals("ch_firefly", s.profile.value.selectedCharacterId)
+        assertEquals("voice_firefly", s.profile.value.voicePackId)
     }
 
-    @Test fun onlyVoicePacksAndCharactersAskToSwitch() {
-        assertEquals(null, askAfterBuying(rug))
-        assertEquals(null, askAfterBuying(Catalog.item("pose_jump")!!))
-        assertEquals(voice.kind, askAfterBuying(voice))
-        assertEquals(firefly.kind, askAfterBuying(firefly))
+    @Test fun switchingToACharacterWithoutVoiceKeepsTheVoice() {
+        val s = state()
+        switchTo(s, Catalog.item("ch_mush")!!)
+        assertEquals("ch_mush", s.profile.value.selectedCharacterId)
+        assertEquals("voice_default", s.profile.value.voicePackId)
+    }
+
+    @Test fun onlyCharactersAskToSwitch() {
+        assertEquals(false, asksToSwitch(rug))
+        assertEquals(false, asksToSwitch(pose))
+        assertEquals(true, asksToSwitch(firefly))
+    }
+
+    @Test fun poseIsItsOwnProduct() {
+        val s = state()
+        assertEquals(BuyResult.BOUGHT, buy(s, pose, 1, config))
+        assertEquals(950, s.profile.value.coins)
+        assertEquals(true, "pose_jump" in s.profile.value.owned)
+        assertEquals(s.profile.value.selectedCharacterId, "ch_sprout")
     }
 
     @Test fun tabsCountCatalogItems() {
-        assertEquals(Catalog.items.count { it.kind == com.break8t.unknown.config.ItemKind.SEED }, shopItems(ShopTab.SEED).size)
-        assertEquals(10, shopItems(ShopTab.CHARACTER).size) // 5 characters + 5 poses
+        assertEquals(Catalog.items.count { it.kind == ItemKind.SEED }, shopItems(ShopTab.SEED).size)
+        assertEquals(5, shopItems(ShopTab.CHARACTER).size)
+        assertEquals(5, shopItems(ShopTab.POSE).size)
+        assertEquals(listOf(ItemKind.CHARACTER), shopItems(ShopTab.CHARACTER).map { it.kind }.distinct())
     }
 
     @Test fun josaFollowsLastSyllable() {

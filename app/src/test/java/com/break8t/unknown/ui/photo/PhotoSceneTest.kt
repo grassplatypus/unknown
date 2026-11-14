@@ -40,6 +40,14 @@ class PhotoSceneTest {
         assertEquals(3, of("pose_back", turns = 1).rotation)
     }
 
+    @Test fun aPoseIsPutOnTheChosenCharacter() {
+        fun cat(id: String) = characterObject(SceneCharacter(id, 0.5f, 0.5f, CharacterSizes[1], 0), 5, characterId = "ch_cat")
+        assertEquals(IsoShapes.cat, cat("ch_cat").shape)
+        assertEquals(IsoShapes.posed(IsoShapes.cat, "pose_wave", com.break8t.unknown.ui.iso.IsoPalette.Orange), cat("pose_wave").shape)
+        assertEquals(IsoShapes.cat, cat("pose_back").shape)
+        assertEquals(2, cat("pose_back").rotation)
+    }
+
     @Test fun aNewCharacterStandsAtTheSpawnAndKeepsItsSpotAfterwards() {
         val s = PhotoState().startCharacter(listOf("ch_sprout"), 0.27f to 0.36f)
         assertEquals(0.27f, s.x, 1e-4f)

@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,7 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
 import com.break8t.unknown.config.Catalog
+import com.break8t.unknown.data.DemoState
 import com.break8t.unknown.data.LocalDemoState
+import com.break8t.unknown.data.Profile
 import com.break8t.unknown.ui.components.AppCard
 import com.break8t.unknown.ui.components.BorderWidth
 import com.break8t.unknown.ui.components.ControlShape
@@ -110,7 +113,7 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
         carId = profile.selectedCarId,
     )
     val grid = if (inHouse) BalanceConfig.DEFAULT.houseGridSize else IslandMap.SIZE
-    val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, pickable = s.editing) })
+    val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, s.editing, profile.selectedCharacterId) })
     val view = rememberIsoViewState()
     // While the character is being set up it carries the scene's selection frame, as S-16-f shows.
     // Edit mode lets a tap select furniture or nothing, so the frame is put back on the character.
@@ -223,7 +226,8 @@ private fun CharacterCard(s: PhotoState, options: List<String>, onChange: (Photo
                 Row(Modifier.widthIn(max = 620.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (id in options) {
                         val on = s.poseId == id
-                        val model = characterObject(SceneCharacter(id, 0f, 0f, CharacterSizes[1], 0), 1)
+                        // options.first() is the chosen character itself (see poseOptions).
+                        val model = characterObject(SceneCharacter(id, 0f, 0f, CharacterSizes[1], 0), 1, characterId = options.first())
                         IsoThumbnail(
                             model.shape,
                             Modifier
@@ -268,6 +272,11 @@ private fun Labeled(label: String, content: @Composable () -> Unit) {
 @WindowPreviews @Composable private fun NightPreview() = PreviewFrame { PhotoScreenImpl(false, {}, night = true) }
 @WindowPreviews @Composable private fun CharacterPreview() =
     PreviewFrame { PhotoScreenImpl(false, {}, PhotoState(poseId = "pose_wave", editing = true), night = false) }
+@WindowPreviews @Composable private fun CatPosePreview() = PreviewFrame {
+    CompositionLocalProvider(LocalDemoState provides DemoState(Profile(selectedCharacterId = "ch_cat"))) {
+        PhotoScreenImpl(false, {}, PhotoState(poseId = "pose_wave", editing = true), night = false)
+    }
+}
 @WindowPreviews @Composable private fun InHousePreview() = PreviewFrame { PhotoScreenImpl(true, {}, PhotoState(poseId = "pose_wave"), night = false) }
 @WindowPreviews @Composable private fun InHouseRotatedPreview() =
     PreviewFrame { PhotoScreenImpl(true, {}, PhotoState(rotation = 1, poseId = "pose_wave"), night = false) }

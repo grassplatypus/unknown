@@ -25,10 +25,11 @@ class PhotoRulesTest {
         assertEquals(0f, s.y)
     }
 
-    @Test fun posesOnlyOwnedAndOnlyForSprout() {
+    @Test fun ownedPosesGoOnAnyCharacter() {
         val owned = setOf("pose_wave", "pose_back")
         assertEquals(listOf("ch_sprout", "pose_wave", "pose_back"), poseOptions("ch_sprout", owned))
-        assertEquals(listOf("ch_cat"), poseOptions("ch_cat", owned))
+        assertEquals(listOf("ch_cat", "pose_wave", "pose_back"), poseOptions("ch_cat", owned))
+        assertEquals(listOf("ch_cat"), poseOptions("ch_cat", emptySet()))
     }
 
     @Test fun startCharacterUsesFirstOptionOnce() {
