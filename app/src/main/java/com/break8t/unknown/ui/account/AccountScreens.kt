@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.break8t.unknown.BuildConfig
 import com.break8t.unknown.R
 import com.break8t.unknown.ui.components.PixelBusy
 import com.break8t.unknown.ui.components.AppCard
@@ -63,8 +64,21 @@ import com.break8t.unknown.ui.theme.AppColors
 /** S-01: 안전 안내와 입장 준비 막대. */
 @Composable
 internal fun SplashContent(progress: Float) = BoxWithConstraints(Modifier.fillMaxSize()) {
+    SplashBody(progress, maxWidth >= WideWidth)
+    AppLogo(Modifier.align(Alignment.BottomEnd))
+    Text(
+        stringResource(
+            R.string.account_build_info, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, BuildConfig.GIT_SHA, BuildConfig.BUILD_TIME,
+        ) + if (BuildConfig.DEBUG) " · debug" else "",
+        Modifier.align(Alignment.BottomStart).padding(16.dp),
+        color = AppColors.TextSub,
+        fontSize = 22.sp,
+    )
+}
+
+@Composable
+private fun SplashBody(progress: Float, wide: Boolean) {
     // 세로 창에서는 문구가 줄바꿈되어 길어지므로 여백을 줄여 진행 막대가 한 화면에 들어오게 한다.
-    val wide = maxWidth >= WideWidth
     // Figma S-01의 바탕은 다른 계정 화면과 달리 #F1E2BB다.
     Column(
         Modifier.fillMaxSize().background(AppColors.Splash).verticalScroll(rememberScrollState()),
@@ -136,7 +150,6 @@ internal fun SplashContent(progress: Float) = BoxWithConstraints(Modifier.fillMa
             }
         }
     }
-    AppLogo(Modifier.align(Alignment.BottomEnd))
 }
 
 /** 자동 로그인 카운트다운에 보일 값. */

@@ -1,3 +1,6 @@
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Properties
 
 plugins {
@@ -25,6 +28,14 @@ android {
         versionName = "0.1"
         // 차량은 arm64, 에뮬레이터는 x86_64다. 나머지 ABI는 APK만 키운다(MapLibre 네이티브 라이브러리).
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        // 스플래시 왼쪽 아래에 보여서, 지금 깔린 것이 어느 빌드인지 눈으로 확인한다.
+        val built = ZonedDateTime.now(ZoneId.of("Asia/Seoul"))
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+        val sha = runCatching {
+            providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }.standardOutput.asText.get().trim()
+        }.getOrDefault("unknown")
+        buildConfigField("String", "BUILD_TIME", "\"$built\"")
+        buildConfigField("String", "GIT_SHA", "\"$sha\"")
     }
     signingConfigs {
         if (keystore.isNotEmpty()) create("release") {
@@ -45,7 +56,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
 }
 
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
