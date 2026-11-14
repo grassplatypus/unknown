@@ -23,6 +23,8 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1"
+        // 차량은 arm64, 에뮬레이터는 x86_64다. 나머지 ABI는 APK만 키운다(MapLibre 네이티브 라이브러리).
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
     signingConfigs {
         if (keystore.isNotEmpty()) create("release") {
