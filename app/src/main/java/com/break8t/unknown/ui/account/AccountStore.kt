@@ -45,6 +45,11 @@ object AccountStore {
         if (canDelete(account, lastUsedId)) accounts = accounts - account
     }
 
+    /** 설정에서 닉네임을 바꾸면 계정 선택 카드에도 같은 이름이 보인다. */
+    fun rename(id: String, nickname: String) {
+        accounts = accounts.map { if (it.id == id) it.copy(nickname = nickname) else it }
+    }
+
     fun setPin(id: String, pin: String?) {
         accounts = accounts.map { if (it.id == id) it.copy(pin = pin) else it }
     }

@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
+import com.break8t.unknown.ui.account.AccountStore
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.config.Catalog
 import com.break8t.unknown.config.CatalogItem
@@ -192,6 +193,7 @@ private fun SettingsContent(
                 toSave = { nicknameToSave(it, cfg.nicknameMax) },
                 onSave = { v ->
                     demo.update { it.copy(nickname = v) }
+                    AccountStore.lastUsedId?.let { AccountStore.rename(it, v) }
                     page = Page.MAIN
                     tab = Tab.ACCOUNT
                     toast = nicknameSaved
