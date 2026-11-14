@@ -69,5 +69,6 @@ class FriendVisitTest {
 
     @Test fun friendHouseGoesBackToTheFriendIsland() {
         assertEquals(Page.FRIEND_ISLAND, backFrom(Page.FRIEND_HOUSE))
+        assertEquals(Page.FRIEND_HOUSE, backFrom(Page.FRIEND_HOUSE_PHOTO))
     }
 }

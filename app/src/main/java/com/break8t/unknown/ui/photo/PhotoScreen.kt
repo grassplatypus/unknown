@@ -67,6 +67,7 @@ import com.break8t.unknown.ui.island.plotViews
 import com.break8t.unknown.ui.island.PlotView
 import com.break8t.unknown.ui.scene.CharacterCard
 import com.break8t.unknown.ui.house.SceneCharacter
+import com.break8t.unknown.ui.house.Placed
 import com.break8t.unknown.ui.iso.IsoHit
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -83,6 +84,8 @@ internal const val ISLAND_CHARACTER_SCALE = 1.6f // the island is framed smaller
 // Where a new character first stands: open ground in front of the house (S-16-f) or the room (S-16-g).
 internal val ISLAND_SPAWN = 0.27f to 0.36f
 internal val HOUSE_SPAWN = 0.5f to 0.7f
+// In a friend's house the friend's character first stands at HOUSE_SPAWN, so mine starts beside it.
+internal val FRIEND_HOUSE_MY_SPAWN = 0.3f to 0.75f
 
 private val PhotoStateSaver = listSaver<PhotoState, Any>({ it.toList() }, { PhotoState.fromList(it) })
 
@@ -92,16 +95,18 @@ fun PhotoScreen(inHouse: Boolean, onClose: () -> Unit) = PhotoScreenImpl(inHouse
 
 /**
  * 친구 섬의 모습. 섬은 친구의 차, 크기, 게시판으로 그린다. [characterId]는 친구 캐릭터이고,
- * [friendCharacter]는 친구 섬에 꺼내 둔 그 캐릭터의 자리, 크기, 포즈다(없으면 사진에 나오지 않는다).
+ * [friendCharacter]는 친구 섬이나 집에 꺼내 둔 그 캐릭터의 자리, 크기, 포즈다(없으면 사진에 나오지 않는다).
+ * [houseLayout]은 친구 집 사진에서 쓰는 친구의 가구 배치다.
  */
 data class PhotoVisit(
     val carId: String, val islandSize: Int, val characterId: String, val plots: List<PlotView>, val night: Boolean,
-    val board: Boolean = true, val friendCharacter: SceneCharacter? = null,
+    val board: Boolean = true, val friendCharacter: SceneCharacter? = null, val houseLayout: List<Placed> = emptyList(),
 )
 
-/** 친구 섬 사진 찍기. 친구 캐릭터는 둔 그대로 서 있고, "캐릭터"로는 내 캐릭터를 세운다. 열 때마다 찍기 화면부터 보인다. */
+/** 친구 섬이나 친구 집([inHouse]) 사진 찍기. 친구 캐릭터는 둔 그대로 서 있고, "캐릭터"로는 내 캐릭터를 세운다. 열 때마다 찍기 화면부터 보인다. */
 @Composable
-fun FriendPhotoScreen(visit: PhotoVisit, onClose: () -> Unit) = PhotoScreenImpl(false, onClose, PhotoState(), visit.night, visit)
+fun FriendPhotoScreen(visit: PhotoVisit, onClose: () -> Unit, inHouse: Boolean = false) =
+    PhotoScreenImpl(inHouse, onClose, PhotoState(), visit.night, visit)
 
 @Composable
 internal fun PhotoScreenImpl(
@@ -120,7 +125,11 @@ internal fun PhotoScreenImpl(
     val characterId = profile.selectedCharacterId
     val scene = RoomSceneState(
         place = if (inHouse) ScenePlace.HOUSE else ScenePlace.ISLAND,
-        layout = if (inHouse) trimToOwned(layout, profile.items) else emptyList(),
+        layout = when {
+            !inHouse -> emptyList()
+            visit != null -> visit.houseLayout
+            else -> trimToOwned(layout, profile.items)
+        },
         camera = s.camera,
         night = isNight,
         character = s.character,
@@ -129,8 +138,8 @@ internal fun PhotoScreenImpl(
         islandSize = islandGrid,
         board = visit?.board,
     )
-    // The house photo shows the room at the size the player bought; the island photo at the size the island was grown to.
-    val config = BalanceConfig.DEFAULT.copy(houseGridSize = profile.houseGridSize)
+    // My house photo shows the room at the size I bought (a friend's room is the default size); the island at its grown size.
+    val config = if (visit != null) BalanceConfig.DEFAULT else BalanceConfig.DEFAULT.copy(houseGridSize = profile.houseGridSize)
     val grid = if (inHouse) config.houseGridSize else islandGrid
     val extra = photoObjects(
         s.character, characterId, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, s.editing, visit?.friendCharacter, visit?.characterId.orEmpty(),
@@ -166,6 +175,7 @@ internal fun PhotoScreenImpl(
     }
     val options = poseOptions(profile.selectedCharacterId, profile.owned)
     val spawn = when {
+        inHouse && visit != null -> FRIEND_HOUSE_MY_SPAWN
         inHouse -> HOUSE_SPAWN
         visit != null -> friendPhotoSpawn(grid)
         else -> ISLAND_SPAWN

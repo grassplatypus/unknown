@@ -142,17 +142,21 @@ fun FriendIslandScreen(
     }
 }
 
-/** 친구 집 구경. 가구는 친구의 견본 배치 그대로 두고, 친구 섬처럼 보관함에서 친구 캐릭터를 꺼내 조종한다. */
+/** 친구 집 구경. 가구는 친구의 견본 배치 그대로 두고, 친구 섬처럼 보관함에서 친구 캐릭터를 꺼내 조종하고 사진을 찍는다. */
 @Composable
 fun FriendHouseScreen(
     friendId: String,
     characterId: String,
     stage: SceneStage,
     onStage: (SceneStage) -> Unit,
+    onPhoto: () -> Unit,
     header: @Composable () -> Unit,
 ) {
     val layout = remember(friendId) { friendHouseLayout(friendId) }
-    FriendScene(RoomSceneState(ScenePlace.HOUSE, layout), friendHouseBounds(), HOUSE_SPAWN, characterId, stage, onStage, header)
+    FriendScene(
+        RoomSceneState(ScenePlace.HOUSE, layout), friendHouseBounds(), HOUSE_SPAWN, characterId, stage, onStage, header,
+        chips = { TopChip(stringResource(R.string.island_photo), { onStage(stage.select(null)); onPhoto() }, icon = R.drawable.house_ic_cam) },
+    )
 }
 
 /** 친구 섬과 친구 집이 같이 쓰는 장면: 잠긴 장면 위에 친구 캐릭터를 꺼내 조종한다. */
@@ -205,7 +209,7 @@ private fun FriendScene(
             header()
             Spacer(Modifier.weight(1f))
             chips()
-            TopChip(stringResource(R.string.scene_stash), { onStage(stage.togglePanel()) }, icon = R.drawable.house_ic_box)
+            TopChip(stringResource(R.string.scene_stash), { onStage(stage.togglePanel()) }, icon = R.drawable.house_ic_box, on = stage.panelOpen)
         }
         Spacer(Modifier.weight(1f))
         val piece = stage.piece(selected)
@@ -243,7 +247,7 @@ private fun FriendIslandPreviewOf(start: SceneStage, visit: PhotoVisit = preview
 @Composable
 private fun FriendHousePreviewOf(start: SceneStage) = IslandPreviewFrame {
     var stage by remember { mutableStateOf(start) }
-    FriendHouseScreen(PREVIEW_FRIEND, "ch_cat", stage, { stage = it }) { ScreenTitle("도토리길의 집") }
+    FriendHouseScreen(PREVIEW_FRIEND, "ch_cat", stage, { stage = it }, {}) { ScreenTitle("도토리길의 집") }
 }
 
 @IslandPreviews @Composable private fun FriendIslandPreview() = FriendIslandPreviewOf(SceneStage())
@@ -255,6 +259,9 @@ private fun FriendHousePreviewOf(start: SceneStage) = IslandPreviewFrame {
 @IslandPreviews @Composable private fun FriendStashEmptyPreview() = FriendIslandPreviewOf(outStage.togglePanel())
 @IslandPreviews @Composable private fun FriendHousePreview() = FriendHousePreviewOf(SceneStage())
 @IslandPreviews @Composable private fun FriendHouseSteerPreview() = FriendHousePreviewOf(houseOut)
+@IslandPreviews @Composable private fun FriendHousePhotoPreview() = IslandPreviewFrame {
+    FriendPhotoScreen(previewVisit.copy(houseLayout = friendHouseLayout(PREVIEW_FRIEND), friendCharacter = houseOut.photoCharacter("ch_cat")), {}, inHouse = true)
+}
 @IslandPreviews @Composable private fun FriendPhotoPreview() = IslandPreviewFrame { FriendPhotoScreen(photoVisit, {}) }
 @IslandPreviews @Composable private fun FriendPhotoBothPreview() = IslandPreviewFrame {
     PhotoScreenImpl(false, {}, PhotoState(poseId = "ch_sprout", editing = true).copy(x = 0.375f, y = 0.375f), photoVisit.night, photoVisit)

@@ -52,8 +52,9 @@ internal val ChipGap = 24.dp
 
 /** 위쪽 칩. onClick이 없으면 지금 화면 이름을 보이는 칩이다(Figma의 노란 칩). */
 @Composable
-internal fun TopChip(text: String, onClick: (() -> Unit)?, modifier: Modifier = Modifier, @DrawableRes icon: Int? = null) {
-    val selected = onClick == null
+internal fun TopChip(text: String, onClick: (() -> Unit)?, modifier: Modifier = Modifier, @DrawableRes icon: Int? = null, on: Boolean = false) {
+    // [on]은 그 칩이 연 패널이 열려 있다는 표시다. 다시 누르면 닫히므로 누를 수 있는 채로 둔다.
+    val selected = onClick == null || on
     Row(
         modifier
             .heightIn(min = 100.dp)
