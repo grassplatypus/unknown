@@ -174,6 +174,12 @@ class AccountRulesTest {
         assertTrue(canDelete(accounts[1], accounts[0].id))
     }
 
+    @Test fun pinAlertEveryThirdFailure() {
+        val c = BalanceConfig(pinFailAlertCount = 3)
+        assertEquals(listOf(false, false, false, true, false, false, true), (0..6).map { pinAlertDue(it, c) })
+        assertFalse(pinAlertDue(3, BalanceConfig(pinFailAlertCount = 0)))
+    }
+
     @Test fun splashProgressStepsUpOverHold() {
         val c = BalanceConfig(splashHoldSec = 1)
         assertEquals(0.25f, splashProgress(0, c))

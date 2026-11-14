@@ -23,6 +23,9 @@
     <string name="account_pin_new">새 PIN %1$d자리를 눌러 주세요</string>
     <string name="account_pin_again">한 번 더 눌러 주세요</string>
     <string name="account_pin_mismatch">두 번 누른 PIN이 달라요.</string>
+    <string name="account_pin_alert_title">휴대폰으로 알렸어요</string>
+    <string name="account_pin_alert_body">PIN이 %1$d번 틀려서 계정 주인의 휴대폰 앱으로 알림을 보냈어요.</string>
+    <string name="account_pin_alert_ok">확인</string>
     <string name="account_pin_current">지금 쓰는 PIN을 눌러 주세요</string>
     <string name="account_key_delete">한 글자 삭제</string>
     <string name="account_park_hint_pin">주차(P)하면 PIN을 누를 수 있어요</string>

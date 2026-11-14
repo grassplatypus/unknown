@@ -68,7 +68,13 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
             if (route == Route.ISLAND && it != Route.ISLAND) holder.removeState(islandKey)
             route = it; sub = null; shareKind = null
         },
-        open = { route = Route.ISLAND; sub = it },
+        open = {
+            // 사진은 열 때마다 새로 찍는다. 집은 섬에서 들어올 때만 시점을 처음으로 돌린다(보관함, 사진에서 돌아올 때는 유지).
+            if (it == IslandSub.PHOTO_ISLAND || it == IslandSub.PHOTO_HOUSE || (it == IslandSub.HOUSE && sub == null)) {
+                holder.removeState("${Route.ISLAND.name}/${it.name}")
+            }
+            route = Route.ISLAND; sub = it
+        },
         back = { sub = null },
         signOut = onSignOut,
         share = { isPostcard, title, subtitle, image ->

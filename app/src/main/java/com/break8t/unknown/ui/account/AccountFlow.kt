@@ -27,6 +27,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.break8t.unknown.R
 import com.break8t.unknown.config.BalanceConfig
+import com.break8t.unknown.ui.components.AppDialog
 import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.drive.DriveMode
 import com.break8t.unknown.drive.LocalUxLimits
@@ -273,6 +274,7 @@ private fun PinCheckStep(
     onAccepted: () -> Unit,
 ) {
     var input by rememberSaveable(stateSaver = PinInputSaver) { mutableStateOf(PinInput()) }
+    var alert by rememberSaveable { mutableStateOf(false) }
     PinContent(
         backLabel, onBack, account, prompt, input, config.pinLength,
         errorText = stringResource(R.string.account_pin_wrong),
@@ -280,10 +282,19 @@ private fun PinCheckStep(
         onDigit = { d ->
             val r = enterPin(input, d, account.pin.orEmpty(), config.pinLength)
             input = r.input
-            if (r.accepted) onAccepted()
+            if (r.accepted) onAccepted() else if (r.input.error && pinAlertDue(r.input.failures, config)) alert = true
         },
         onDelete = { input = input.backspace() },
     )
+    if (alert) {
+        AppDialog(
+            title = stringResource(R.string.account_pin_alert_title),
+            body = stringResource(R.string.account_pin_alert_body, input.failures),
+            confirmText = stringResource(R.string.account_pin_alert_ok),
+            onConfirm = { alert = false },
+            onDismiss = { alert = false },
+        )
+    }
 }
 
 @Composable

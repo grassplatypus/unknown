@@ -30,7 +30,7 @@ fun nextDemoAccount(accounts: List<Account>, config: BalanceConfig): Account? =
 /** 지금 쓰는 계정은 삭제하지 않는다(Figma S-05). */
 fun canDelete(account: Account, currentId: String?): Boolean = account.id != currentId
 
-/** 눌러 둔 PIN 숫자와 틀린 횟수. 틀린 횟수가 쌓여도 잠그지 않는다(시연에는 알릴 휴대폰이 없다). */
+/** 눌러 둔 PIN 숫자와 틀린 횟수. 틀린 횟수가 쌓여도 잠그지 않고, [pinAlertDue]일 때 휴대폰 알림 창만 띄운다. */
 data class PinInput(val digits: String = "", val error: Boolean = false, val failures: Int = 0) {
     fun press(digit: Char, length: Int): PinInput =
         if (digits.length >= length) this else copy(digits = digits + digit, error = false)
@@ -42,6 +42,10 @@ data class PinInput(val digits: String = "", val error: Boolean = false, val fai
     /** 틀렸을 때: 칸을 비우고 오류를 보인다. */
     fun rejected(): PinInput = PinInput(error = true, failures = failures + 1)
 }
+
+/** pinFailAlertCount번 틀릴 때마다 계정 주인의 휴대폰 앱으로 알린다. 시연에는 휴대폰 앱이 없어 창만 띄운다. */
+fun pinAlertDue(failures: Int, config: BalanceConfig): Boolean =
+    failures > 0 && config.pinFailAlertCount > 0 && failures % config.pinFailAlertCount == 0
 
 data class PinResult(val input: PinInput, val accepted: Boolean)
 

@@ -16,7 +16,7 @@ data class BalanceConfig(
     // 계정
     val maxAccounts: Int = 5,
     val autoLoginSec: Int = 10,
-    val splashHoldSec: Int = 1,
+    val splashHoldSec: Int = 5, // 시작 안전 안내를 읽을 수 있게 최소 이만큼 보인다(팀 피드백)
     val pinLength: Int = 4,
     val pinFailAlertCount: Int = 3,
     val loginQrTtlSec: Int = 5 * 60,

@@ -12,6 +12,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.ui.components.AppToast
+import com.break8t.unknown.ui.components.DialogPanel
 import com.break8t.unknown.ui.theme.AppColors
 import com.break8t.unknown.ui.theme.AppTheme
 
@@ -54,6 +55,14 @@ private fun S03aPin() = Pin("계정 선택", locked, "PIN 4자리를 눌러 주�
 
 @AccountPreviews @Composable
 private fun S03bPinWrong() = Pin("계정 선택", locked, "PIN 4자리를 눌러 주세요", PinInput(error = true, failures = 1), "PIN이 맞지 않아요.")
+
+@AccountPreviews @Composable
+private fun S03cPinAlert() = Frame {
+    Pin("계정 선택", locked, "PIN 4자리를 눌러 주세요", PinInput(error = true, failures = 3), "PIN이 맞지 않아요.")
+    Box(Modifier.fillMaxSize().background(AppColors.Scrim), Alignment.Center) {
+        DialogPanel("휴대폰으로 알렸어요", "PIN이 3번 틀려서 계정 주인의 휴대폰 앱으로 알림을 보냈어요.", "확인", {}, {}, Modifier.padding(24.dp))
+    }
+}
 
 @AccountPreviews @Composable
 private fun S03PinDialpadBlocked() =
