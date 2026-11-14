@@ -10,4 +10,5 @@
 | 구조, 계약(인터페이스), 창 크기, 화면 상태 | `.claude/rules/20-architecture.md` |
 | 주차와 주행 규칙, 보상 공식, 필드 드랍, 용어 | `.claude/rules/30-domain.md` |
 | 안전과 자산 | `.claude/rules/40-safety.md` |
+| 화면 만들기(Figma, 그림, 작업 방식, 보고서) | `.claude/rules/50-screens.md` |
 | 기계로 막는 규칙(훅) | `.claude/hooks/guard.py` |

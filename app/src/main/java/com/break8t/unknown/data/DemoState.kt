@@ -16,7 +16,21 @@ data class Profile(
     val selectedCarId: String = "car_red",
     val selectedCharacterId: String = "ch_sprout",
     val voiceGuideOn: Boolean = true,
+    val voicePackId: String = "default",
     val drivingStatusPublic: Boolean = true,
+    // 섬 시간: 실제 시간을 따를지, 따르지 않으면 밤인지
+    val islandRealTime: Boolean = true,
+    val islandNight: Boolean = false,
+    // 개수가 있는 아이템(씨앗, 가구). 키는 Figma 이름(seed_carrot, it_sofa 등)
+    val items: Map<String, Int> = mapOf(
+        "seed_carrot" to 3, "seed_potato" to 1, "seed_wheat" to 0,
+        "it_sofa" to 1, "it_plant" to 2, "it_picture" to 1, "it_rug" to 3, "it_lamp" to 1,
+    ),
+    // 하나만 가지는 것(캐릭터, 자동차, 음성팩, 사진 포즈)
+    val owned: Set<String> = setOf(
+        "ch_sprout", "ch_cat", "ch_mush", "ch_cloud", "car_red", "car_blue",
+        "voice_default", "pose_wave", "pose_sit", "pose_back",
+    ),
 )
 
 class DemoState(initial: Profile = Profile()) {
@@ -24,6 +38,16 @@ class DemoState(initial: Profile = Profile()) {
     val profile: StateFlow<Profile> = state
 
     fun update(change: (Profile) -> Profile) = state.update(change)
+
+    /** 개수를 더하거나 뺀다. 0 아래로 내려가면 바꾸지 않고 false를 돌려준다. */
+    fun addItem(id: String, delta: Int): Boolean {
+        var ok = false
+        state.update { p ->
+            val next = (p.items[id] ?: 0) + delta
+            if (next < 0) p else p.copy(items = p.items + (id to next)).also { ok = true }
+        }
+        return ok
+    }
 
     /** 코인이 모자라면 아무것도 바꾸지 않고 false를 돌려준다. */
     fun spend(coins: Int): Boolean {

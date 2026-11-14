@@ -24,3 +24,4 @@ docs/trajectory.jsonl   훅이 남기는 작업 기록 (로컬 전용, 커밋하
 @.claude/rules/20-architecture.md
 @.claude/rules/30-domain.md
 @.claude/rules/40-safety.md
+@.claude/rules/50-screens.md
