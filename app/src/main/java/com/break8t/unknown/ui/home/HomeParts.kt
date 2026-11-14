@@ -51,7 +51,8 @@ internal fun HomeText(
     fontSize = size.fsp,
     fontWeight = weight,
     textAlign = align,
-    lineHeight = lineHeight?.fsp ?: TextUnit.Unspecified,
+    // MaterialTheme gives bodyLarge (24sp line height) to every Text; Figma text boxes are about 1.2x the size.
+    lineHeight = ((lineHeight?.toFloat() ?: (size * 1.2f)) * 1.3f).sp,
 )
 
 /** 누를 수 없는 상태 표시(홈 제목, P/D 칩, 코인). */
