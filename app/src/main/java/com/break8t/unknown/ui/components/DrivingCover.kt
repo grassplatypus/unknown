@@ -32,7 +32,7 @@ import com.break8t.unknown.ui.theme.AppColors
 // Figma S-11-b. 크기는 Figma px × 1.3이다(SideRail.kt 참고).
 private val PillShape = RoundedCornerShape(16.dp)
 
-/** Figma S-11-b: 반투명 덮개와 아래쪽 안내. 덮개 아래로 가는 터치는 모두 여기서 소비한다. */
+/** 반투명 덮개와 가운데 안내(Figma S-11-b보다 크게, 가운데로). 덮개 아래로 가는 터치는 모두 여기서 소비한다. */
 @Composable
 fun DrivingCover(hint: String, modifier: Modifier = Modifier) {
     // API 31 미만에서는 본문이 흐려지지 않아서, Figma 값 0.6이면 본문이 그대로 읽힌다.
@@ -44,20 +44,20 @@ fun DrivingCover(hint: String, modifier: Modifier = Modifier) {
             .pointerInput(Unit) {
                 awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } }
             }
-            .padding(start = 24.dp, end = 24.dp, bottom = 72.dp),
-        contentAlignment = Alignment.BottomCenter,
+            .padding(horizontal = 24.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Box(
             Modifier
-                .widthIn(max = 780.dp)
+                .widthIn(max = 960.dp)
                 .fillMaxWidth()
-                .heightIn(min = 100.dp)
+                .heightIn(min = 140.dp)
                 .clip(PillShape)
                 .background(AppColors.Card.copy(alpha = 0.92f))
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 40.dp, vertical = 28.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(hint, color = AppColors.Text, fontSize = 39.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text(hint, color = AppColors.Text, fontSize = 52.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         }
     }
 }
