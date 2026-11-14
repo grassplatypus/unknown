@@ -175,8 +175,8 @@ private fun MyInfoHome(
         }
         ProfileCard(profile)
         BoxWithConstraints {
-            // 넓은 창은 Figma처럼 다섯 칸 한 줄, 화면을 나누면 세 칸씩 두 줄.
-            val cols = if (maxWidth >= 1100.dp) CollectionKind.entries.size else 3
+            // 넓은 창은 Figma처럼 다섯 칸 한 줄. 화면을 나누면 "정체 카드"가 한 줄에 들어가도록 두 칸씩.
+            val cols = if (maxWidth >= 1100.dp) CollectionKind.entries.size else 2
             Column(verticalArrangement = Arrangement.spacedBy(26.dp)) {
                 CollectionKind.entries.chunked(cols).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {

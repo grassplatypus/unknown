@@ -112,7 +112,7 @@ internal fun FriendsPane(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = ScreenPadding),
                 ) {
                     if (!wide) item { FriendDetail(selected, onDelete) }
-                    items(friends, key = { it.id }) { f -> FriendRow(f, f.id == selected.id) { onSelect(f) } }
+                    items(friends, key = { it.id }) { f -> FriendRow(f, f.id == selected.id, chipBelow = !wide) { onSelect(f) } }
                 }
                 if (wide) FriendDetail(selected, onDelete, Modifier.width(550.dp))
             }
@@ -137,7 +137,7 @@ private fun DrivingChip() = Row(
 }
 
 @Composable
-private fun FriendRow(friend: Friend, selected: Boolean, onClick: () -> Unit) = Row(
+private fun FriendRow(friend: Friend, selected: Boolean, chipBelow: Boolean, onClick: () -> Unit) = Row(
     Modifier
         .fillMaxWidth()
         .clip(TileShape)
@@ -149,11 +149,13 @@ private fun FriendRow(friend: Friend, selected: Boolean, onClick: () -> Unit) = 
     verticalAlignment = Alignment.CenterVertically,
 ) {
     Avatar(friend, 99.dp)
-    Column(Modifier.weight(1f)) {
-        Text(friend.nickname, color = AppColors.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+    // 좁은 창에서는 칩을 이름 아래로 내려야 이름이 잘리지 않는다.
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(friend.nickname, color = AppColors.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(friend.status, color = AppColors.TextSub, fontSize = 31.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (friend.driving && chipBelow) DrivingChip()
     }
-    if (friend.driving) DrivingChip()
+    if (friend.driving && !chipBelow) DrivingChip()
     Icon(painterResource(R.drawable.myinfo_ic_next), null, Modifier.size(47.dp), tint = AppColors.Text)
 }
 
