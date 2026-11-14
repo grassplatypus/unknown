@@ -3,12 +3,15 @@ package com.break8t.unknown.ui.home
 import android.content.Context
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.data.DemoState
+import com.break8t.unknown.data.DemoStore
 import com.break8t.unknown.data.Profile
 import com.break8t.unknown.drive.DriveMode
 import com.break8t.unknown.navi.NaviRaidSource
 import com.break8t.unknown.navi.NaviTraffic
 import com.break8t.unknown.reward.RewardCalculator
 import com.break8t.unknown.reward.RewardResult
+import com.break8t.unknown.ui.settings.voiceAssetFolder
+import com.break8t.unknown.voice.AssetVoicePlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
@@ -18,8 +21,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** P로 바꾼 뒤 차례로 띄우는 알림. 순서가 곧 표시 순서다. */
 enum class HomePopup { REWARD, LEVEL_UP, POSTCARD, JAM_CARD }
@@ -67,10 +72,16 @@ class HomeController(private val scope: CoroutineScope, private val config: Bala
     val popups: StateFlow<List<HomePopup>> = queue
     private var drove = false
 
-    /** 한 번만 연결한다. 연결과 조회는 NaviTraffic이 메인 스레드 밖에서 한다. */
-    fun attachNavi(context: Context) {
+    /** 내비와 레이드 음성을 한 번만 연결한다. 연결과 조회는 NaviTraffic이, 파일 읽기는 플레이어가 메인 스레드 밖에서 한다. */
+    fun attachNavi(context: Context, demo: DemoState = DemoStore.state) {
         if (navi.value != null) return
         navi.value = NaviRaidSource(NaviTraffic(context.applicationContext), scope, config).also { it.setDriving(driving) }
+        val profile = demo.profile
+        val pack = profile.map { voiceAssetFolder(it.voicePackId) }.stateIn(scope, SharingStarted.Eagerly, voiceAssetFolder(profile.value.voicePackId))
+        val enabled = profile.map { it.voiceGuideOn }.stateIn(scope, SharingStarted.Eagerly, profile.value.voiceGuideOn)
+        val voice = AssetVoicePlayer(context.applicationContext, pack, enabled)
+        // 홈이 아닌 메뉴에 있어도 말해야 해서 화면이 아니라 프로세스에 하나뿐인 이 객체가 지켜본다.
+        scope.launch { announceRaid(raid.state, voice::play) }
     }
 
     fun onMode(mode: DriveMode, demo: DemoState) {

@@ -18,6 +18,7 @@
     <string name="home_demo_road">서부간선도로</string>
     <string name="home_demo_jam_time">오늘 오전 8:12</string>
     <string name="home_demo_postcard">벚꽃길</string>
+    <string name="home_demo_postcard_note">오늘 받은 엽서예요.</string>
 
     <!-- S-08 주차 중 -->
     <string name="home_today_parked">오늘 %1$dkm를 %2$s 동안 달렸어요.</string>

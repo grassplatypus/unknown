@@ -61,6 +61,8 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
     var shareTitle by rememberSaveable { mutableStateOf("") }
     var shareSubtitle by rememberSaveable { mutableStateOf("") }
     var shareImage by rememberSaveable { mutableStateOf<Int?>(null) }
+    // 홈은 주행 중에도 덮지 않으므로, 홈 알림에서 연 공유 화면은 P를 벗어나면 닫는다. UNKNOWN은 화면 재생성 중일 수 있어 숨기기만 한다.
+    LaunchedEffect(mode) { if (mode == DriveMode.DRIVING) shareKind = null }
     // 섬은 진입 상태를 기억하지 않는다. 떠나거나 주행 덮개가 덮으면 다음에 입구부터 다시 들어온다.
     val islandKey = "${Route.ISLAND.name}/null"
     val nav = Nav(
@@ -100,7 +102,7 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
                 DrivingCover(stringResource(route.parkHint))
             } else {
                 val kind = shareKind
-                if (kind != null) ShareQrScreen(kind, shareTitle, shareSubtitle, shareImage, onClose = { shareKind = null })
+                if (kind != null && mode.isParked) ShareQrScreen(kind, shareTitle, shareSubtitle, shareImage, onClose = { shareKind = null })
                 else holder.SaveableStateProvider("${route.name}/${sub?.name}") { ScreenFor(route, sub, mode, nav) }
             }
         }
@@ -136,7 +138,7 @@ private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav) 
         })
         route == Route.MY_INFO -> MyInfoScreen(onShare = nav.share)
         route == Route.ENCYCLOPEDIA -> EncyclopediaScreen(onShare = nav.share, onOpenFieldDrop = { nav.go(Route.FIELD_DROP) })
-        route == Route.HOME -> HomeScreen(mode, nav.go)
+        route == Route.HOME -> HomeScreen(mode, nav.go, nav.share)
         route == Route.FIELD_DROP -> FieldDropScreen()
         route == Route.SETTINGS ->
             SettingsScreen(onSwitchAccount = nav.signOut, onLogout = nav.signOut, onOpenShop = { nav.open(IslandSub.SHOP) })

@@ -22,13 +22,14 @@ object HomeDemo {
     // 레이드 동안 남은 거리. 정체가 앞에서 늘었다 줄었다 하는 것을 시연에서 보이려고 중간에 세 번 늘린다.
     val FAKE_REMAINING_M = listOf(1600.0, 1500.0, 1420.0, 1480.0, 1560.0, 1450.0, 1300.0, 1180.0, 1240.0, 1100.0, 950.0, 800.0, 860.0, 700.0)
 
+    // 앞의 셋만 화면에 보여서 테두리 단계가 하나씩 다르게 둔다. 나머지 단계는 모두 보기에서 보인다.
     val PARTICIPANTS = listOf(
-        Participant("영희", friend = true),
-        Participant("철수", friend = true),
-        Participant("길동", friend = true),
-        Participant("구름나그네", friend = false),
-        Participant("달리는감자", friend = false),
-        Participant("초보농부", friend = false),
+        Participant("영희", friend = true, level = 23),
+        Participant("철수", friend = true, level = 12),
+        Participant("길동", friend = true, level = 6),
+        Participant("구름나그네", friend = false, level = 15),
+        Participant("달리는감자", friend = false, level = 8),
+        Participant("초보농부", friend = false, level = 2),
     )
 
     /** Figma D-02 견본: 70분, 정체 8분 40초와 5분 20초, 안전점수 92점. */

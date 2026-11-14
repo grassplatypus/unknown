@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.clickable
@@ -59,7 +60,11 @@ private val RowShape = RoundedCornerShape(12.fdp)
 
 // 바깥을 직접 그려야 어둡게 칠할 수 있어서, 바깥 터치도 플랫폼 대신 여기서 받는다.
 @Composable
-private fun HomeDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) =
+private fun HomeDialog(
+    onDismiss: () -> Unit,
+    overlay: @Composable BoxScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit,
+) =
     Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)) {
         Box(
             Modifier
@@ -81,6 +86,7 @@ private fun HomeDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.(
                 verticalArrangement = Arrangement.spacedBy(24.fdp),
                 content = content,
             )
+            overlay()
         }
     }
 
@@ -163,7 +169,7 @@ private fun LevelRow(profile: Profile) = Row(
 
 /** D-03 레벨 업. */
 @Composable
-internal fun LevelUpDialog(level: Int, onOk: () -> Unit) = HomeDialog(onOk) {
+internal fun LevelUpDialog(level: Int, onOk: () -> Unit) = HomeDialog(onOk, overlay = { Confetti(Modifier.matchParentSize()) }) {
     Box(Modifier.fillMaxWidth().height(220.fdp), contentAlignment = Alignment.Center) {
         Image(
             painterResource(R.drawable.home_ch_sprout),
@@ -230,6 +236,7 @@ private fun PersonRow(p: Participant, index: Int) = Row(
 ) {
     Avatar(p, index, 32, Modifier.size(76.fdp))
     HomeText(p.name, 34, Modifier.weight(1f), weight = FontWeight.Medium)
+    HomeText(stringResource(R.string.home_level, p.level), 26, color = AppColors.TextSub)
     if (p.friend) HomeText(stringResource(R.string.home_friend), 26, color = AppColors.TextSub)
 }
 

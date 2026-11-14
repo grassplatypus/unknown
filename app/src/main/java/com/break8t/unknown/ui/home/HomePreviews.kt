@@ -1,10 +1,13 @@
 package com.break8t.unknown.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,4 +70,26 @@ private fun S09aApproaching() = Frame { DrivingHome(RaidState.Approaching(LIVE_J
 @Composable
 private fun S09dLivePassed() = Frame {
     DrivingHome(RaidState.Passed(312, coins = 5, emptyList(), LIVE_JAM.copy(remainingM = 0.0, progress = 1f)), onEnd = {})
+}
+
+/** 테두리 네 단계: 기본, 은(Lv.5), 금(Lv.10), 금과 보석(Lv.20). */
+@HomeSizes
+@Composable
+private fun AvatarFrames() = Frame {
+    Row(Modifier.padding(27.fdp), horizontalArrangement = Arrangement.spacedBy(27.fdp)) {
+        listOf(1, 5, 10, 20).forEachIndexed { i, level ->
+            Avatar(Participant("Lv$level", friend = true, level = level), i, 40, Modifier.size(150.fdp))
+        }
+    }
+}
+
+@HomeSizes
+@Composable
+private fun D03LevelUp() = Frame { LevelUpDialog(8) {} }
+
+@HomeSizes
+@Composable
+private fun D06People() = Frame {
+    DrivingHome(RaidState.Group(HomeDemo.JAM, HomeDemo.PARTICIPANTS), onEnd = {})
+    PeopleDialog(HomeDemo.PARTICIPANTS) {}
 }
