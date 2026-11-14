@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,13 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.progressSemantics
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -177,11 +174,12 @@ internal fun FarmContent(
                     )
                 }
             } else {
+                // 심기 버튼이 스크롤 아래로 숨지 않게 씨앗 카드를 바닥에 두고, 장면은 남은 높이만 쓴다.
                 Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 35.dp, end = 35.dp, bottom = 35.dp),
+                    Modifier.fillMaxSize().padding(start = 35.dp, end = 35.dp, bottom = 35.dp),
                     Arrangement.spacedBy(35.dp),
                 ) {
-                    FarmScene(scene, plots, now, target, onPlot, Modifier.fillMaxWidth().aspectRatio(1f))
+                    FarmScene(scene, plots, now, target, onPlot, Modifier.fillMaxWidth().weight(1f))
                     SeedCard(profile.items, seedId, target >= 0, onSeed, onPlant, fill = false, Modifier.fillMaxWidth())
                 }
             }
