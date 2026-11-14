@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.home
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,6 +58,8 @@ private enum class DrivingDialog { NONE, PEOPLE, QR }
 internal fun DrivingHome(
     raid: RaidState,
     onEnd: () -> Unit,
+    voiceOn: Boolean = true,
+    onVoiceChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     config: BalanceConfig = BalanceConfig.DEFAULT,
 ) {
@@ -67,7 +70,8 @@ internal fun DrivingHome(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val wide = maxWidth >= WideMin
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 34.fdp, vertical = 27.fdp),
+            // 주차 중 홈(ParkedHome)과 같은 바깥 여백이라 기어를 바꿔도 제목과 칩이 제자리에 있다.
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(27.fdp),
             verticalArrangement = Arrangement.spacedBy(27.fdp),
         ) {
             TopBar(
@@ -90,8 +94,12 @@ internal fun DrivingHome(
                         }
                     },
                     right = { RaidSide(raid, config.raidVisibleAvatars) { dialog = DrivingDialog.PEOPLE } },
+                    // 레이드 그림 카드가 길어 맨 아래에 두면 화면 밖으로 밀려서, 왼쪽 카드 밑에 둔다.
+                    leftBelow = { VoiceGuideButton(voiceOn, onVoiceChange) },
                 )
             }
+            // 주행 중 안내는 음성이 중심이라(40-safety.md) 주차 중 홈과 같은 자리에서 켜고 끈다.
+            if (raid is RaidState.None || raid is RaidState.Approaching) VoiceGuideButton(voiceOn, onVoiceChange)
         }
     }
     val people = (raid as? RaidState.Group)?.participants ?: (raid as? RaidState.Passed)?.participants
@@ -108,10 +116,7 @@ private fun TopBar(showQr: Boolean, showEnd: Boolean, onQr: () -> Unit, onEnd: (
     verticalArrangement = Arrangement.spacedBy(12.fdp),
     itemVerticalAlignment = Alignment.CenterVertically,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.fdp)) {
-        Box(Modifier.size(48.fdp).clip(RoundedCornerShape(10.fdp)).background(AppColors.Success))
-        HomeText(stringResource(R.string.app_name), 34, weight = FontWeight.Bold)
-    }
+    ScreenTitle(stringResource(R.string.route_home))
     Spacer(Modifier.weight(1f))
     if (showQr) SecondaryButton(stringResource(R.string.home_passenger_qr), onQr)
     Tag(AppColors.Accent, Modifier.widthIn(min = 220.fdp)) {
@@ -122,11 +127,10 @@ private fun TopBar(showQr: Boolean, showEnd: Boolean, onQr: () -> Unit, onEnd: (
 
 /** S-09-a. 종료 버튼이 없다. 앞에 정체가 있으면 한 줄로 알린다(Figma에 없는 상태). */
 @Composable
-private fun NoRaid(ahead: RaidState.Approaching?) = Column {
+private fun NoRaid(ahead: RaidState.Approaching?) = HomeCard(Modifier.fillMaxWidth()) {
     HomeText(
         stringResource(R.string.home_today_driving, HomeDemo.TODAY_KM_DRIVING, HomeDemo.TODAY_MIN_DRIVING),
         40,
-        Modifier.padding(top = 20.fdp),
     )
     Box(Modifier.padding(vertical = 30.fdp).fillMaxWidth().height(2.fdp).background(AppColors.Muted))
     Row {
@@ -163,18 +167,34 @@ private fun BigStat(label: String, value: String) = Column(Modifier.width(260.fd
 }
 
 @Composable
-private fun TwoColumns(wide: Boolean, left: @Composable ColumnScope.() -> Unit, right: @Composable ColumnScope.() -> Unit) {
+private fun TwoColumns(
+    wide: Boolean,
+    left: @Composable ColumnScope.() -> Unit,
+    right: @Composable ColumnScope.() -> Unit,
+    leftBelow: @Composable () -> Unit,
+) {
     if (wide) {
-        Row(horizontalArrangement = Arrangement.spacedBy(26.fdp)) {
-            Column(Modifier.weight(560f).padding(top = 20.fdp), content = left)
-            Column(Modifier.weight(497f), content = right)
+        // 높이를 맞추려고 IntrinsicSize를 쓰면 오른쪽 그림의 높이를 잘못 재서 그 아래 글이 잘린다.
+        Row(horizontalArrangement = Arrangement.spacedBy(27.fdp)) {
+            Column(Modifier.weight(560f), verticalArrangement = Arrangement.spacedBy(27.fdp)) {
+                HomeCard(Modifier.fillMaxWidth(), left)
+                leftBelow()
+            }
+            HomeCard(Modifier.weight(497f), right)
         }
     } else {
-        Column(verticalArrangement = Arrangement.spacedBy(40.fdp)) {
-            Column(content = left)
-            Column(content = right)
+        Column(verticalArrangement = Arrangement.spacedBy(20.fdp)) {
+            HomeCard(Modifier.fillMaxWidth(), left)
+            leftBelow()
+            HomeCard(Modifier.fillMaxWidth(), right)
         }
     }
+}
+
+/** 주차 중 홈(ParkedHome)의 카드와 같은 틀. 기어를 바꿔도 화면이 같은 앱으로 보이게 한다. */
+@Composable
+private fun HomeCard(modifier: Modifier, content: @Composable ColumnScope.() -> Unit) = AppCard(modifier) {
+    Column(Modifier.padding(horizontal = 26.fdp, vertical = 22.fdp), content = content)
 }
 
 /** S-09-b, S-09-c 왼쪽: 지나는 중인 정체와 남은 거리. 응답마다 남은 거리와 막대가 바뀐다. */
