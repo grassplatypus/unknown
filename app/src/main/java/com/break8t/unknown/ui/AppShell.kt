@@ -61,8 +61,13 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
     var shareTitle by rememberSaveable { mutableStateOf("") }
     var shareSubtitle by rememberSaveable { mutableStateOf("") }
     var shareImage by rememberSaveable { mutableStateOf<Int?>(null) }
+    // 섬은 진입 상태를 기억하지 않는다. 떠나거나 주행 덮개가 덮으면 다음에 입구부터 다시 들어온다.
+    val islandKey = "${Route.ISLAND.name}/null"
     val nav = Nav(
-        go = { route = it; sub = null; shareKind = null },
+        go = {
+            if (route == Route.ISLAND && it != Route.ISLAND) holder.removeState(islandKey)
+            route = it; sub = null; shareKind = null
+        },
         open = { route = Route.ISLAND; sub = it },
         back = { sub = null },
         signOut = onSignOut,
@@ -79,7 +84,12 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
             val limits = LocalUxLimits.current
             val covered = (!route.allowedWhileDriving && !mode.isParked) || limits.blocks(route.blockedBy)
             val focus = LocalFocusManager.current
-            LaunchedEffect(covered) { if (covered) focus.clearFocus(force = true) }
+            LaunchedEffect(covered) {
+                if (covered) {
+                    focus.clearFocus(force = true)
+                    holder.removeState(islandKey)
+                }
+            }
             if (covered) {
                 DrivingCover(stringResource(route.parkHint))
             } else {
