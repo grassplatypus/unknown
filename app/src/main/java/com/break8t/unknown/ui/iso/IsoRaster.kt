@@ -239,8 +239,7 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
             val bot = scene.bottom(x, y)
             val id = -((y / scene.tile) * scene.width + x / scene.tile) - 1
             val seed = x * 7919 + y * 104729
-            val inGhost = ghost != null && ghost.wall == null &&
-                x in ghost.x until ghost.x + ghost.footW && y in ghost.y until ghost.y + ghost.footD
+            val inGhost = ghost != null && ghostCovers(ghost, x, y)
             tint = if (inGhost) mark else 0
             tintAmount = if (inGhost) 0.45f else 0f
             if (cell.floor == FloorType.ROAD) roadIds += id
@@ -435,4 +434,15 @@ private object Textures {
             }
         }
     }
+}
+
+/**
+ * Whether floor cell ([x], [y]) is under [o] where it is drawn: [IsoObject.ox], [IsoObject.oy] and [IsoObject.scale]
+ * move and size the drawing, so the photo character (cell 0, 0, placed by ox/oy) gets its mark under itself.
+ */
+internal fun ghostCovers(o: IsoObject, x: Int, y: Int): Boolean {
+    if (o.wall != null) return false
+    val x0 = o.x + o.ox; val y0 = o.y + o.oy
+    val eps = 1e-3f
+    return x + 1 > x0 + eps && x < x0 + o.footW * o.scale - eps && y + 1 > y0 + eps && y < y0 + o.footD * o.scale - eps
 }

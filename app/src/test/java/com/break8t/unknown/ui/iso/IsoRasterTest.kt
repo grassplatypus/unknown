@@ -84,4 +84,14 @@ class IsoRasterTest {
         assertEquals(null, idAt(f, 0.5f, 4.5f, 10.5f / VPC)) // ghost pixels carry no object id
         assertEquals(IsoHit.Item("plant"), hitTest(room, f, f.projection.screenX(4.5f, 4.5f, 10.5f / VPC), f.projection.screenY(4.5f, 4.5f, 10.5f / VPC)))
     }
+
+    @Test
+    fun ghostMarkFollowsDrawnSpotNotOriginCell() {
+        val cells = { o: IsoObject -> (0 until 8).flatMap { y -> (0 until 8).filter { x -> ghostCovers(o, x, y) }.map { it to y } } }
+        // Furniture: footprint cells as before.
+        assertEquals(listOf(2 to 1, 3 to 1), cells(IsoObject("sofa", IsoShape(2, 1, emptyList()), 2, 1)))
+        // Photo character: cell (0, 0), drawn 3.7, 2.7 cells away at 0.6 scale, so the mark sits there, not at the origin.
+        val ch = IsoObject("character", IsoShape(1, 1, emptyList()), 0, 0, ox = 3.7f, oy = 2.7f, scale = 0.6f)
+        assertEquals(listOf(3 to 2, 4 to 2, 3 to 3, 4 to 3), cells(ch))
+    }
 }
