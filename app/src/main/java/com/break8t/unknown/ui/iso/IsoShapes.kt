@@ -86,7 +86,6 @@ object IsoPalette {
     internal val CloudShade = Color(0xFFE0DDD5)
     internal val Orange = Color(0xFFF2A93B)
     internal val Stripe = Color(0xFFD9822B)
-    internal val SproutBody = Color(0xFFB5D96A)
 }
 
 enum class PlotStage { EMPTY, SPROUT, GROWING, GROWN }
@@ -264,67 +263,17 @@ object IsoShapes {
         c(15, 2, 1, 1, 4, 1, P.StoneC), c(0, 1, 2, 1, 1, 1, P.Red), c(0, 6, 2, 1, 1, 1, P.Red),
     ))
 
-    /** Characters: chunky 8 x 8 figures facing +y. */
-    val sprout = IsoShape(1, 1, listOf(
-        c(1, 2, 0, 6, 5, 6, P.SproutBody),
-        c(1, 2, 0, 1, 5, 1, P.T), c(6, 2, 0, 1, 5, 1, P.T), c(1, 2, 5, 1, 5, 1, P.T), c(6, 2, 5, 1, 5, 1, P.T),
-        c(2, 6, 1, 4, 1, 2, P.Cream),
-        c(2, 6, 4, 1, 1, 1, P.Ink), c(5, 6, 4, 1, 1, 1, P.Ink), c(3, 6, 3, 2, 1, 1, P.Roof),
-        c(1, 6, 3, 1, 1, 1, P.Pink), c(6, 6, 3, 1, 1, 1, P.Pink),
-        c(3, 4, 6, 2, 1, 2, P.Leaf), c(1, 4, 7, 2, 1, 2, P.LeafLight), c(5, 4, 7, 2, 1, 2, P.LeafLight),
-    ))
-
-    val cat = IsoShape(1, 1, listOf(
-        c(2, 3, 0, 4, 3, 4, P.Orange), c(6, 2, 1, 1, 1, 4, P.Stripe),
-        c(1, 2, 4, 6, 5, 4, P.Orange), c(1, 2, 4, 6, 5, 1, P.WoodDark),
-        c(1, 3, 8, 2, 2, 1, P.Orange), c(5, 3, 8, 2, 2, 1, P.Orange),
-        c(3, 2, 7, 2, 1, 1, P.Stripe), c(1, 4, 6, 1, 1, 1, P.Stripe), c(6, 4, 6, 1, 1, 1, P.Stripe),
-        c(2, 6, 6, 1, 1, 1, P.Ink), c(5, 6, 6, 1, 1, 1, P.Ink), c(3, 6, 5, 2, 1, 1, P.Cream),
-        c(2, 5, 1, 4, 1, 2, P.Cream),
-    ))
-
-    val mush = IsoShape(1, 1, listOf(
-        c(2, 2, 0, 4, 4, 4, P.Cream),
-        c(2, 5, 2, 1, 1, 1, P.Ink), c(5, 5, 2, 1, 1, 1, P.Ink), c(3, 5, 1, 2, 1, 1, P.Pink),
-        c(0, 0, 4, 8, 8, 2, P.Roof), c(1, 1, 6, 6, 6, 2, P.Roof),
-        c(0, 0, 4, 1, 1, 2, P.T), c(7, 0, 4, 1, 1, 2, P.T), c(0, 7, 4, 1, 1, 2, P.T), c(7, 7, 4, 1, 1, 2, P.T),
-        c(2, 2, 7, 2, 2, 1, P.Cream), c(5, 4, 7, 1, 2, 1, P.Cream), c(0, 3, 5, 1, 2, 1, P.Cream),
-        c(7, 4, 4, 1, 2, 1, P.Cream), c(3, 7, 4, 2, 1, 1, P.Cream),
-    ))
-
-    val cloud = IsoShape(1, 1, listOf(
-        c(2, 3, 0, 1, 2, 1, P.Blue), c(5, 3, 0, 1, 2, 1, P.Blue),
-        c(1, 2, 1, 6, 5, 4, P.White), c(0, 3, 2, 8, 3, 2, P.White), c(2, 3, 5, 4, 3, 1, P.White),
-        c(1, 2, 1, 6, 5, 1, P.CloudShade),
-        c(2, 6, 3, 1, 1, 1, P.Ink), c(5, 6, 3, 1, 1, 1, P.Ink), c(1, 6, 2, 1, 1, 1, P.Pink), c(6, 6, 2, 1, 1, 1, P.Pink),
-    ))
-
-    /** The abdomen glows at night. */
-    val firefly = IsoShape(1, 1, listOf(
-        c(2, 2, 0, 4, 4, 3, P.Light, P.Light), c(2, 2, 1, 4, 4, 1, P.Ink),
-        c(2, 2, 3, 4, 4, 3, P.Yellow),
-        c(2, 5, 4, 1, 1, 1, P.Ink), c(5, 5, 4, 1, 1, 1, P.Ink),
-        c(0, 2, 4, 2, 2, 1, P.White), c(6, 2, 4, 2, 2, 1, P.White),
-        c(2, 3, 6, 1, 1, 2, P.Ink), c(5, 3, 6, 1, 1, 2, P.Ink), c(2, 3, 8, 1, 1, 1, P.Yellow), c(5, 3, 8, 1, 1, 1, P.Yellow),
-    ))
-
     /**
-     * Pose items as small changes to a character model: an arm up, both arms up, feet forward.
-     * Side and back poses keep the model and turn it, see [poseTurns].
+     * The character [id] in [pose] (null or an unknown pose is the plain standing figure), or null for an
+     * unknown id. Each character has its own model per pose, see [IsoCharacters]; they are 2 x 2 cells, drawn at half scale.
      */
-    fun posed(base: IsoShape, pose: String?, body: Color = P.SproutBody): IsoShape = when (pose) {
-        "pose_wave" -> base.copy(parts = base.parts + listOf(c(7, 4, 3, 1, 1, 5, body), c(0, 4, 1, 1, 1, 2, body)))
-        "pose_jump" -> base.copy(parts = base.parts + listOf(c(0, 4, 4, 1, 1, 4, body), c(7, 4, 4, 1, 1, 4, body)))
-        "pose_sit" -> base.copy(parts = base.parts + listOf(c(2, 7, 0, 1, 1, 1, body), c(5, 7, 0, 1, 1, 1, body)))
-        else -> base
-    }
+    fun character(id: String, pose: String?): IsoShape? = IsoCharacters.of(id, pose)
 
-    /** Quarter turns for the pose items that show the character from another side. */
-    fun poseTurns(pose: String?): Int = when (pose) {
-        "pose_side" -> 1
-        "pose_back" -> 2
-        else -> 0
-    }
+    val sprout: IsoShape get() = character("ch_sprout", null)!!
+    val cat: IsoShape get() = character("ch_cat", null)!!
+    val mush: IsoShape get() = character("ch_mush", null)!!
+    val cloud: IsoShape get() = character("ch_cloud", null)!!
+    val firefly: IsoShape get() = character("ch_firefly", null)!!
 
     private val cars = mapOf("car_red" to car(P.Red), "car_blue" to car(P.Blue), "car_yellow" to car(P.Yellow))
     private val litCars = mapOf("car_red" to car(P.Red, true), "car_blue" to car(P.Blue, true), "car_yellow" to car(P.Yellow, true))
@@ -350,11 +299,6 @@ object IsoShapes {
         "path" -> path
         "water" -> water
         "car" -> cars["car_red"]
-        "ch_sprout" -> sprout
-        "ch_cat" -> cat
-        "ch_mush" -> mush
-        "ch_cloud" -> cloud
-        "ch_firefly" -> firefly
-        else -> cars[id]
+        else -> cars[id] ?: character(id, null)
     }
 }

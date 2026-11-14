@@ -67,6 +67,41 @@ class SceneSnapshotTest {
         save("photo_room", renderScene(com.break8t.unknown.ui.house.RoomMap.scene(emptyList(), cfg, cam, extra), cam, w, h), 0x020A12)
     }
 
+    /** All five characters in every pose (rows: characters, columns: stand and the five poses), as the app builds them. */
+    @Test
+    fun characters() {
+        val ids = IsoCharacters.ids
+        val poses = IsoCharacters.poses
+        fun char(id: String, pose: String?, x: Float, y: Float, size: Float, grid: Int, base: Float = 1f) =
+            com.break8t.unknown.ui.photo.characterObject(
+                com.break8t.unknown.ui.house.SceneCharacter(pose ?: id, x, y, size, 0), grid, base, characterId = id,
+            )
+        val tw = 120; val th = 150; val k = 3
+        for (step in intArrayOf(0, 2)) {
+            val sheet = BufferedImage(tw * k * poses.size, th * k * ids.size, BufferedImage.TYPE_INT_RGB)
+            for ((r, id) in ids.withIndex()) for ((col, pose) in poses.withIndex()) {
+                val o = char(id, pose, 0.5f, 0.5f, com.break8t.unknown.ui.photo.CharacterSizes[1], 1)
+                val tile = IsoScene(1, 1, listOf(Cell(FloorType.GRASS)), listOf(o), floorDepth = 0.12f, frame = FrameBox(0f, 0f, 1f, 1f, -0.12f, 1.9f))
+                val f = renderScene(tile, IsoCamera.of(ViewPreset.OBLIQUE, step), tw, th)
+                assertTrue("$id $pose", f.pixels.any { it ushr 24 != 0 })
+                for (y in 0 until th * k) for (x in 0 until tw * k) {
+                    val c = f.pixels[(y / k) * f.w + x / k]
+                    sheet.setRGB(col * tw * k + x, r * th * k + y, if (c ushr 24 == 0) 0x8C9AA6 else c)
+                }
+            }
+            ImageIO.write(sheet, "png", File(out, "characters_sheet_cam$step.png"))
+        }
+        // The same models at the smallest photo size on the largest island, on the app's own pixel grid.
+        val size = com.break8t.unknown.config.BalanceConfig.DEFAULT.islandSizes.last()
+        val island = IslandMap.scene(plots, "car_red", size = size)
+        val chars = ids.flatMapIndexed { r, id ->
+            poses.mapIndexed { col, pose ->
+                char(id, pose, (1.5f + col * 2f) / size, (2f + r * 2.3f) / size, com.break8t.unknown.ui.photo.CharacterSizes[0], size, 1.6f).copy(id = "c$r$col")
+            }
+        }
+        save("characters_island_small", renderScene(island.copy(objects = chars, roads = emptyList()), IsoCamera.of(ViewPreset.OBLIQUE, 0), w, h), 0x74BDF7)
+    }
+
     @Test
     fun farm() {
         save("farm", renderScene(IslandMap.farmScene(plots), IslandMap.FARM_CAMERA, 330, 330), 0x74BDF7)
