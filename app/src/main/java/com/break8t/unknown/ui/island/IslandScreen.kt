@@ -75,7 +75,7 @@ import java.time.Instant
 import java.time.ZoneId
 
 /** 섬에서 다른 묶음의 화면으로 가는 곳. 연결은 AppShell이 한다. */
-enum class IslandPlace { HOUSE, PHOTO, SHOP, INVENTORY }
+enum class IslandPlace { HOUSE, PHOTO, SHOP, INVENTORY, FRIENDS }
 
 private enum class IslandStage { ENTRANCE, ISLAND, FARM }
 
@@ -145,7 +145,7 @@ fun IslandScreen(onOpen: (IslandPlace) -> Unit) {
         }
         if (expanded && stage == IslandStage.ISLAND) ExpandedToast(Modifier.align(Alignment.BottomCenter))
         if (stage == IslandStage.ISLAND && board && guestbookOpen) {
-            MyGuestbookPanel(visitSince, onClose = { guestbookOpen = false })
+            MyGuestbookPanel(visitSince, onClose = { guestbookOpen = false }, onOpenFriend = { onOpen(IslandPlace.FRIENDS) })
         }
         if (stage == IslandStage.ISLAND && board && !driving && !guestbookOpen && notice > 0) {
             GuestbookNoticeDialog(

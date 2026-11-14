@@ -83,6 +83,8 @@ private const val TICK_MS = 1_000L
 
 internal enum class Page { HOME, LIST, FRIENDS, ADD, FRIEND_ISLAND, FRIEND_COLLECTION, FRIEND_PHOTO, FRIEND_HOUSE }
 
+private val friendPages = setOf(Page.FRIEND_ISLAND, Page.FRIEND_COLLECTION, Page.FRIEND_PHOTO, Page.FRIEND_HOUSE)
+
 /** 뒤로 가기. 친구 화면에서 연 곳은 친구로, 친구 섬 사진과 친구 집은 친구 섬으로 돌아간다. */
 internal fun backFrom(page: Page): Page = when (page) {
     Page.FRIEND_PHOTO, Page.FRIEND_HOUSE -> Page.FRIEND_ISLAND
@@ -117,6 +119,18 @@ fun MyInfoScreen(onShare: ShareHandler) {
     val visitHour = remember { LocalTime.now().hour }
     val toFriends = { page = Page.FRIENDS }
     BackHandler(enabled = page != Page.HOME) { page = backFrom(page) }
+    val jump by FriendNav.request.collectAsState()
+    LaunchedEffect(jump) {
+        val j = jump ?: return@LaunchedEffect
+        friendId = j.friendId
+        stage = SceneStage()
+        houseStage = SceneStage()
+        friendKind = CollectionKind.POSTCARD
+        page = if (j.collection) Page.FRIEND_COLLECTION else Page.FRIEND_ISLAND
+        FriendNav.request.value = null
+    }
+    // 방명록 프로필에서 지금 보던 친구를 지우면 빈 화면에 남지 않고 친구 목록으로 간다.
+    LaunchedEffect(friends, page) { if (page in friendPages && friends.none { it.id == friendId }) page = Page.FRIENDS }
 
     when (page) {
         Page.HOME -> MyInfoHome(profile, friends.size, collections(profile), { page = Page.FRIENDS }) {

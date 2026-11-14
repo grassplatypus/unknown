@@ -151,6 +151,7 @@ private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav, 
                     nav.open(IslandSub.HOUSE)
                 }
                 IslandPlace.PHOTO -> nav.open(IslandSub.PHOTO_ISLAND)
+                IslandPlace.FRIENDS -> nav.go(Route.MY_INFO)
             }
         })
         route == Route.MY_INFO -> MyInfoScreen(onShare = nav.share)

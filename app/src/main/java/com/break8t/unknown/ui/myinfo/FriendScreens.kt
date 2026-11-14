@@ -52,6 +52,13 @@ import com.break8t.unknown.ui.collection.DialogTitle
 import com.break8t.unknown.ui.collection.HeaderChip
 import com.break8t.unknown.ui.collection.Josa
 import com.break8t.unknown.ui.collection.Overlay
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.flow.update
 import com.break8t.unknown.ui.collection.PreviewShell
 import com.break8t.unknown.ui.collection.ScreenPadding
 import com.break8t.unknown.ui.collection.ScreenPreviews
@@ -195,23 +202,21 @@ private fun FriendDetail(
     DangerButton(stringResource(R.string.myinfo_delete_friend), onDelete, Modifier.fillMaxWidth())
 }
 
-/** 방명록에서 친구를 누르면 보는 프로필. 섬 놀러 가기와 삭제는 내 정보의 친구 화면에서 한다. */
+/** 방명록에서 친구를 누르면 띄우는 프로필. 친구 창의 자세히와 같은 구성이고, 바깥을 누르면 닫힌다. */
 @Composable
-fun FriendProfileCard(friend: Friend, onClose: () -> Unit, modifier: Modifier = Modifier) = DialogFrame(832.dp, modifier) {
-    Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
-        Avatar(friend, 174.dp)
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(friend.nickname, color = AppColors.Text, fontSize = 52.sp, fontWeight = FontWeight.Bold)
-            Text(friend.status, color = AppColors.TextSub, fontSize = 31.sp)
-            if (friend.driving) DrivingChip()
+fun FriendProfileOverlay(friend: Friend, onClose: () -> Unit, onVisit: (Friend) -> Unit, onCollection: (Friend) -> Unit) {
+    var confirmDelete by remember(friend.id) { mutableStateOf(false) }
+    Overlay(if (confirmDelete) { { confirmDelete = false } } else onClose) {
+        if (confirmDelete) {
+            DeleteFriendDialog(friend, { confirmDelete = false }) {
+                FriendStore.friends.update { list -> list.filterNot { it.id == friend.id } }
+                onClose()
+            }
+        } else {
+            // 카드 안의 빈 곳을 눌러도 닫히지 않게 바깥의 누름을 여기서 받는다.
+            FriendDetail(friend, { confirmDelete = true }, onVisit, onCollection, Modifier.width(550.dp).pointerInput(Unit) { detectTapGestures { } })
         }
     }
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Stat(R.string.myinfo_friend_jams, stringResource(R.string.myinfo_friend_jams_value, friend.jamsThisWeek))
-        Stat(R.string.myinfo_friend_postcard, friend.lastPostcard)
-        Stat(R.string.myinfo_friend_since, friend.since)
-    }
-    PrimaryButton(stringResource(R.string.myinfo_close), onClose, Modifier.fillMaxWidth())
 }
 
 @Composable
@@ -472,5 +477,5 @@ private fun FriendAddedPreview() = PreviewShell(Route.MY_INFO) {
 @ScreenPreviews
 @Composable
 private fun FriendProfilePreview() = PreviewShell(Route.MY_INFO) {
-    Overlay({}) { FriendProfileCard(demoFriends.first(), {}) }
+    FriendProfileOverlay(demoFriends.first(), {}, {}, {})
 }

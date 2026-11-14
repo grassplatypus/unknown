@@ -43,6 +43,12 @@ object FriendStore {
     val friends = MutableStateFlow(demoFriends)
 }
 
+/** 방명록 프로필에서 고른 친구 화면. 내 정보가 열리면 그 화면으로 가고 비운다. */
+object FriendNav {
+    data class Request(val friendId: String, val collection: Boolean)
+    val request = MutableStateFlow<Request?>(null)
+}
+
 object FriendCode {
     // ponytail: 번호 길이는 BalanceConfig에 없어서 여기 둔다. 팀이 바꿀 값이면 BalanceConfig로 옮긴다.
     const val LENGTH = 6

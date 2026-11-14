@@ -47,8 +47,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
@@ -57,7 +55,8 @@ import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.drive.LocalUxLimits
 import com.break8t.unknown.ui.account.Avatar
 import com.break8t.unknown.ui.myinfo.Friend
-import com.break8t.unknown.ui.myinfo.FriendProfileCard
+import com.break8t.unknown.ui.myinfo.FriendNav
+import com.break8t.unknown.ui.myinfo.FriendProfileOverlay
 import com.break8t.unknown.ui.myinfo.FriendStore
 import com.break8t.unknown.ui.components.AppDialog
 import com.break8t.unknown.ui.components.ControlShape
@@ -75,7 +74,7 @@ import java.util.UUID
  * 내 섬 게시판을 누르면 여는 방명록. 친구가 남긴 글을 읽고 지운다. [newSince]보다 뒤에 온 것에 "새 방명록"을 붙인다.
  */
 @Composable
-fun MyGuestbookPanel(newSince: Long, onClose: () -> Unit) {
+fun MyGuestbookPanel(newSince: Long, onClose: () -> Unit, onOpenFriend: () -> Unit = {}) {
     val state = LocalDemoState.current
     val all by GuestbookStore.entries.collectAsState()
     val entries = all[GuestbookStore.MY_ISLAND].orEmpty()
@@ -87,7 +86,7 @@ fun MyGuestbookPanel(newSince: Long, onClose: () -> Unit) {
         entries, newSince, System.currentTimeMillis(), friends,
         onAuthor = { profileId = it.id }, onDelete = { deleteId = it.id }, onStore = { askStore = true }, onClose = onClose,
     )
-    friends.firstOrNull { it.id == profileId }?.let { ProfileDialog(it) { profileId = null } }
+    friends.firstOrNull { it.id == profileId }?.let { Profile(it, { profileId = null }, onOpenFriend) }
     entries.firstOrNull { it.id == deleteId }?.let { e ->
         DeleteDialog(e, onCancel = { deleteId = null }) {
             GuestbookStore.remove(GuestbookStore.MY_ISLAND, e.id)
@@ -119,7 +118,7 @@ fun FriendGuestbookPanel(friendId: String, friendNickname: String, onClose: () -
         canDelete = { canDelete(friendId, it) }, onAuthor = { profileId = it.id }, onDelete = { deleteId = it.id },
         onWrite = { writing = true }, onClose = onClose,
     )
-    friends.firstOrNull { it.id == profileId }?.let { ProfileDialog(it) { profileId = null } }
+    friends.firstOrNull { it.id == profileId }?.let { Profile(it, { profileId = null }, {}) }
     if (writing) {
         WriteDialog(friendNickname, onCancel = { writing = false }) { text ->
             GuestbookStore.add(
@@ -152,9 +151,15 @@ internal fun ColumnScope.GuestbookNoticeBody(count: Int, onOpen: () -> Unit, onL
     }
 }
 
+/** 섬 놀러 가기와 컬렉션 보기는 내 정보의 친구 화면에서 연다. [onOpenFriend]는 내 정보로 옮겨 간다. */
 @Composable
-private fun ProfileDialog(friend: Friend, onClose: () -> Unit) = Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false)) {
-    FriendProfileCard(friend, onClose, Modifier.padding(24.dp))
+private fun Profile(friend: Friend, onClose: () -> Unit, onOpenFriend: () -> Unit) {
+    val go = { f: Friend, collection: Boolean ->
+        FriendNav.request.value = FriendNav.Request(f.id, collection)
+        onClose()
+        onOpenFriend()
+    }
+    FriendProfileOverlay(friend, onClose, onVisit = { go(it, false) }, onCollection = { go(it, true) })
 }
 
 @Composable
