@@ -15,7 +15,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
-data class Participant(val name: String, val friend: Boolean, val level: Int)
+/** 함께 지나는 사람. [characterId]는 대표 캐릭터(ch_*)로, 아바타에 그 그림을 그린다. */
+data class Participant(val name: String, val friend: Boolean, val level: Int, val characterId: String = "ch_sprout")
 
 /** 레이드 아바타 테두리. 레벨이 높을수록 화려해져서 함께 지나는 사람끼리 견주게 한다. */
 enum class AvatarFrame { BASIC, SILVER, GOLD, JEWEL }

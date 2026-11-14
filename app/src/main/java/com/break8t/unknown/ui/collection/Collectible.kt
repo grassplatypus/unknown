@@ -91,7 +91,8 @@ private val demoCards = listOf(
 // 같은 장소의 다른 판은 이름이 같고 id만 다르다. 새 그림 없이 같은 그림에 판 테두리를 얹어 구분한다.
 private val demoPostcards = listOf(
     postcard("post_cheomseongdae", "경주 첨성대", R.drawable.myinfo_post_cheomseongdae, "방문", LocalDate.parse("2026-10-12")),
-    postcard("post_cheomseongdae_xmas", "경주 첨성대", R.drawable.myinfo_post_cheomseongdae, "방문",
+    // 크리스마스 판은 눈 덮인 전용 그림이다(노말 그림을 참고 그림으로 같은 방식으로 만듦).
+    postcard("post_cheomseongdae_xmas", "경주 첨성대", R.drawable.myinfo_post_cheomseongdae_xmas, "방문",
         LocalDate.parse("2025-12-25"), PostcardRarity.CHRISTMAS),
     Collectible(CollectionKind.POSTCARD, "post_cheomseongdae_gold", "경주 첨성대", R.drawable.myinfo_post_cheomseongdae,
         owned = false, rarity = PostcardRarity.GOLD),

@@ -1,5 +1,12 @@
 package com.break8t.unknown.ui.home
 
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.graphics.ImageBitmap
+import com.break8t.unknown.ui.collection.artFor
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -98,7 +105,13 @@ internal fun Avatar(
     val fill = if (p.friend) AvatarColors[index % AvatarColors.size] else AppColors.Muted
     val frame = avatarFrame(p.level, config)
     Box(modifier.drawBehind { drawPixelFrame(frame, fill) }, contentAlignment = Alignment.Center) {
-        HomeText(p.name.take(1), textSize, weight = FontWeight.Bold)
+        // 대표 캐릭터 그림을 테두리 안쪽에 둔다. 그림이 없는 새 캐릭터만 예전처럼 첫 글자를 쓴다.
+        val art = artFor(p.characterId)
+        if (art != null) {
+            Image(ImageBitmap.imageResource(art), p.name, Modifier.fillMaxSize(0.68f), filterQuality = FilterQuality.None)
+        } else {
+            HomeText(p.name.take(1), textSize, weight = FontWeight.Bold)
+        }
     }
 }
 

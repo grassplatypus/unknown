@@ -24,12 +24,12 @@ object HomeDemo {
 
     // 앞의 셋만 화면에 보여서 테두리 단계가 하나씩 다르게 둔다. 나머지 단계는 모두 보기에서 보인다.
     val PARTICIPANTS = listOf(
-        Participant("영희", friend = true, level = 23),
-        Participant("철수", friend = true, level = 12),
-        Participant("길동", friend = true, level = 6),
-        Participant("구름나그네", friend = false, level = 15),
-        Participant("달리는감자", friend = false, level = 8),
-        Participant("초보농부", friend = false, level = 2),
+        Participant("영희", friend = true, level = 23, characterId = "ch_cat"),
+        Participant("철수", friend = true, level = 12, characterId = "ch_mush"),
+        Participant("길동", friend = true, level = 6, characterId = "ch_firefly"),
+        Participant("구름나그네", friend = false, level = 15, characterId = "ch_cloud"),
+        Participant("달리는감자", friend = false, level = 8, characterId = "ch_sprout"),
+        Participant("초보농부", friend = false, level = 2, characterId = "ch_mush"),
     )
 
     /** Figma D-02 견본: 70분, 정체 8분 40초와 5분 20초, 안전점수 92점. */
