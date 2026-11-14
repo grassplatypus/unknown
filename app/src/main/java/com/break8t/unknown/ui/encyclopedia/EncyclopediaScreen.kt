@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import com.break8t.unknown.ui.photo.ShareHandler
 import com.break8t.unknown.R
 import com.break8t.unknown.ui.collection.CollectionKind
 import com.break8t.unknown.ui.collection.CollectionScreen
@@ -21,7 +22,7 @@ private const val DEMO_LOAD_MS = 600L
 /** 도감 진입점(Figma S-24). 처음에는 불러오는 중(S-24-b)을 보이고, 다 불러온 뒤에만 비어 있음을 판단한다. */
 @Composable
 fun EncyclopediaScreen(
-    onShare: (isPostcard: Boolean, title: String, subtitle: String) -> Unit,
+    onShare: ShareHandler,
     onOpenFieldDrop: () -> Unit,
 ) {
     var kind by rememberSaveable { mutableStateOf(CollectionKind.CARD) }

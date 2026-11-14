@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.break8t.unknown.ui.photo.ShareHandler
 import com.break8t.unknown.R
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.data.LocalDemoState
@@ -73,7 +74,7 @@ private enum class Page { HOME, LIST, FRIENDS, ADD }
 
 /** 내 정보 진입점(Figma S-20 ~ S-23). 공유는 콜백으로만 알린다. */
 @Composable
-fun MyInfoScreen(onShare: (isPostcard: Boolean, title: String, subtitle: String) -> Unit) {
+fun MyInfoScreen(onShare: ShareHandler) {
     val demo = LocalDemoState.current
     val profile by demo.profile.collectAsState()
     val friends by FriendStore.friends.collectAsState()

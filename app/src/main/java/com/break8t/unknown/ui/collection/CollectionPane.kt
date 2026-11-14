@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.collection
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +42,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.break8t.unknown.ui.photo.ShareHandler
 import com.break8t.unknown.R
 import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.data.Profile
@@ -74,7 +76,7 @@ fun CollectionScreen(
     onKind: (CollectionKind) -> Unit,
     loaded: Boolean,
     showLocked: Boolean,
-    onShare: (isPostcard: Boolean, title: String, subtitle: String) -> Unit,
+    onShare: ShareHandler,
     onOpenFieldDrop: (() -> Unit)?,
     header: @Composable () -> Unit,
 ) {
@@ -89,7 +91,7 @@ fun CollectionScreen(
     Box(Modifier.fillMaxSize()) {
         CollectionPane(all, kind, onKind, loaded, showLocked, profile, header, onOpenFieldDrop) { item ->
             when {
-                !item.owned || item.kind == CollectionKind.CARD || item.kind == CollectionKind.POSTCARD -> openId = item.id
+                !item.owned || item.kind == CollectionKind.CARD || item.kind == CollectionKind.POSTCARD || item.kind == CollectionKind.BADGE -> openId = item.id
                 item.kind == CollectionKind.CHARACTER && item.id != profile.selectedCharacterId -> openId = item.id
                 item.kind == CollectionKind.CAR -> demo.update { it.copy(selectedCarId = item.id) }
             }
@@ -111,18 +113,19 @@ fun CollectionScreen(
     }
 }
 
-/** 항목에 맞는 다이얼로그: 잠김 D-26, 정체 카드 D-24, 엽서 D-25, 캐릭터 바꾸기 D-20. */
+/** 항목에 맞는 다이얼로그: 잠김 D-26, 정체 카드 D-24, 엽서 D-25, 뱃지, 캐릭터 바꾸기 D-20. */
 @Composable
 internal fun ItemDialog(
     item: Collectible,
     onClose: () -> Unit,
-    onShare: (isPostcard: Boolean, title: String, subtitle: String) -> Unit,
+    onShare: ShareHandler,
     onChangeCharacter: () -> Unit,
 ) {
     when {
         !item.owned -> LockedHint(item, onClose)
         item.kind == CollectionKind.CARD -> CardDetail(item, onClose, onShare)
         item.kind == CollectionKind.POSTCARD -> PostcardDetail(item, onClose, onShare)
+        item.kind == CollectionKind.BADGE -> BadgeDetail(item, onClose)
         else -> DialogFrame(832.dp) {
             DialogArt(item.art, item.name)
             DialogTitle(stringResource(R.string.collection_change_character_title, Josa.euroRo(item.name)))
@@ -319,26 +322,53 @@ private fun CloseShareRow(onClose: () -> Unit, onShare: () -> Unit) =
         SecondaryButton(stringResource(R.string.collection_share), onShare, Modifier.weight(1f))
     }
 
-/** D-24. 견본 기록이 없는 카드는 만난 횟수만 보인다. */
+/** D-24. 왼쪽에 그림, 오른쪽에 기록. 대화상자가 좁은 세로 창에서는 그림 아래에 기록을 둔다. */
 @Composable
-private fun CardDetail(item: Collectible, onClose: () -> Unit, onShare: (Boolean, String, String) -> Unit) {
+private fun CardDetail(item: Collectible, onClose: () -> Unit, onShare: ShareHandler) {
     val meets = stringResource(R.string.collection_meet_count, item.meetCount ?: 0)
     DialogFrame(1196.dp) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             DialogTitle(item.name)
             item.route?.let { DialogBody(it) }
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(39.dp), verticalArrangement = Arrangement.spacedBy(31.dp)) {
-            Art(item.art, item.name, Modifier.width(507.dp).aspectRatio(390f / 260f).clip(ArtShape), ContentScale.Crop)
-            Column(Modifier.widthIn(min = 320.dp, max = 560.dp), verticalArrangement = Arrangement.spacedBy(26.dp)) {
-                Stat(R.string.collection_meets, meets)
-                item.fastest?.let { Stat(R.string.collection_fastest, it) }
-                item.slowest?.let { Stat(R.string.collection_slowest, it) }
-                item.usualTime?.let { Stat(R.string.collection_usual_time, it) }
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val art = @Composable { m: Modifier -> Art(item.art, item.name, m.aspectRatio(390f / 260f).clip(ArtShape), ContentScale.Crop) }
+            val stats = @Composable { m: Modifier ->
+                Column(m, verticalArrangement = Arrangement.spacedBy(26.dp)) {
+                    Stat(R.string.collection_meets, meets)
+                    item.fastest?.let { Stat(R.string.collection_fastest, it) }
+                    item.slowest?.let { Stat(R.string.collection_slowest, it) }
+                    item.usualTime?.let { Stat(R.string.collection_usual_time, it) }
+                }
+            }
+            if (maxWidth >= 900.dp) {
+                Row(horizontalArrangement = Arrangement.spacedBy(39.dp), verticalAlignment = Alignment.CenterVertically) {
+                    art(Modifier.weight(1f))
+                    stats(Modifier.weight(1f))
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(31.dp)) {
+                    art(Modifier.fillMaxWidth())
+                    stats(Modifier.fillMaxWidth())
+                }
             }
         }
-        CloseShareRow(onClose) { onShare(false, item.name, item.route ?: meets) }
+        CloseShareRow(onClose) { onShare(false, item.name, item.route ?: meets, item.art) }
     }
+}
+
+/** 받은 뱃지를 크게 보인다. 받은 조건과 날짜를 함께 쓴다. */
+@Composable
+private fun BadgeDetail(item: Collectible, onClose: () -> Unit) = DialogFrame(832.dp) {
+    Box(Modifier.fillMaxWidth().clip(ArtShape).background(AppColors.Accent).padding(26.dp), Alignment.Center) {
+        Art(item.art, item.name, Modifier.size(312.dp))
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        DialogTitle(item.name)
+        item.note?.let { DialogBody(it) }
+    }
+    item.date?.let { Stat(R.string.collection_badge_date, it) }
+    PrimaryButton(stringResource(R.string.collection_close), onClose, Modifier.fillMaxWidth())
 }
 
 @Composable
@@ -350,14 +380,14 @@ private fun Stat(@StringRes label: Int, value: String) =
 
 /** D-25 */
 @Composable
-private fun PostcardDetail(item: Collectible, onClose: () -> Unit, onShare: (Boolean, String, String) -> Unit) =
+private fun PostcardDetail(item: Collectible, onClose: () -> Unit, onShare: ShareHandler) =
     DialogFrame(1040.dp) {
         Art(item.art, item.name, Modifier.fillMaxWidth().aspectRatio(720f / 400f).clip(ArtShape), ContentScale.Crop)
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             DialogTitle(item.name)
             DialogBody(item.note.orEmpty())
         }
-        CloseShareRow(onClose) { onShare(true, item.name, item.note.orEmpty()) }
+        CloseShareRow(onClose) { onShare(true, item.name, item.note.orEmpty(), item.art) }
     }
 
 /** D-26. Figma 힌트는 상점 문구 하나뿐이라, 값을 매긴 항목만 그 문구를 쓴다. */
@@ -401,7 +431,7 @@ private fun EncyclopediaEmptyPreview() = PreviewShell(Route.ENCYCLOPEDIA) {
 }
 
 internal class DialogStates : PreviewParameterProvider<String> {
-    override val values = sequenceOf("card_seongsan", "post_cheomseongdae", "ch_cat", "ch_firefly", "car_yellow", "card_gayang")
+    override val values = sequenceOf("card_seongsan", "post_cheomseongdae", "badge_safe", "ch_cat", "ch_firefly", "car_yellow", "card_gayang")
 }
 
 @ScreenPreviews
@@ -410,7 +440,7 @@ private fun ItemDialogPreview(@PreviewParameter(DialogStates::class) id: String)
     val all = collections(Profile())
     val kind = all.entries.first { e -> e.value.any { it.id == id } }.key
     CollectionPane(all, kind, {}, true, true, Profile(), { HeaderChip("도감") }, {}) {}
-    Overlay({}) { ItemDialog(all.getValue(kind).first { it.id == id }, {}, { _, _, _ -> }, {}) }
+    Overlay({}) { ItemDialog(all.getValue(kind).first { it.id == id }, {}, { _, _, _, _ -> }, {}) }
 }
 
 @ScreenPreviews

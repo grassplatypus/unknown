@@ -57,6 +57,9 @@ import kotlinx.coroutines.delay
 
 enum class ShareKind { PHOTO, POSTCARD, JAM_CARD }
 
+/** 도감과 내 정보가 공유 화면을 열 때 넘기는 것. image는 왼쪽 카드에 보일 그림이다. */
+typealias ShareHandler = (isPostcard: Boolean, title: String, subtitle: String, image: Int?) -> Unit
+
 /** 휴대폰으로 열 QR을 보이는 공유 화면(S-17). title과 subtitle은 왼쪽 카드 아래에 쓴다. */
 @Composable
 fun ShareQrScreen(kind: ShareKind, title: String, subtitle: String, onClose: () -> Unit) =

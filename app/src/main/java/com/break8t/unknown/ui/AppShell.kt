@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import com.break8t.unknown.ui.photo.ShareHandler
 import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.drive.DriveMode
 import com.break8t.unknown.drive.LocalUxLimits
@@ -59,15 +60,17 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
     var shareKind by rememberSaveable { mutableStateOf<ShareKind?>(null) }
     var shareTitle by rememberSaveable { mutableStateOf("") }
     var shareSubtitle by rememberSaveable { mutableStateOf("") }
+    var shareImage by rememberSaveable { mutableStateOf<Int?>(null) }
     val nav = Nav(
         go = { route = it; sub = null; shareKind = null },
         open = { route = Route.ISLAND; sub = it },
         back = { sub = null },
         signOut = onSignOut,
-        share = { isPostcard, title, subtitle ->
+        share = { isPostcard, title, subtitle, image ->
             shareKind = if (isPostcard) ShareKind.POSTCARD else ShareKind.JAM_CARD
             shareTitle = title
             shareSubtitle = subtitle
+            shareImage = image
         },
     )
     Row(Modifier.fillMaxSize().background(AppColors.Background)) {
@@ -81,7 +84,7 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
                 DrivingCover(stringResource(route.parkHint))
             } else {
                 val kind = shareKind
-                if (kind != null) ShareQrScreen(kind, shareTitle, shareSubtitle, onClose = { shareKind = null })
+                if (kind != null) ShareQrScreen(kind, shareTitle, shareSubtitle, shareImage, onClose = { shareKind = null })
                 else holder.SaveableStateProvider("${route.name}/${sub?.name}") { ScreenFor(route, sub, mode, nav) }
             }
         }
@@ -93,7 +96,7 @@ private class Nav(
     val open: (IslandSub) -> Unit,
     val back: () -> Unit,
     val signOut: () -> Unit,
-    val share: (isPostcard: Boolean, title: String, subtitle: String) -> Unit,
+    val share: ShareHandler,
 )
 
 @Composable

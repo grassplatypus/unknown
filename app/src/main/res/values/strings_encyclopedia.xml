@@ -36,6 +36,7 @@
     <string name="collection_fastest">가장 빨리 지난 기록</string>
     <string name="collection_slowest">가장 느리게 지난 기록</string>
     <string name="collection_usual_time">만나는 시간대</string>
+    <string name="collection_badge_date">받은 날</string>
     <string name="collection_close">닫기</string>
     <string name="collection_share">공유</string>
 
