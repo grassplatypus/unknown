@@ -41,7 +41,7 @@ enum class IslandSub { SHOP, INVENTORY }
  * 덮개로 가릴 수 없어서다. 화면 상태는 SaveableStateHolder가 보관해 P로 돌아오면 이어진다.
  */
 @Composable
-fun AppShell(mode: DriveMode) {
+fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
     var route by rememberSaveable { mutableStateOf(Route.HOME) }
     var sub by rememberSaveable { mutableStateOf<IslandSub?>(null) }
     val demo = LocalDemoState.current
@@ -52,6 +52,7 @@ fun AppShell(mode: DriveMode) {
         go = { route = it; sub = null },
         open = { route = Route.ISLAND; sub = it },
         back = { sub = null },
+        signOut = onSignOut,
     )
     Row(Modifier.fillMaxSize().background(AppColors.Background)) {
         SideRail(current = route, onSelect = nav.go)
@@ -69,7 +70,7 @@ fun AppShell(mode: DriveMode) {
     }
 }
 
-private class Nav(val go: (Route) -> Unit, val open: (IslandSub) -> Unit, val back: () -> Unit)
+private class Nav(val go: (Route) -> Unit, val open: (IslandSub) -> Unit, val back: () -> Unit, val signOut: () -> Unit)
 
 @Composable
 private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav) {
@@ -88,8 +89,8 @@ private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav) 
         })
         route == Route.HOME -> HomeScreen(mode, nav.go)
         route == Route.FIELD_DROP -> FieldDropScreen()
-        // 계정 화면은 아직 합치지 않았다. 합치면 계정 전환과 로그아웃을 연결한다.
-        route == Route.SETTINGS -> SettingsScreen(onSwitchAccount = {}, onLogout = {}, onOpenShop = { nav.open(IslandSub.SHOP) })
+        route == Route.SETTINGS ->
+            SettingsScreen(onSwitchAccount = nav.signOut, onLogout = nav.signOut, onOpenShop = { nav.open(IslandSub.SHOP) })
         else -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             Text(stringResource(R.string.screen_coming), color = AppColors.TextSub)
         }

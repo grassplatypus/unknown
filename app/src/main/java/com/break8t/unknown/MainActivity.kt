@@ -5,6 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.break8t.unknown.ui.account.AccountFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.break8t.unknown.data.DemoStore
 import com.break8t.unknown.data.LocalDemoState
@@ -28,8 +32,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mode by drive.mode.collectAsStateWithLifecycle()
             val limits by ux.limits.collectAsStateWithLifecycle()
+            // 화면을 나누면 Activity가 다시 만들어지므로 로그인 여부는 저장해 둔다.
+            var signedIn by rememberSaveable { mutableStateOf(false) }
             CompositionLocalProvider(LocalDemoState provides demo, LocalUxLimits provides limits) {
-                AppTheme { AppShell(mode) }
+                AppTheme {
+                    if (signedIn) AppShell(mode, onSignOut = { signedIn = false })
+                    else AccountFlow(mode, onSignedIn = { signedIn = true })
+                }
             }
         }
     }

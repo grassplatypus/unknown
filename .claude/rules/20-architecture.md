@@ -34,7 +34,12 @@
 
 | 화면 | 함수 | 위치 |
 |---|---|---|
+| 시작과 계정 (사이드 메뉴 밖, 로그인 전) | `AccountFlow(mode, onSignedIn)` | `ui/account/` |
 | 홈 | `HomeScreen(mode, onNavigate)` | `ui/home/` |
+| 필드 드랍 | `FieldDropScreen()` | `ui/fielddrop/` |
+| 섬 | `IslandScreen(onOpen)` | `ui/island/` |
+| 상점, 보관함 (섬 아래) | `ShopScreen(onBack, onOpenInventory)`, `InventoryScreen(onBack, onOpenShop, onPlaceFurniture)` | `ui/shop/`, `ui/inventory/` |
+| 설정 | `SettingsScreen(onSwitchAccount, onLogout, onOpenShop)` | `ui/settings/` |
 
 `AppShell`이 사이드 메뉴 선택에 따라 진입점을 부른다. 기능 담당은 진입점 시그니처를 바꾸지 않는다.
 
