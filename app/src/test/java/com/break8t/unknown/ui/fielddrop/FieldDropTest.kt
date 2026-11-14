@@ -205,4 +205,18 @@ class FieldDropTest {
         assertNull(mushroomAt(emptyList(), list)) // empty map closes the card
         assertNull(mushroomAt(listOf("gone", null), list))
     }
+
+    @Test fun rotatedCarCanvasFitsAndKeepsCentre() {
+        assertEquals(114, rotatedSidePx(114, 0f))
+        assertEquals(114, rotatedSidePx(114, 90f))
+        assertEquals(114, rotatedSidePx(114, 180f))
+        assertEquals(162, rotatedSidePx(114, 45f)) // 114 x 1.4142 = 161.2, rounded up to the same parity
+        assertEquals(152, rotatedSidePx(114, carRotation(250f))) // S-10-a, 25 degrees: 151.5
+        assertEquals(161, rotatedSidePx(113, 45f)) // odd side stays odd
+        for (deg in 0 until 360 step 5) {
+            val side = rotatedSidePx(114, deg.toFloat())
+            assertEquals(0, (side - 114) % 2)
+            assertTrue(side >= 114 && side <= 162)
+        }
+    }
 }

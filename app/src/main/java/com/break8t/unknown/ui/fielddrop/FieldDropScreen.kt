@@ -247,11 +247,8 @@ private fun PreviewMarkers(markers: MapMarkers, project: (GeoPoint) -> Offset) {
     Canvas(Modifier.fillMaxSize()) {
         val c = drawContext.canvas.nativeCanvas
         val at = project(markers.car)
-        val carArt = images.getValue(markers.carIcon)
-        c.save()
-        c.rotate(markers.carRotate, at.x, at.y)
+        val carArt = rotatedCar(images.getValue(markers.carIcon), markers.carRotate)
         c.drawBitmap(carArt, at.x - carArt.width / 2f, at.y - carArt.height / 2f, null)
-        c.restore()
         val tag = images.getValue(MY_CAR_TAG)
         c.drawBitmap(tag, at.x - tag.width / 2f, at.y + CAR_TAG_TOP_DP * density, null)
         markers.mushrooms.forEach { m ->

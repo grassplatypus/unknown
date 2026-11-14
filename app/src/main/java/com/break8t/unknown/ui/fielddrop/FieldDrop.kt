@@ -6,7 +6,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.asin
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.log2
 import kotlin.math.pow
@@ -153,6 +155,13 @@ fun mapMarkers(car: CarFix, carId: String, mushrooms: List<Mushroom>, state: Fie
 /** 누른 자리에서 지도가 찾은 표시 id 가운데 첫 버섯. 없으면 빈 곳을 누른 것이다. */
 fun mushroomAt(hitIds: List<String?>, mushrooms: List<Mushroom>): Mushroom? =
     hitIds.firstNotNullOfOrNull { id -> mushrooms.firstOrNull { it.id == id } }
+
+/** 정사각형 그림을 [deg]만큼 돌려 담을 정사각형의 한 변(px). 원래 변과 홀짝을 맞춰서 가운데가 같은 픽셀에 남는다. */
+fun rotatedSidePx(sidePx: Int, deg: Float): Int {
+    val r = Math.toRadians(deg.toDouble())
+    val need = ceil(sidePx * (abs(cos(r)) + abs(sin(r))) - 1e-9).toInt()
+    return need + (need - sidePx).mod(2)
+}
 
 fun distanceText(meters: Int): String =
     if (meters < 1000) "${meters}m" else String.format(Locale.ROOT, "%.1fkm", meters / 1000.0)
