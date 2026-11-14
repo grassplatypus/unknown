@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -46,6 +47,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
@@ -169,7 +171,7 @@ private fun ProductGrid(items: List<CatalogItem>, profile: Profile, onPick: (Cat
         verticalArrangement = Arrangement.spacedBy(Gap),
     ) {
         items(items, key = { it.id }) { item ->
-            Tile(item, profile, Modifier.fillMaxWidth(), boxHeight = 156.dp, onPick) {
+            Tile(item, profile, Modifier.fillMaxWidth(), ProductSize, onPick) {
                 Text(
                     stringResource(R.string.shop_count, profile.items[item.id] ?: 0),
                     color = AppColors.TextSub,
@@ -180,13 +182,20 @@ private fun ProductGrid(items: List<CatalogItem>, profile: Profile, onPick: (Cat
     }
 }
 
+/** 칸 종류마다 다른 크기. Figma S-19-a(상품), S-19-e(캐릭터, 포즈) 값 x 1.3. */
+private class TileSize(val padding: Dp, val box: Dp, val image: Dp, val name: TextUnit, val price: TextUnit)
+
+private val ProductSize = TileSize(18.dp, 156.dp, 130.dp, 39.sp, 39.sp)
+private val CharacterSize = TileSize(18.dp, 143.dp, 130.dp, 34.sp, 36.sp)
+private val PoseSize = TileSize(13.dp, 120.dp, 109.dp, 31.sp, 36.sp)
+
 /** 상품 칸. 하나만 가지는 것을 이미 가졌으면 "소유 중"을 보이고 누를 수 없다. */
 @Composable
 private fun Tile(
     item: CatalogItem,
     profile: Profile,
     modifier: Modifier,
-    boxHeight: Dp,
+    size: TileSize,
     onPick: (CatalogItem) -> Unit,
     footer: @Composable () -> Unit = {},
 ) {
@@ -195,17 +204,17 @@ private fun Tile(
     val canPick = !owned && price != null
     AppCard(modifier.clip(TileShape).clickable(enabled = canPick, role = Role.Button) { onPick(item) }) {
         Column(
-            Modifier.padding(18.dp),
+            Modifier.padding(size.padding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(Modifier.fillMaxWidth().heightIn(min = boxHeight).clip(BoxShape).background(AppColors.Accent), Alignment.Center) {
-                ItemImage(item.id, item.name, boxHeight * 0.83f)
+            Box(Modifier.fillMaxWidth().height(size.box).clip(BoxShape).background(AppColors.Accent), Alignment.Center) {
+                ItemImage(item.id, item.name, size.image)
             }
-            Text(item.name, color = AppColors.Text, fontSize = 36.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+            Text(item.name, color = AppColors.Text, fontSize = size.name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
             when {
-                owned -> Text(stringResource(R.string.shop_owned), color = AppColors.Success, fontSize = 31.sp, fontWeight = FontWeight.Bold)
-                price != null -> CoinAmount(price, 36.sp, if (price > profile.coins) AppColors.Error else AppColors.Text)
+                owned -> Text(stringResource(R.string.shop_owned), color = AppColors.Success, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+                price != null -> CoinAmount(price, size.price, if (price > profile.coins) AppColors.Error else AppColors.Text)
             }
             footer()
         }
@@ -307,20 +316,20 @@ private fun SmallBuyButton(enabled: Boolean, onClick: () -> Unit) {
 /** S-19-e. 캐릭터와 사진 포즈를 줄마다 옆으로 넘겨 본다. */
 @Composable
 private fun CharacterTab(profile: Profile, onPick: (CatalogItem) -> Unit) {
-    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(stringResource(R.string.shop_section_character))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Gap)) {
-            items(Catalog.ofKind(ItemKind.CHARACTER), key = { it.id }) { Tile(it, profile, Modifier.width(287.dp), 135.dp, onPick) }
+            items(Catalog.ofKind(ItemKind.CHARACTER), key = { it.id }) { Tile(it, profile, Modifier.width(294.dp), CharacterSize, onPick) }
         }
-        SectionLabel(stringResource(R.string.shop_section_pose))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            items(Catalog.ofKind(ItemKind.POSE), key = { it.id }) { Tile(it, profile, Modifier.width(190.dp), 109.dp, onPick) }
+        SectionLabel(stringResource(R.string.shop_section_pose), Modifier.padding(top = 23.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(17.dp)) {
+            items(Catalog.ofKind(ItemKind.POSE), key = { it.id }) { Tile(it, profile, Modifier.width(177.dp), PoseSize, onPick) }
         }
     }
 }
 
 @Composable
-private fun SectionLabel(text: String) = Text(text, color = AppColors.TextSub, fontSize = 31.sp, fontWeight = FontWeight.Bold)
+private fun SectionLabel(text: String, modifier: Modifier = Modifier) = Text(text, modifier, color = AppColors.TextSub, fontSize = 31.sp, fontWeight = FontWeight.Bold)
 
 /** D-14, D-15, D-17, D-19. 씨앗과 가구만 개수를 고른다. */
 @Composable

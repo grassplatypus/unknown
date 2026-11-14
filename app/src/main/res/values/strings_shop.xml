@@ -14,9 +14,9 @@
     <string name="shop_count">%1$d개</string>
     <string name="shop_owned">소유 중</string>
     <string name="shop_in_use">사용 중</string>
-    <string name="shop_previewing">미리 듣기 중</string>
+    <string name="shop_previewing">미리 듣는 중</string>
     <string name="shop_preview">미리 듣기</string>
-    <string name="shop_preview_stop">미리 듣기 멈추기</string>
+    <string name="shop_preview_stop">미리 듣기 멈춤</string>
 
     <string name="shop_qty_less">하나 줄이기</string>
     <string name="shop_qty_more">하나 늘리기</string>
