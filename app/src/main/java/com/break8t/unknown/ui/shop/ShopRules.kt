@@ -6,11 +6,12 @@ import com.break8t.unknown.config.CatalogItem
 import com.break8t.unknown.config.ItemKind
 import com.break8t.unknown.data.DemoState
 
-enum class ShopTab(val kinds: List<ItemKind>) {
-    SEED(listOf(ItemKind.SEED)),
-    FURNITURE(listOf(ItemKind.FURNITURE)),
-    VOICE(listOf(ItemKind.VOICE_PACK)),
-    CHARACTER(listOf(ItemKind.CHARACTER, ItemKind.POSE)),
+/** 음성팩은 캐릭터에 묶여 있어서 탭이 없다. 포즈는 어느 캐릭터에도 쓰므로 따로 판다. */
+enum class ShopTab(val kind: ItemKind) {
+    SEED(ItemKind.SEED),
+    FURNITURE(ItemKind.FURNITURE),
+    CHARACTER(ItemKind.CHARACTER),
+    POSE(ItemKind.POSE),
 }
 
 enum class BuyResult { BOUGHT, NOT_ENOUGH_COINS, ALREADY_OWNED, NOT_FOR_SALE, BAD_QUANTITY }
@@ -18,7 +19,7 @@ enum class BuyResult { BOUGHT, NOT_ENOUGH_COINS, ALREADY_OWNED, NOT_FOR_SALE, BA
 /** 씨앗과 가구는 개수로 사고, 나머지는 하나만 가진다. */
 fun CatalogItem.isCounted(): Boolean = kind == ItemKind.SEED || kind == ItemKind.FURNITURE
 
-fun shopItems(tab: ShopTab): List<CatalogItem> = Catalog.items.filter { it.kind in tab.kinds }
+fun shopItems(tab: ShopTab): List<CatalogItem> = Catalog.ofKind(tab.kind)
 
 fun totalPrice(item: CatalogItem, qty: Int): Int = (item.price ?: 0) * qty
 
@@ -40,17 +41,13 @@ fun buy(state: DemoState, item: CatalogItem, qty: Int, config: BalanceConfig): B
     return BuyResult.BOUGHT
 }
 
-/** 산 뒤에 묻는 것. 음성팩은 D-16, 캐릭터는 D-18을 띄운다. */
-fun askAfterBuying(item: CatalogItem): ItemKind? =
-    item.kind.takeIf { it == ItemKind.VOICE_PACK || it == ItemKind.CHARACTER }
+/** 산 뒤에 바꿀지 묻는 것은 캐릭터뿐이다(D-18). */
+fun asksToSwitch(item: CatalogItem): Boolean = item.kind == ItemKind.CHARACTER
 
-/** D-16, D-18의 바꾸기. */
+/** D-18의 바꾸기. 함께 산 목소리가 있으면 목소리도 그 캐릭터 것으로 바꾼다. */
 fun switchTo(state: DemoState, item: CatalogItem) = state.update {
-    when (item.kind) {
-        ItemKind.VOICE_PACK -> it.copy(voicePackId = item.id)
-        ItemKind.CHARACTER -> it.copy(selectedCharacterId = item.id)
-        else -> it
-    }
+    if (item.kind != ItemKind.CHARACTER) it
+    else it.copy(selectedCharacterId = item.id, voicePackId = item.voiceId ?: it.voicePackId)
 }
 
 /** 받침이 있으면 [withFinal], 없으면 [without]. 한글이 아닌 끝 글자는 받침 없음으로 본다. */

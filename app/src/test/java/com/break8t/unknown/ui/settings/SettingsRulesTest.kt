@@ -44,6 +44,11 @@ class SettingsRulesTest {
         assertEquals(listOf("기본 목소리", "냥이 목소리"), packs.map { it.name })
     }
 
+    @Test fun characterVoiceComesOnlyWithItsCharacter() {
+        assertEquals(listOf("voice_default"), ownedVoicePacks(setOf("voice_default", "voice_sprout")).map { it.id })
+        assertEquals(listOf("voice_default", "voice_firefly"), ownedVoicePacks(setOf("voice_default", "ch_firefly")).map { it.id })
+    }
+
     @Test fun voiceFolderDropsPrefix() = assertEquals("default", voiceAssetFolder("voice_default"))
 
     @Test fun particleRo() {

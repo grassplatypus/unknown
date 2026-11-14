@@ -1,9 +1,9 @@
 package com.break8t.unknown.ui.shop
 
 import com.break8t.unknown.ui.components.ScreenTitle
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,19 +16,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -60,20 +53,21 @@ import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.data.Profile
 import com.break8t.unknown.ui.components.AppCard
 import com.break8t.unknown.ui.components.AppChip
-import com.break8t.unknown.ui.components.ControlShape
 import com.break8t.unknown.ui.components.PrimaryButton
 import com.break8t.unknown.ui.components.SecondaryButton
 import com.break8t.unknown.ui.theme.AppColors
 
-/** 상점 진입점(S-19). 섬으로와 보관함은 다른 묶음 화면이라 콜백으로 알린다. */
+/**
+ * 상점 진입점(S-19). 뒤로 가기와 보관함은 다른 묶음 화면이라 콜백으로 알린다.
+ * @param fromVoicePacks 설정의 음성팩 고르기에서 열었으면 참이다. 뒤로 버튼이 "음성팩"이 되고, 목소리가 딸린 캐릭터 탭부터 보인다.
+ */
 @Composable
-fun ShopScreen(onBack: () -> Unit, onOpenInventory: () -> Unit) {
+fun ShopScreen(onBack: () -> Unit, onOpenInventory: () -> Unit, fromVoicePacks: Boolean = false) {
     val state = LocalDemoState.current
     val profile by state.profile.collectAsState()
     val context = LocalContext.current
     val config = BalanceConfig.DEFAULT
-    var tab by rememberSaveable { mutableStateOf(ShopTab.SEED) }
-    var playingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var tab by rememberSaveable { mutableStateOf(if (fromVoicePacks) ShopTab.CHARACTER else ShopTab.SEED) }
     var pendingId by rememberSaveable { mutableStateOf<String?>(null) }
     var qty by rememberSaveable { mutableIntStateOf(1) }
     var askId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -81,10 +75,8 @@ fun ShopScreen(onBack: () -> Unit, onOpenInventory: () -> Unit) {
 
     Box(Modifier.fillMaxSize()) {
         ShopContent(
-            profile, tab, playingId, onBack, onOpenInventory,
-            onTab = { tab = it },
-            onTogglePlay = { id -> playingId = if (playingId == id) null else id },
-            onPick = { pendingId = it.id; qty = 1 },
+            profile, tab, onBack, onOpenInventory, onTab = { tab = it }, onPick = { pendingId = it.id; qty = 1 },
+            backLabel = if (fromVoicePacks) R.string.shop_back_voice else R.string.shop_back,
         )
         ToastHost(toast) { toast = null }
     }
@@ -97,7 +89,7 @@ fun ShopScreen(onBack: () -> Unit, onOpenInventory: () -> Unit) {
                 close()
                 when {
                     !bought -> Unit
-                    askAfterBuying(item) != null -> askId = item.id
+                    asksToSwitch(item) -> askId = item.id
                     item.kind == ItemKind.POSE -> toast = context.getString(R.string.shop_toast_pose, item.name)
                     else -> toast = context.getString(R.string.shop_toast_bought, item.name, qty)
                 }
@@ -115,19 +107,18 @@ fun ShopScreen(onBack: () -> Unit, onOpenInventory: () -> Unit) {
 internal fun ShopContent(
     profile: Profile,
     tab: ShopTab,
-    playingId: String?,
     onBack: () -> Unit,
     onOpenInventory: () -> Unit,
     onTab: (ShopTab) -> Unit,
-    onTogglePlay: (String) -> Unit,
     onPick: (CatalogItem) -> Unit,
+    @StringRes backLabel: Int = R.string.shop_back,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().padding(ScreenPadding)) {
         // Split screen (about 660dp of body) has no room for the stall picture beside the grid.
         val wide = maxWidth >= 1000.dp
         Column(verticalArrangement = Arrangement.spacedBy(Gap)) {
             HeaderBar(profile.coins) {
-                HeaderChip(stringResource(R.string.shop_back), R.drawable.shop_ic_back, selected = false, onClick = onBack)
+                HeaderChip(stringResource(backLabel), R.drawable.shop_ic_back, selected = false, onClick = onBack)
                 ScreenTitle(stringResource(R.string.shop_title))
                 HeaderChip(stringResource(R.string.shop_inventory), R.drawable.shop_ic_box, selected = false, onClick = onOpenInventory)
             }
@@ -147,9 +138,18 @@ internal fun ShopContent(
                         }
                     }
                     when (tab) {
-                        ShopTab.SEED, ShopTab.FURNITURE -> ProductGrid(shopItems(tab), profile, onPick)
-                        ShopTab.VOICE -> VoiceList(profile, playingId, wide, onTogglePlay, onPick)
-                        ShopTab.CHARACTER -> CharacterTab(profile, onPick)
+                        ShopTab.SEED, ShopTab.FURNITURE -> ProductGrid(shopItems(tab), profile, 260.dp, ProductSize, onPick) { item ->
+                            Text(stringResource(R.string.shop_count, profile.items[item.id] ?: 0), color = AppColors.TextSub, fontSize = 29.sp)
+                        }
+                        ShopTab.CHARACTER -> ProductGrid(shopItems(tab), profile, 260.dp, CharacterSize, onPick) { item ->
+                            if (item.voiceId != null) {
+                                Text(stringResource(R.string.shop_with_voice), color = AppColors.TextSub, fontSize = 29.sp)
+                            }
+                        }
+                        ShopTab.POSE -> ProductGrid(
+                            shopItems(tab), profile, 177.dp, PoseSize, onPick,
+                            header = stringResource(R.string.shop_pose_any),
+                        )
                     }
                 }
             }
@@ -160,25 +160,32 @@ internal fun ShopContent(
 private fun tabLabel(tab: ShopTab) = when (tab) {
     ShopTab.SEED -> R.string.shop_tab_seed
     ShopTab.FURNITURE -> R.string.shop_tab_furniture
-    ShopTab.VOICE -> R.string.shop_tab_voice
     ShopTab.CHARACTER -> R.string.shop_tab_character
+    ShopTab.POSE -> R.string.shop_tab_pose
 }
 
 @Composable
-private fun ProductGrid(items: List<CatalogItem>, profile: Profile, onPick: (CatalogItem) -> Unit) {
+private fun ProductGrid(
+    items: List<CatalogItem>,
+    profile: Profile,
+    minCell: Dp,
+    size: TileSize,
+    onPick: (CatalogItem) -> Unit,
+    header: String? = null,
+    footer: @Composable (CatalogItem) -> Unit = {},
+) {
     LazyVerticalGrid(
-        GridCells.Adaptive(260.dp),
+        GridCells.Adaptive(minCell),
         horizontalArrangement = Arrangement.spacedBy(Gap),
         verticalArrangement = Arrangement.spacedBy(Gap),
     ) {
-        items(items, key = { it.id }) { item ->
-            Tile(item, profile, Modifier.fillMaxWidth(), ProductSize, onPick) {
-                Text(
-                    stringResource(R.string.shop_count, profile.items[item.id] ?: 0),
-                    color = AppColors.TextSub,
-                    fontSize = 29.sp,
-                )
+        if (header != null) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(header, color = AppColors.TextSub, fontSize = 31.sp, fontWeight = FontWeight.Bold)
             }
+        }
+        items(items, key = { it.id }) { item ->
+            Tile(item, profile, Modifier.fillMaxWidth(), size, onPick) { footer(item) }
         }
     }
 }
@@ -222,117 +229,7 @@ private fun Tile(
     }
 }
 
-@Composable
-private fun VoiceList(
-    profile: Profile,
-    playingId: String?,
-    wide: Boolean,
-    onTogglePlay: (String) -> Unit,
-    onPick: (CatalogItem) -> Unit,
-) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(26.dp)) {
-        items(shopItems(ShopTab.VOICE), key = { it.id }) { item ->
-            VoiceRow(item, profile, playing = item.id == playingId, wide, { onTogglePlay(item.id) }, { onPick(item) })
-        }
-    }
-}
-
-/** S-19-c, S-19-d. 미리 듣기는 아직 녹음 파일이 없어서 재생 표시만 바꾼다. */
-@Composable
-private fun VoiceRow(item: CatalogItem, profile: Profile, playing: Boolean, wide: Boolean, onTogglePlay: () -> Unit, onBuy: () -> Unit) {
-    AppCard(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.heightIn(min = 161.dp).padding(horizontal = 23.dp, vertical = 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(26.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (wide) {
-                Box(Modifier.size(109.dp).clip(TileShape).background(AppColors.Accent), Alignment.Center) {
-                    ItemImage(item.id, item.name, 109.dp)
-                }
-            }
-            Box(
-                Modifier
-                    .size(109.dp)
-                    .clip(ControlShape)
-                    .background(AppColors.Card)
-                    .border(3.dp, AppColors.Line, ControlShape)
-                    .clickable(role = Role.Button, onClick = onTogglePlay),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painterResource(if (playing) R.drawable.shop_ic_pause else R.drawable.shop_ic_play),
-                    contentDescription = stringResource(if (playing) R.string.shop_preview_stop else R.string.shop_preview),
-                    Modifier.size(52.dp),
-                    tint = AppColors.Text,
-                )
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(item.name, color = AppColors.Text, fontSize = 42.sp, fontWeight = FontWeight.Bold)
-                if (playing) {
-                    Text(stringResource(R.string.shop_previewing), color = AppColors.Success, fontSize = 31.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            VoiceStatus(item, profile, onBuy)
-        }
-    }
-}
-
-@Composable
-private fun VoiceStatus(item: CatalogItem, profile: Profile, onBuy: () -> Unit) {
-    val price = item.price
-    when {
-        item.id == profile.voicePackId -> StatusText(stringResource(R.string.shop_in_use))
-        item.id in profile.owned -> StatusText(stringResource(R.string.shop_owned))
-        price != null -> Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val short = price > profile.coins
-            CoinAmount(price, 39.sp, if (short) AppColors.Error else AppColors.Text)
-            SmallBuyButton(enabled = !short, onBuy)
-        }
-    }
-}
-
-@Composable
-private fun StatusText(text: String) = Text(text, color = AppColors.Success, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-
-@Composable
-private fun SmallBuyButton(enabled: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(width = 199.dp, height = 68.dp)
-            .clip(ControlShape)
-            .background(if (enabled) AppColors.Primary else AppColors.Disabled)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            stringResource(R.string.shop_buy),
-            color = if (enabled) AppColors.Card else AppColors.DisabledText,
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-/** S-19-e. 캐릭터와 사진 포즈를 줄마다 옆으로 넘겨 본다. */
-@Composable
-private fun CharacterTab(profile: Profile, onPick: (CatalogItem) -> Unit) {
-    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionLabel(stringResource(R.string.shop_section_character))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(Gap)) {
-            items(Catalog.ofKind(ItemKind.CHARACTER), key = { it.id }) { Tile(it, profile, Modifier.width(294.dp), CharacterSize, onPick) }
-        }
-        SectionLabel(stringResource(R.string.shop_section_pose), Modifier.padding(top = 23.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(17.dp)) {
-            items(Catalog.ofKind(ItemKind.POSE), key = { it.id }) { Tile(it, profile, Modifier.width(177.dp), PoseSize, onPick) }
-        }
-    }
-}
-
-@Composable
-private fun SectionLabel(text: String, modifier: Modifier = Modifier) = Text(text, modifier, color = AppColors.TextSub, fontSize = 31.sp, fontWeight = FontWeight.Bold)
-
-/** D-14, D-15, D-17, D-19. 씨앗과 가구만 개수를 고른다. */
+/** D-14, D-17, D-19. 씨앗과 가구만 개수를 고른다. 캐릭터는 함께 받는 목소리를, 포즈는 쓰는 곳을 밝힌다. */
 @Composable
 internal fun ColumnScope.BuyDialogBody(
     item: CatalogItem,
@@ -351,6 +248,7 @@ internal fun ColumnScope.BuyDialogBody(
     } else {
         BigImageBox(item.id, item.name)
         DialogTitle(buyTitle(item))
+        buyNote(item)?.let { Text(it, color = AppColors.TextSub, fontSize = 36.sp) }
     }
     CoinSummary(coins, total)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(35.dp)) {
@@ -369,12 +267,17 @@ private fun buyTitle(item: CatalogItem): String = when (item.kind) {
     else -> stringResource(R.string.shop_buy_title, item.name, josa(item.name, "을", "를"))
 }
 
-/** D-16(음성팩), D-18(캐릭터). 바꾸기는 지금 쓰는 것을 산 것으로 바꾼다. */
+@Composable
+private fun buyNote(item: CatalogItem): String? = when (item.kind) {
+    ItemKind.POSE -> stringResource(R.string.shop_pose_any)
+    else -> item.voiceId?.let(Catalog::item)?.let { stringResource(R.string.shop_buy_with_voice, it.name) }
+}
+
+/** D-18. 바꾸기는 대표 캐릭터를 산 것으로 바꾸고, 함께 받은 목소리가 있으면 목소리도 바꾼다. */
 @Composable
 internal fun ColumnScope.SwitchDialogBody(item: CatalogItem, onLater: () -> Unit, onSwitch: () -> Unit) {
-    val voice = item.kind == ItemKind.VOICE_PACK
-    if (!voice) BigImageBox(item.id, item.name)
-    DialogTitle(stringResource(if (voice) R.string.shop_switch_voice else R.string.shop_switch_character))
+    BigImageBox(item.id, item.name)
+    DialogTitle(stringResource(if (item.voiceId != null) R.string.shop_switch_character_voice else R.string.shop_switch_character))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(35.dp)) {
         SecondaryButton(stringResource(R.string.shop_later), onLater, Modifier.weight(1f))
         PrimaryButton(stringResource(R.string.shop_switch), onSwitch, Modifier.weight(1f))

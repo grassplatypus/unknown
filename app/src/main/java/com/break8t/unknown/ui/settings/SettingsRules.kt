@@ -20,9 +20,12 @@ internal fun statusMessageToSave(draft: String, max: Int): String = textToSave(d
 /** 섬 시간을 실제 시간에 맞추면 밤/낮은 고를 수 없다(S-25-b). 끄면 고른다(S-25-d). */
 internal fun islandTimeChoiceEnabled(realTime: Boolean): Boolean = !realTime
 
-/** 가진 음성팩. 순서와 이름은 Catalog를 따르고, Catalog에 없는 id는 이름이 없어서 뺀다. */
+/**
+ * 가진 음성팩. 캐릭터 목소리는 그 캐릭터를 가졌을 때만, 기본 목소리처럼 캐릭터가 없는 것은 보유 목록에 있을 때 고른다.
+ * 순서와 이름은 Catalog를 따르고, Catalog에 없는 id는 이름이 없어서 뺀다.
+ */
 internal fun ownedVoicePacks(owned: Set<String>): List<CatalogItem> =
-    Catalog.ofKind(ItemKind.VOICE_PACK).filter { it.id in owned }
+    Catalog.ofKind(ItemKind.VOICE_PACK).filter { (Catalog.characterOf(it.id)?.id ?: it.id) in owned }
 
 // ponytail: Catalog id(voice_default)와 assets/voice/<폴더>(default)를 이어 주는 약속이 아직 없어서 접두어만 뗀다.
 internal fun voiceAssetFolder(packId: String): String = packId.removePrefix("voice_")

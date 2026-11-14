@@ -6,6 +6,7 @@ import com.break8t.unknown.ui.house.CameraPreset
 import com.break8t.unknown.ui.house.SceneCamera
 import com.break8t.unknown.ui.house.SceneCharacter
 import com.break8t.unknown.ui.iso.IsoObject
+import com.break8t.unknown.ui.iso.IsoPalette
 import com.break8t.unknown.ui.iso.IsoShapes
 import kotlin.random.Random
 
@@ -57,14 +58,15 @@ data class PhotoState(
     }
 }
 
-/**
- * 고를 수 있는 포즈. 첫 칸은 고른 캐릭터의 기본 그림이다.
- * 포즈 그림(pose_*)은 새싹이 그림뿐이라 다른 캐릭터에는 붙이지 않는다.
- */
-fun poseOptions(characterId: String, owned: Set<String>): List<String> {
-    val poses = if (characterId == "ch_sprout") Catalog.ofKind(ItemKind.POSE).map { it.id }.filter { it in owned } else emptyList()
-    return listOf(characterId) + poses
-}
+/** 고를 수 있는 포즈. 첫 칸은 고른 캐릭터의 기본 모습이고, 가진 포즈는 어느 캐릭터에나 붙는다. */
+fun poseOptions(characterId: String, owned: Set<String>): List<String> =
+    listOf(characterId) + Catalog.ofKind(ItemKind.POSE).map { it.id }.filter { it in owned }
+
+// 포즈가 덧붙이는 팔과 발의 색. 캐릭터 모델의 몸 색과 맞춘다.
+private val LimbColors = mapOf(
+    "ch_sprout" to IsoPalette.SproutBody, "ch_cat" to IsoPalette.Orange, "ch_mush" to IsoPalette.Cream,
+    "ch_cloud" to IsoPalette.White, "ch_firefly" to IsoPalette.Yellow,
+)
 
 fun isNight(realTime: Boolean, nightFlag: Boolean, hour: Int): Boolean =
     if (realTime) hour >= NIGHT_FROM_HOUR || hour < NIGHT_UNTIL_HOUR else nightFlag
@@ -90,14 +92,22 @@ fun qrModules(seed: Int, size: Int = 25): List<BooleanArray> {
 /**
  * The character as a voxel model standing in the scene. [SceneCharacter.x] and y are fractions of a
  * [grid] x [grid] floor; size 0.071 (the Figma sample) is the model at its own scale.
+ * @param characterId the character a pose id is put on; a character id in [c] stands for itself.
  */
-fun characterObject(c: SceneCharacter, grid: Int, baseScale: Float = 1f, pickable: Boolean = false): IsoObject {
+fun characterObject(
+    c: SceneCharacter,
+    grid: Int,
+    baseScale: Float = 1f,
+    pickable: Boolean = false,
+    characterId: String = "ch_sprout",
+): IsoObject {
     val pose = c.imageId.takeIf { it.startsWith("pose_") }
-    val base = if (pose != null) IsoShapes.sprout else IsoShapes.of(c.imageId) ?: IsoShapes.sprout
+    val who = if (pose != null) characterId else c.imageId
+    val base = IsoShapes.of(who) ?: IsoShapes.sprout
     val scale = c.size / CharacterSizes[1] * baseScale
     val turns = IsoShapes.poseTurns(pose) + c.turns
     return IsoObject(
-        "character", IsoShapes.posed(base, pose), 0, 0, turns.mod(4),
+        "character", IsoShapes.posed(base, pose, LimbColors[who] ?: IsoPalette.SproutBody), 0, 0, turns.mod(4),
         ox = c.x * grid - scale / 2f, oy = c.y * grid - scale / 2f,
         z = if (pose == "pose_jump") JUMP_CELLS else 0f, scale = scale, pickable = pickable,
     )

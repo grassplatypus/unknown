@@ -6,7 +6,8 @@ package com.break8t.unknown.config
  */
 enum class ItemKind { SEED, FURNITURE, CHARACTER, CAR, VOICE_PACK, POSE }
 
-data class CatalogItem(val id: String, val name: String, val kind: ItemKind, val price: Int?)
+/** [voiceId]는 캐릭터와 함께 받는 음성팩이다. 생김새와 목소리가 엇갈리지 않게 음성팩은 따로 팔지 않는다. */
+data class CatalogItem(val id: String, val name: String, val kind: ItemKind, val price: Int?, val voiceId: String? = null)
 
 data class CropSpec(val seedId: String, val name: String, val growMinutes: Int, val harvestCoins: Int)
 
@@ -21,17 +22,18 @@ object Catalog {
         CatalogItem("it_rug", "러그", ItemKind.FURNITURE, 80),
         CatalogItem("it_lamp", "스탠드", ItemKind.FURNITURE, 90),
         CatalogItem("it_shelf", "책장", ItemKind.FURNITURE, 300),
-        CatalogItem("ch_sprout", "새싹이", ItemKind.CHARACTER, null),
-        CatalogItem("ch_cat", "냥이", ItemKind.CHARACTER, null),
+        CatalogItem("ch_sprout", "새싹이", ItemKind.CHARACTER, null, voiceId = "voice_sprout"),
+        CatalogItem("ch_cat", "냥이", ItemKind.CHARACTER, null, voiceId = "voice_cat"),
         CatalogItem("ch_mush", "버섯이", ItemKind.CHARACTER, null),
         CatalogItem("ch_cloud", "구름이", ItemKind.CHARACTER, null),
-        CatalogItem("ch_firefly", "반딧이", ItemKind.CHARACTER, 200), // 임시
+        CatalogItem("ch_firefly", "반딧이", ItemKind.CHARACTER, 200, voiceId = "voice_firefly"), // 임시, 목소리 포함
         CatalogItem("car_red", "빨간 차", ItemKind.CAR, null),
         CatalogItem("car_blue", "파란 차", ItemKind.CAR, null),
         CatalogItem("car_yellow", "노란 차", ItemKind.CAR, null),
         CatalogItem("voice_default", "기본 목소리", ItemKind.VOICE_PACK, null),
-        CatalogItem("voice_sprout", "새싹이 목소리", ItemKind.VOICE_PACK, 200), // 임시
-        CatalogItem("voice_cat", "냥이 목소리", ItemKind.VOICE_PACK, 300), // 임시
+        CatalogItem("voice_sprout", "새싹이 목소리", ItemKind.VOICE_PACK, null),
+        CatalogItem("voice_cat", "냥이 목소리", ItemKind.VOICE_PACK, null),
+        CatalogItem("voice_firefly", "반딧이 목소리", ItemKind.VOICE_PACK, null),
         CatalogItem("pose_wave", "인사", ItemKind.POSE, null),
         CatalogItem("pose_jump", "점프", ItemKind.POSE, 50),
         CatalogItem("pose_sit", "앉기", ItemKind.POSE, null),
@@ -48,4 +50,7 @@ object Catalog {
 
     fun item(id: String): CatalogItem? = items.firstOrNull { it.id == id }
     fun ofKind(kind: ItemKind): List<CatalogItem> = items.filter { it.kind == kind }
+
+    /** [voiceId] 음성팩을 함께 주는 캐릭터. 기본 목소리처럼 캐릭터가 없으면 null이다. */
+    fun characterOf(voiceId: String): CatalogItem? = items.firstOrNull { it.voiceId == voiceId }
 }

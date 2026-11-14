@@ -531,7 +531,8 @@ private fun SubHeader(@StringRes title: Int, onBack: () -> Unit) {
 @DrawableRes
 private fun artFor(id: String): Int? = when (id) {
     "ch_sprout", "voice_default", "voice_sprout" -> R.drawable.settings_ch_sprout
-    else -> com.break8t.unknown.ui.collection.artFor(id) // 다른 캐릭터는 도감 그림을 쓴다. 없으면 첫 글자만 나왔다
+    // 다른 캐릭터와 그 목소리는 도감의 캐릭터 그림을 쓴다. 없으면 첫 글자만 나왔다
+    else -> com.break8t.unknown.ui.collection.artFor(Catalog.characterOf(id)?.id ?: id)
 }
 
 @Composable
@@ -675,11 +676,13 @@ private fun NicknameBlank() = Frame(Profile(nickname = " ")) { Screen(page = Pag
 @SizePreviews @Composable
 private fun NicknameSaved() = Frame { Screen(page = Page.NICKNAME, toast = stringResource(R.string.settings_nickname_saved)) }
 
-private val previewOwned = Profile().owned + "voice_sprout"
-
-@SizePreviews @Composable private fun VoicePacks() = Frame(Profile(owned = previewOwned)) { Screen(page = Page.VOICE) }
+// 가진 캐릭터(새싹이, 냥이)의 목소리가 함께 보이고, 상점에서 반딧이를 사면 반딧이 목소리가 더해진다.
+@SizePreviews @Composable private fun VoicePacks() = Frame { Screen(page = Page.VOICE) }
 
 @SizePreviews @Composable
-private fun VoicePackChanged() = Frame(Profile(owned = previewOwned, voicePackId = "voice_sprout")) {
+private fun VoicePacksWithFirefly() = Frame(Profile(owned = Profile().owned + "ch_firefly")) { Screen(page = Page.VOICE) }
+
+@SizePreviews @Composable
+private fun VoicePackChanged() = Frame(Profile(voicePackId = "voice_sprout")) {
     Screen(page = Page.VOICE, toast = stringResource(R.string.settings_voice_changed, withRo("새싹이 목소리")))
 }
