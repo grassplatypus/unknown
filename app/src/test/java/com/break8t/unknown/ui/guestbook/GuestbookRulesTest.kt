@@ -63,6 +63,9 @@ class GuestbookRulesTest {
         assertEquals(ItemKind.OUTDOOR, board.kind)
         assertNull(board.price)
         assertFalse(Catalog.ofKind(ItemKind.FURNITURE).any { it.id == "deco_board" })
+        for (tab in com.break8t.unknown.ui.shop.ShopTab.entries) {
+            assertTrue(tab.name, com.break8t.unknown.ui.shop.shopItems(tab).none { it.id == "deco_board" })
+        }
     }
 
     @Test fun theBoardIsAlwaysOneInTheInventoryWhetherPlacedOrStored() {
