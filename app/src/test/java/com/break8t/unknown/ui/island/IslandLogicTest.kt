@@ -1,8 +1,11 @@
 package com.break8t.unknown.ui.island
 
+import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.config.CropSpec
+import com.break8t.unknown.data.Profile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -103,5 +106,31 @@ class IslandLogicTest {
         assertFalse(takesReul(0))
         assertTrue(takesReul(15)) // 십오를
         assertFalse(takesReul(20)) // 이십을
+    }
+
+    private val islandCfg = BalanceConfig(islandSizes = listOf(10, 12, 14), islandExpandCoins = listOf(200, 400))
+
+    @Test fun islandSizeFollowsLevelAndClamps() {
+        assertEquals(10, islandSize(0, islandCfg))
+        assertEquals(14, islandSize(2, islandCfg))
+        assertEquals(14, islandSize(9, islandCfg))
+        assertEquals(10, islandSize(-1, islandCfg))
+    }
+
+    @Test fun expandingSpendsCoinsAndRaisesLevel() {
+        assertEquals(Profile(coins = 40, islandLevel = 1), expandIsland(Profile(coins = 240), islandCfg))
+        assertEquals(Profile(coins = 0, islandLevel = 2), expandIsland(Profile(coins = 400, islandLevel = 1), islandCfg))
+    }
+
+    @Test fun expandingRefusesWhenShortOrLargest() {
+        assertNull(expandIsland(Profile(coins = 399, islandLevel = 1), islandCfg))
+        assertNull(expandIsland(Profile(coins = 9_999, islandLevel = 2), islandCfg))
+        assertNull(expandCost(2, islandCfg))
+        assertEquals(200, expandCost(0, islandCfg))
+    }
+
+    @Test fun defaultDemoCanAffordFirstStepButNotSecond() {
+        val first = expandIsland(Profile(), BalanceConfig.DEFAULT)!!
+        assertNull(expandIsland(first, BalanceConfig.DEFAULT))
     }
 }

@@ -31,6 +31,8 @@ data class Profile(
         "ch_sprout", "ch_cat", "ch_mush", "ch_cloud", "car_red", "car_blue",
         "voice_default", "pose_wave", "pose_sit", "pose_back",
     ),
+    // 섬을 넓힌 단계. 0이 처음 크기이고 크기는 BalanceConfig.islandSizes[islandLevel]이다.
+    val islandLevel: Int = 0,
 )
 
 class DemoState(initial: Profile = Profile()) {

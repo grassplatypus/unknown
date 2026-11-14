@@ -41,6 +41,9 @@ data class BalanceConfig(
 
     // 도감 뱃지: 모은 엽서가 이 수에 닿을 때마다 뱃지 하나가 열린다. 작은 수부터 적는다.
     val postcardBadgeSteps: List<Int> = listOf(3, 5, 10),
+    // 섬 넓히기: 단계별 섬 한 변의 칸 수, 그리고 i단계에서 i+1단계로 넓히는 코인(임시).
+    val islandSizes: List<Int> = listOf(10, 12, 14),
+    val islandExpandCoins: List<Int> = listOf(200, 400), // 임시
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

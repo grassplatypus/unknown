@@ -1,8 +1,16 @@
 package com.break8t.unknown.ui.island
 
 import com.break8t.unknown.ui.components.ScreenTitle
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,7 +74,7 @@ import com.break8t.unknown.ui.components.SecondaryButton
 import com.break8t.unknown.ui.theme.AppColors
 import kotlinx.coroutines.delay
 
-private const val TOAST_MS = 3_000L
+internal const val TOAST_MS = 3_000L
 internal val WideLayout = 1000.dp
 private val DialogShape = RoundedCornerShape(26.dp)
 
@@ -119,7 +127,11 @@ internal fun FarmScreen(night: Boolean, plots: List<Plot>, now: Long, profile: P
                     else -> pullAt = i
                 }
             },
-            onSeed = { seedId = it },
+            onSeed = { id ->
+                seedId = id
+                // D-10 opens as soon as an empty seed is picked; the card then keeps its no-seed line.
+                if ((profile.items[id] ?: 0) <= 0) missingSeed = id
+            },
             onPlant = ::plantPicked,
         )
         harvested?.let { HarvestToast(it, Modifier.align(Alignment.BottomCenter)) }
@@ -196,9 +208,8 @@ private fun FarmScene(scene: IslandSceneState, plots: List<Plot>, now: Long, tar
 
 @Composable
 private fun BoxScope.PlotOverlay(plot: Plot, now: Long, picked: Boolean) {
-    if (picked) Box(Modifier.matchParentSize().border(6.dp, AppColors.Selected))
     when {
-        plot.isEmpty -> Unit
+        plot.isEmpty -> if (picked) PickedMark()
         plot.isGrown(now) -> {
             FitText(
                 stringResource(R.string.island_grown), 23.sp,
@@ -213,6 +224,23 @@ private fun BoxScope.PlotOverlay(plot: Plot, now: Long, picked: Boolean) {
 }
 
 private val LabelShape = RoundedCornerShape(13.dp)
+private val PickShape = RoundedCornerShape(26.dp)
+
+/** Figma "고른 빈 칸": 노란 테두리 타원과 그 아래 "여기에 심어요" 칩. */
+@Composable
+private fun BoxScope.PickedMark() {
+    Canvas(Modifier.align(Alignment.Center).fillMaxWidth(0.94f).aspectRatio(130f / 66f)) {
+        val stroke = 6.5.dp.toPx()
+        drawOval(AppColors.Selected.copy(alpha = 0.25f))
+        drawOval(AppColors.Selected, Offset(stroke / 2, stroke / 2), Size(size.width - stroke, size.height - stroke), style = Stroke(stroke))
+    }
+    FitText(
+        stringResource(R.string.island_plant_here), 26.sp,
+        Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp)
+            .clip(PickShape).background(AppColors.Selected).border(BorderWidth, AppColors.Line, PickShape)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
 
 @Composable
 private fun GrowingLabel(plot: Plot, now: Long, modifier: Modifier) {
@@ -263,18 +291,26 @@ private fun SeedCard(
     fill: Boolean,
     modifier: Modifier,
 ) {
+    // Figma S-13 Card: 26dp sides and bottom, 18dp above the title.
+    val pad = Modifier.padding(start = 26.dp, end = 26.dp, top = 18.dp, bottom = 26.dp)
     AppCard(modifier) {
-        Column(if (fill) Modifier.fillMaxSize().padding(23.dp) else Modifier.padding(23.dp), Arrangement.spacedBy(16.dp)) {
+        Column(if (fill) Modifier.fillMaxSize().then(pad) else pad, Arrangement.spacedBy(16.dp)) {
             Text(stringResource(R.string.island_plant_title), color = AppColors.TextSub, fontSize = 31.sp)
             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(16.dp)) {
                 Catalog.crops.forEach { c ->
                     SeedCell(c, items[c.seedId] ?: 0, c.seedId == seedId, onClick = { onSeed(c.seedId) }, Modifier.weight(1f))
                 }
             }
-            if (fill) Spacer(Modifier.weight(1f))
             val name = crop(seedId)?.name
+            val hasSeed = (items[seedId] ?: 0) > 0
+            // D-10 scene: an empty seed says so under the seeds and the plant button turns grey.
+            if (!hasSeed && name != null) {
+                Text(stringResource(R.string.island_seed_empty, name), Modifier.padding(top = 13.dp), color = AppColors.TextSub, fontSize = 34.sp)
+            }
+            if (fill) Spacer(Modifier.weight(1f))
             if (canPlant && name != null) {
-                PrimaryButton(stringResource(R.string.island_plant, name), onPlant, Modifier.fillMaxWidth())
+                val label = stringResource(R.string.island_plant, name)
+                if (hasSeed) PrimaryButton(label, onPlant, Modifier.fillMaxWidth()) else DisabledButton(label, Modifier.fillMaxWidth())
             }
         }
     }
@@ -288,12 +324,12 @@ private fun SeedCell(crop: CropSpec, count: Int, selected: Boolean, onClick: () 
             .background(AppColors.Card)
             .border(if (selected) 6.dp else BorderWidth, if (selected) AppColors.Selected else AppColors.Line, ControlShape)
             .selectable(selected, role = Role.RadioButton, onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 10.dp),
+            .padding(start = 6.dp, end = 6.dp, top = 13.dp, bottom = 18.dp),
         Arrangement.spacedBy(6.dp),
         Alignment.CenterHorizontally,
     ) {
         seedArt[crop.seedId]?.let {
-            Image(painterResource(it), null, Modifier.size(83.dp).alpha(if (count > 0) 1f else 0.4f))
+            Image(painterResource(it), null, Modifier.padding(bottom = 7.dp).size(83.dp).alpha(if (count > 0) 1f else 0.4f))
         }
         FitText(
             stringResource(R.string.island_seed_count, crop.name, count), 31.sp, Modifier.fillMaxWidth(),
@@ -326,12 +362,24 @@ private fun HarvestToast(h: Harvest, modifier: Modifier) {
 
 // AppDialog always labels its dismiss button 취소; D-09 and D-10 need 그대로 두기 and 닫기.
 @Composable
-private fun FarmDialog(onDismiss: () -> Unit, panel: @Composable (Modifier) -> Unit) {
+internal fun FarmDialog(onDismiss: () -> Unit, panel: @Composable (Modifier) -> Unit) {
     Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false)) { panel(Modifier.padding(24.dp)) }
 }
 
+/** Figma 꺼진 버튼(D-10 장면의 "밀 심기"). 공용 부품에 꺼진 주 버튼이 없어서 같은 틀로 그린다. */
 @Composable
-private fun DialogPanel(
+internal fun DisabledButton(text: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier.heightIn(min = 100.dp).clip(ControlShape).background(AppColors.Disabled)
+            .semantics { disabled() }.padding(horizontal = 26.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = AppColors.DisabledText, fontSize = 44.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+internal fun DialogPanel(
     title: String,
     dismissText: String,
     confirmText: String,
@@ -340,6 +388,8 @@ private fun DialogPanel(
     modifier: Modifier,
     body: String? = null,
     header: (@Composable () -> Unit)? = null,
+    confirmEnabled: Boolean = true,
+    destructive: Boolean = false,
 ) {
     Column(
         modifier.widthIn(max = 832.dp).clip(DialogShape).background(AppColors.Card)
@@ -351,8 +401,25 @@ private fun DialogPanel(
         if (body != null) Text(body, color = AppColors.TextSub, fontSize = 36.sp, lineHeight = 55.sp)
         Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(35.dp)) {
             SecondaryButton(dismissText, onDismiss, Modifier.weight(1f))
-            PrimaryButton(confirmText, onConfirm, Modifier.weight(1f))
+            when {
+                !confirmEnabled -> DisabledButton(confirmText, Modifier.weight(1f))
+                destructive -> DangerButton(confirmText, onConfirm, Modifier.weight(1f))
+                else -> PrimaryButton(confirmText, onConfirm, Modifier.weight(1f))
+            }
         }
+    }
+}
+
+/** Figma D-09 "뽑기": 되돌릴 수 없는 일이라 카드 바탕에 빨간 테두리와 글자를 쓴다. */
+@Composable
+private fun DangerButton(text: String, onClick: () -> Unit, modifier: Modifier) {
+    Box(
+        modifier.heightIn(min = 100.dp).clip(ControlShape).background(AppColors.Card)
+            .border(BorderWidth, AppColors.Error, ControlShape)
+            .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 26.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = AppColors.Error, fontSize = 44.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }
 
@@ -368,16 +435,17 @@ internal fun PullPanel(plot: Plot, now: Long, onPull: () -> Unit, onKeep: () -> 
         onDismiss = onKeep,
         modifier = modifier,
         body = stringResource(R.string.island_pull_body),
+        destructive = true,
         header = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(31.dp)) {
-                Box(Modifier.size(130.dp).clip(ControlShape).background(AppColors.Muted), Alignment.Center) {
+                Box(Modifier.size(130.dp).clip(ControlShape).background(AppColors.Accent), Alignment.Center) {
                     seedArt[plot.seedId]?.let { Image(painterResource(it), null, Modifier.size(94.dp)) }
                 }
                 Column {
-                    Text(c?.name.orEmpty(), color = AppColors.Text, fontSize = 42.sp, fontWeight = FontWeight.Bold)
+                    Text(c?.name.orEmpty(), color = AppColors.Text, fontSize = 47.sp, fontWeight = FontWeight.Bold)
                     Text(
                         stringResource(R.string.island_remaining, durationText(plot.readyAt - now)),
-                        color = AppColors.TextSub, fontSize = 31.sp,
+                        color = AppColors.TextSub, fontSize = 34.sp,
                     )
                 }
             }
@@ -402,8 +470,12 @@ internal fun NoSeedPanel(seedId: String, onShop: () -> Unit, onClose: () -> Unit
 private val previewPlots = demoPlots(PREVIEW_NOW, 3)
 
 @Composable
-private fun FarmPreviewBody(at: Alignment = Alignment.Center, overlay: @Composable (Modifier) -> Unit = {}) = IslandPreviewFrame {
-    FarmContent(false, previewPlots, PREVIEW_NOW, Profile(), target = 8, seedId = "seed_carrot", {}, {}, {}, {})
+private fun FarmPreviewBody(
+    at: Alignment = Alignment.Center,
+    seedId: String = "seed_carrot",
+    overlay: @Composable (Modifier) -> Unit = {},
+) = IslandPreviewFrame {
+    FarmContent(false, previewPlots, PREVIEW_NOW, Profile(), target = 8, seedId = seedId, {}, {}, {}, {})
     overlay(Modifier.align(at))
 }
 
@@ -427,7 +499,11 @@ private fun PullPreview() = FarmPreviewBody { m ->
 
 @IslandPreviews
 @Composable
-private fun NoSeedPreview() = FarmPreviewBody { m ->
+private fun NoSeedCardPreview() = FarmPreviewBody(seedId = "seed_wheat")
+
+@IslandPreviews
+@Composable
+private fun NoSeedPreview() = FarmPreviewBody(seedId = "seed_wheat") { m ->
     Scrim()
     NoSeedPanel("seed_wheat", {}, {}, m.padding(24.dp))
 }

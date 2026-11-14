@@ -38,6 +38,10 @@ class SceneSnapshotTest {
         save("island_day", renderScene(scene, IsoCamera.of(ViewPreset.OBLIQUE, 0), w, h), 0x74BDF7)
         save("island_night", renderScene(scene, IsoCamera.of(ViewPreset.OBLIQUE, 0), w, h, night = true), 0x011043)
         for (p in ViewPreset.entries) save("island_${p.name.lowercase()}_1", renderScene(scene, IsoCamera.of(p, 1), w, h), 0x74BDF7)
+        for (size in com.break8t.unknown.config.BalanceConfig.DEFAULT.islandSizes) {
+            val big = IslandMap.scene(plots, "car_red", size = size)
+            save("island_size_$size", renderScene(big, IsoCamera.of(ViewPreset.OBLIQUE, 0), w, h), 0x74BDF7)
+        }
     }
 
     @Test
