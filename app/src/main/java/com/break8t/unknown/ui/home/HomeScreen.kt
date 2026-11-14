@@ -1,17 +1,51 @@
 package com.break8t.unknown.ui.home
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.break8t.unknown.R
+import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.drive.DriveMode
 import com.break8t.unknown.ui.Route
-import com.break8t.unknown.ui.theme.AppColors
 
-/** 홈 진입점. 자리만 잡아 둔 구현이다. home 담당이 채우고, 시그니처는 유지한다. */
+/** 홈 진입점. P일 때만 S-08과 보상 알림을, 그 밖(DRIVING, UNKNOWN)에는 S-09를 보인다. */
 @Composable
 fun HomeScreen(mode: DriveMode, onNavigate: (Route) -> Unit) {
-    Box(Modifier.fillMaxSize(), Alignment.Center) { Text("홈 ($mode)", color = AppColors.TextSub) }
+    val demo = LocalDemoState.current
+    val home = HomeStore.controller
+    LaunchedEffect(mode) { home.onMode(mode, demo) }
+    val profile by demo.profile.collectAsStateWithLifecycle()
+
+    if (!mode.isParked) {
+        val raid by home.raid.state.collectAsStateWithLifecycle()
+        DrivingHome(raid, onEnd = home.raid::end)
+        return
+    }
+    ParkedHome(profile, onVoiceChange = { on -> demo.update { it.copy(voiceGuideOn = on) } })
+    val popups by home.popups.collectAsStateWithLifecycle()
+    val openEncyclopedia = { home.dismiss(); onNavigate(Route.ENCYCLOPEDIA) }
+    // 공유 화면은 다른 묶음 몫이라 지금은 알림만 닫는다.
+    when (popups.firstOrNull()) {
+        HomePopup.REWARD -> RewardDialog(home.reward, HomeDemo.SESSION, profile, home::dismiss)
+        HomePopup.LEVEL_UP -> LevelUpDialog(profile.level, home::dismiss)
+        HomePopup.POSTCARD -> NewItemDialog(
+            R.drawable.home_post_blossom,
+            stringResource(R.string.home_new_postcard),
+            stringResource(R.string.home_demo_postcard),
+            onClose = home::dismiss,
+            onShare = home::dismiss,
+            onOpenEncyclopedia = openEncyclopedia,
+        )
+        HomePopup.JAM_CARD -> NewItemDialog(
+            R.drawable.home_card_seongsan,
+            stringResource(R.string.home_new_jam_card),
+            stringResource(R.string.home_demo_jam_name),
+            onClose = home::dismiss,
+            onShare = home::dismiss,
+            onOpenEncyclopedia = openEncyclopedia,
+        )
+        null -> Unit
+    }
 }

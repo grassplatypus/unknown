@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma icon/vol. 색은 부르는 쪽에서 tint로 정한다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:pathData="M33,17C34.8323,18.8693 35.8586,21.3825 35.8586,24C35.8586,26.6175 34.8323,29.1307 33,31M38,12C41.1754,15.1864 42.9584,19.5015 42.9584,24C42.9584,28.4985 41.1754,32.8136 38,36M8,18V30H16L26,38V10L16,18H8Z"
+        android:strokeWidth="4.4"
+        android:strokeColor="#3A2A1C"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
