@@ -51,6 +51,19 @@ class SceneSnapshotTest {
     }
 
     @Test
+    fun photo() {
+        val cfg = com.break8t.unknown.config.BalanceConfig.DEFAULT
+        val poses = listOf("ch_sprout", "pose_wave", "pose_jump", "pose_sit", "pose_side", "pose_back", "ch_cat", "ch_mush")
+        val extra = poses.mapIndexed { i, id ->
+            com.break8t.unknown.ui.photo.characterObject(
+                com.break8t.unknown.ui.house.SceneCharacter(id, 0.1f + (i % 4) * 0.25f, 0.3f + (i / 4) * 0.4f, 0.1f, false), 5,
+            ).copy(id = "c$i")
+        }
+        val cam = IsoCamera.of(ViewPreset.OBLIQUE, 0)
+        save("photo_room", renderScene(com.break8t.unknown.ui.house.RoomMap.scene(emptyList(), cfg, cam, extra), cam, w, h), 0x020A12)
+    }
+
+    @Test
     fun farm() {
         save("farm", renderScene(IslandMap.farmScene(plots), IslandMap.FARM_CAMERA, 330, 330), 0x74BDF7)
     }

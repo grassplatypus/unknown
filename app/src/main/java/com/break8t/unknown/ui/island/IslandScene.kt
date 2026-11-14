@@ -21,6 +21,7 @@ import com.break8t.unknown.ui.iso.Crop
 import com.break8t.unknown.ui.iso.FloorType
 import com.break8t.unknown.ui.iso.FrameBox
 import com.break8t.unknown.ui.iso.IsoCamera
+import com.break8t.unknown.ui.iso.IsoFarm
 import com.break8t.unknown.ui.iso.IsoHit
 import com.break8t.unknown.ui.iso.IsoObject
 import com.break8t.unknown.ui.iso.IsoOverlayScope
@@ -105,15 +106,17 @@ object IslandMap {
         val farm = plots.mapIndexed { k, v ->
             o("plot$k", IsoShapes.plot(plotStage(v), cropOf(v.seedId)), FARM_X + k % n, FARM_Y + k / n, pick = true)
         }
-        val fence = (0 until n).map { o("fence$it", IsoScenery.lightFence, FARM_X + it, FARM_Y - 1, pick = true) } +
-            o("fence_end", IsoScenery.fencePost, FARM_X + n, FARM_Y - 1, pick = true)
+        val fence = (0 until n).map { o("fence$it", IsoScenery.lowFence, FARM_X + it, FARM_Y - 1, pick = true) } +
+            o("fence_end", IsoScenery.lowPost, FARM_X + n, FARM_Y - 1, pick = true)
         val lanes = (3 until SIZE).map { o("lane$it", IsoScenery.laneY, ROAD_X, it) }
         val scenery = listOf(
             o("house", IsoShapes.house, 1, 0, pick = true),
             o("stall", IsoScenery.stall, 7, 0, pick = true),
             o("parking", IsoScenery.parking, ROAD_X, 1),
+        ) + listOfNotNull(
             // The art parks a small car in a one-cell box, so the 2-cell model is scaled down and centred.
-            IsoObject("car", IsoShapes.of(carId) ?: IsoShapes.car(Color.Red), ROAD_X, 1, 1, ox = 0.15f, oy = 0.3f, scale = 0.7f, pickable = false),
+            IsoShapes.of(carId)?.let { IsoObject("car", it, ROAD_X, 1, 1, ox = 0.15f, oy = 0.3f, scale = 0.7f, pickable = false) },
+        ) + listOf(
             o("mailbox", IsoScenery.mailbox, 3, 3),
             o("bigtree", IsoScenery.bigTree, 0, 3),
             o("tree1", IsoScenery.tree, 0, 0),
@@ -136,10 +139,10 @@ object IslandMap {
             o("flower6", IsoScenery.redFlowers, 0, 5),
             o("rocks1", IsoScenery.rocks, 8, 5),
             o("rocks2", IsoScenery.rocks, 2, 9),
-            o("cloud1", IsoScenery.cloud, -3, 1, z = 3.5f),
-            o("cloud2", IsoScenery.cloud, 10, -3, z = 2.5f),
-            o("islet1", IsoScenery.islet, -2, 6, z = 2f),
-            o("islet2", IsoScenery.islet, 12, 2, z = 1.5f),
+            o("cloud1", IsoScenery.cloud, -2, 3, z = 2.5f),
+            o("cloud2", IsoScenery.cloud, 9, -2, z = 3f),
+            o("islet1", IsoScenery.islet, -1, 6, z = 1.5f),
+            o("islet2", IsoScenery.islet, 11, 1, z = 2f),
         )
         return IsoScene(
             SIZE, SIZE, cells(), lanes + scenery + fence + farm + extra, floorDepth = EDGE_DEPTH, frame = FRAME,
@@ -148,16 +151,28 @@ object IslandMap {
     }
 
     /** The farm screen (S-13): plots ringed by grass, a fence of lights at the back, seen from the front. */
+    // Each farm-screen bed is 2 x 2 cells inside a one-cell grass ring, so the beds dominate like S-13.
+    private const val BED = 2
+    private const val FARM_SLAB = 1.1f
+
     fun farmScene(plots: List<PlotView>): IsoScene {
         val n = sqrt(plots.size.toDouble()).roundToInt().coerceAtLeast(1)
-        val side = n + 2
-        val farm = plots.mapIndexed { k, v -> IsoObject("plot$k", IsoShapes.farmPlot(plotStage(v), cropOf(v.seedId)), 1 + k % n, 1 + k / n, scale = 0.5f) }
-        val fence = (0 until side - 1).map { o("fence$it", IsoScenery.lightFence, it, 0) } + o("fence_end", IsoScenery.fencePost, side - 1, 0)
-        val grass = (0 until side * side).filter { i -> (i % side) in 1..n && (i / side) in 1..n }.toSet()
-        val bushes = (0 until side * side).filter { it !in grass && it / side > 0 }.map { i ->
-            o("tuft$i", IsoScenery.tuft, i % side, i / side)
+        val side = n * BED + 2
+        val f = IsoFarm.FINE
+        val e = side * f
+        val farm = plots.mapIndexed { k, v ->
+            o("plot$k", IsoFarm.bed(plotStage(v), cropOf(v.seedId)), (1 + BED * (k % n)) * f, (1 + BED * (k / n)) * f, pick = true)
         }
-        return IsoScene(side, side, objects = fence + farm + bushes, floorDepth = 0.6f)
+        // The art's fence spans about three quarters of the farm, centred on the back row.
+        val fence = o("fence", IsoFarm.fence, (e - IsoFarm.fence.w) / 2, 1)
+        val bed = { x: Int, y: Int -> x in 1..n * BED && y in 1..n * BED }
+        val tufts = (0 until side * side).filter { !bed(it % side, it / side) }.map { i ->
+            o("tuft$i", IsoFarm.tuft, (i % side) * f + 1, (i / side) * f + 1)
+        }
+        // Fit the beds and the fence, not the default headroom, so the farm fills its panel like S-13.
+        // A slab about one dirt band deep, so its front shows the art's brown edge rather than stone.
+        val frame = FrameBox(0f, 0f, e.toFloat(), e.toFloat(), -FARM_SLAB, 1.5f * f)
+        return IsoScene(e, e, objects = listOf(fence) + farm + tufts, floorDepth = FARM_SLAB, frame = frame, tile = f)
     }
 
     val FARM_CAMERA = IsoCamera(0f, 55f)
@@ -165,10 +180,14 @@ object IslandMap {
     /** Index of the plot a tap landed on, from the plot model or the floor cell under it. */
     fun plotAt(hit: IsoHit, plots: Int, farmView: Boolean): Int? {
         val n = sqrt(plots.toDouble()).roundToInt().coerceAtLeast(1)
-        val (x0, y0) = if (farmView) 1 to 1 else FARM_X to FARM_Y
+        val (x0, y0) = if (farmView) IsoFarm.FINE to IsoFarm.FINE else FARM_X to FARM_Y
+        val size = if (farmView) BED * IsoFarm.FINE else 1
         return when (hit) {
             is IsoHit.Item -> hit.id.removePrefix("plot").takeIf { hit.id.startsWith("plot") }?.toIntOrNull()
-            is IsoHit.Cell -> if (hit.x - x0 in 0 until n && hit.y - y0 in 0 until n) (hit.y - y0) * n + (hit.x - x0) else null
+            is IsoHit.Cell -> {
+                val cx = Math.floorDiv(hit.x - x0, size); val cy = Math.floorDiv(hit.y - y0, size)
+                if (cx in 0 until n && cy in 0 until n) cy * n + cx else null
+            }
         }?.takeIf { it in 0 until plots }
     }
 
@@ -191,9 +210,10 @@ object IslandMap {
     /** Cell rectangle of plot [k] on the farm screen, for the labels that sit on it. */
     fun farmPlotRect(k: Int, plots: Int): FloatArray {
         val n = sqrt(plots.toDouble()).roundToInt().coerceAtLeast(1)
-        val x = 1f + k % n
-        val y = 1f + k / n
-        return floatArrayOf(x, y, x + 1f, y + 1f)
+        val f = IsoFarm.FINE.toFloat()
+        val x = (1f + BED * (k % n)) * f
+        val y = (1f + BED * (k / n)) * f
+        return floatArrayOf(x, y, x + BED * f, y + BED * f)
     }
 
     private const val EDGE_DEPTH = 1f
@@ -202,7 +222,7 @@ object IslandMap {
 
     /** The road leaves the island as a thin bridge and runs on to the edge of whatever the screen shows. */
     val ROAD = RoadRay(ROAD_X, SIZE, 0, 1, BRIDGE_DEPTH, IsoScenery.laneY)
-    private val FRAME = FrameBox(-0.5f, -0.5f, SIZE + 0.5f, SIZE + 0.5f, -5f, 3f)
+    private val FRAME = FrameBox(0f, 0f, SIZE.toFloat(), SIZE.toFloat(), -4.5f, 6.5f) // headroom for the chips above the roof
 }
 
 /**

@@ -42,8 +42,8 @@ class IsoModelTest {
     fun sceneryModelsStayInsideTheirFootprints() {
         val all = listOf(
             IsoScenery.bigTree, IsoScenery.tree, IsoScenery.appleTree, IsoScenery.bush, IsoScenery.redFlowers,
-            IsoScenery.stall, IsoScenery.lightFence, IsoScenery.fencePost, IsoScenery.laneY, IsoScenery.parking,
-            IsoScenery.cloud, IsoScenery.islet, IsoScenery.window, IsoScenery.lantern, IsoScenery.tuft, IsoScenery.post(24),
+            IsoScenery.stall, IsoScenery.lowFence, IsoScenery.lowPost, IsoFarm.fence, IsoFarm.tuft, IsoScenery.laneY, IsoScenery.parking,
+            IsoScenery.cloud, IsoScenery.islet, IsoScenery.window, IsoScenery.lantern, IsoScenery.tuft, IsoScenery.post(24), IsoFarm.bed(PlotStage.GROWN, Crop.WHEAT),
         ) + PlotStage.entries.flatMap { s -> Crop.entries.map { IsoShapes.plot(s, it) } }
         for (s in all) for (c in s.parts) {
             assertTrue("$c", c.x >= 0 && c.y >= 0 && c.z >= 0 && c.x + c.w <= s.w * VPC && c.y + c.d <= s.d * VPC)

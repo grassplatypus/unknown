@@ -42,7 +42,9 @@ data class PhotoState(
     fun placedAt(cx: Int, cy: Int, grid: Int) = copy(x = ((cx + 0.5f) / grid).coerceIn(0f, 1f), y = ((cy + 0.5f) / grid).coerceIn(0f, 1f))
 
     /** 캐릭터 버튼: 아직 없으면 첫 포즈로 세우고, 편집 카드를 연다. */
-    fun startCharacter(options: List<String>) = copy(poseId = poseId ?: options.first(), editing = true)
+    fun startCharacter(options: List<String>, spawn: Pair<Float, Float>? = null) =
+        if (poseId != null || spawn == null) copy(poseId = poseId ?: options.first(), editing = true)
+        else copy(poseId = options.first(), editing = true, x = spawn.first, y = spawn.second)
 
     fun toList(): List<Any> = listOf(preset.name, rotation, poseId ?: "", x, y, sizeIndex, flipped, editing, shot)
 
@@ -88,16 +90,30 @@ fun qrModules(seed: Int, size: Int = 25): List<BooleanArray> {
  * The character as a voxel model standing in the scene. [SceneCharacter.x] and y are fractions of a
  * [grid] x [grid] floor; size 0.071 (the Figma sample) is the model at its own scale.
  */
-fun characterObject(c: SceneCharacter, grid: Int): IsoObject {
+fun characterObject(c: SceneCharacter, grid: Int, baseScale: Float = 1f): IsoObject {
     val pose = c.imageId.takeIf { it.startsWith("pose_") }
     val base = if (pose != null) IsoShapes.sprout else IsoShapes.of(c.imageId) ?: IsoShapes.sprout
-    val scale = c.size / CharacterSizes[1]
+    val scale = c.size / CharacterSizes[1] * baseScale
     val turns = IsoShapes.poseTurns(pose) + if (c.flipped) FLIP_TURNS else 0
     return IsoObject(
         "character", IsoShapes.posed(base, pose), 0, 0, turns.mod(4),
         ox = c.x * grid - scale / 2f, oy = c.y * grid - scale / 2f,
         z = if (pose == "pose_jump") JUMP_CELLS else 0f, scale = scale, pickable = false,
     )
+}
+
+/** A rectangle in dp. */
+data class FrameRect(val left: Float, val top: Float, val width: Float, val height: Float)
+
+/**
+ * The capture frame of S-16 (760 x 640 at 150, 120 in the 1144 x 901 content), shrunk on the right so it
+ * ends [gap] before the angle panel at [panelLeft]. All values in dp.
+ */
+fun captureFrame(width: Float, height: Float, panelLeft: Float, gap: Float): FrameRect {
+    val left = width * 150f / 1144f
+    val top = height * 120f / 901f
+    val w = minOf(width * 760f / 1144f, panelLeft - gap - left)
+    return FrameRect(left, top, w.coerceAtLeast(0f), height * 640f / 901f)
 }
 
 private const val FLIP_TURNS = 3 // the model faces +y; three quarter turns make it face +x, the mirrored side on screen

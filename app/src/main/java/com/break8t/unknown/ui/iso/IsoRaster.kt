@@ -230,7 +230,7 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
             val cell = scene.cell(x, y)
             if (cell.floor == FloorType.NONE) continue
             val bot = scene.bottom(x, y)
-            val id = -(y * scene.width + x) - 1
+            val id = -((y / scene.tile) * scene.width + x / scene.tile) - 1
             val seed = x * 7919 + y * 104729
             val inGhost = ghost != null && ghost.wall == null &&
                 x in ghost.x until ghost.x + ghost.footW && y in ghost.y until ghost.y + ghost.footD
@@ -346,7 +346,7 @@ internal fun shade(c: Int, f: Float): Int =
 private const val NIGHT_R = 0x01.toFloat()
 private const val NIGHT_G = 0x10.toFloat()
 private const val NIGHT_B = 0x43.toFloat()
-private const val NIGHT_AMOUNT = 0.6f
+private const val NIGHT_AMOUNT = 0.42f // S-12-b roof: day 205,64,52 to night 110,36,50
 
 private fun hash(i: Int, j: Int, seed: Int): Int {
     var x = seed * 73856093 xor i * 19349663 xor j * 83492791

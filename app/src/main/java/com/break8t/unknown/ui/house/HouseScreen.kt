@@ -1,7 +1,6 @@
 package com.break8t.unknown.ui.house
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +49,8 @@ import com.break8t.unknown.ui.components.BorderWidth
 import com.break8t.unknown.ui.components.ControlShape
 import com.break8t.unknown.ui.components.DialogPanel
 import com.break8t.unknown.ui.theme.AppColors
+import com.break8t.unknown.ui.iso.IsoShapes
+import com.break8t.unknown.ui.iso.IsoThumbnail
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -116,7 +116,9 @@ internal fun HouseScreenImpl(
     }
     BackHandler(enabled = draft != null) { tryExit() }
 
-    Box(Modifier.fillMaxSize().background(AppColors.Text)) {
+    // S-14: the pixel backdrop fills the whole screen, behind the chips and the tray too.
+    Box(Modifier.fillMaxSize().background(HouseBg)) {
+        PixelNoise(Modifier.fillMaxSize())
         Column(Modifier.fillMaxSize().padding(ScreenPad), verticalArrangement = Arrangement.spacedBy(ChipGap)) {
             FlowRow(
                 Modifier.fillMaxWidth(),
@@ -127,7 +129,6 @@ internal fun HouseScreenImpl(
                     TopChip(stringResource(R.string.house_to_island), onBack, icon = R.drawable.house_ic_back)
                     TopChip(stringResource(R.string.house_title), null)
                     Spacer(Modifier.weight(1f))
-                    TopChip(stringResource(R.string.house_storage), onOpenInventory, icon = R.drawable.house_ic_box)
                     TopChip(stringResource(R.string.house_take_photo), onTakePhoto, icon = R.drawable.house_ic_cam)
                     TopChip(stringResource(R.string.house_decorate), { setDraft(saved) })
                 } else {
@@ -139,13 +140,14 @@ internal fun HouseScreenImpl(
                 }
             }
             if (draft == null) {
-                RoomScene(RoomSceneState(ScenePlace.HOUSE, saved), Modifier.weight(1f).fillMaxWidth(), config, view)
+                RoomScene(RoomSceneState(ScenePlace.HOUSE, saved), Modifier.weight(1f).fillMaxWidth(), config, view, backdrop = false)
             } else {
                 RoomScene(
                     RoomSceneState(ScenePlace.HOUSE, draft, selected = selected),
                     Modifier.weight(1f).fillMaxWidth(),
                     config,
                     view,
+                    backdrop = false,
                     editMode = true,
                     onSelect = { selected = it },
                     canPlace = { pl -> placeAt(draft, RoomMap.indexOf(pl.id), pl, config) != null },
@@ -156,7 +158,7 @@ internal fun HouseScreenImpl(
                     },
                 ) {
                     // Under the selected piece, as in S-15-a; the engine projects its front corner.
-                    draft.getOrNull(selected)?.let { p ->
+                    draft.getOrNull(selected)?.takeIf { showPieceButtons(selected, view.dragging) }?.let { p ->
                         val (x, y, z) = RoomMap.buttonAnchor(p, config)
                         Row(
                             Modifier.isoAnchor(x, y, z, Alignment.TopCenter).padding(top = 12.dp),
@@ -264,7 +266,7 @@ private fun StorageTile(id: String, name: String, count: Int, onClick: () -> Uni
             .padding(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Image(painterResource(furnitureImage(id)), null, Modifier.size(99.dp))
+        IsoThumbnail(IsoShapes.of(id) ?: IsoShapes.plant, Modifier.size(99.dp))
         Text(name, color = AppColors.Text, fontSize = 31.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         Text(stringResource(R.string.house_count, count), color = AppColors.TextSub, fontSize = 29.sp)
     }

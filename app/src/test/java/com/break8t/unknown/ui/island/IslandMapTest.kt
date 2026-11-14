@@ -30,8 +30,13 @@ class IslandMapTest {
 
     @Test fun tapsFindThePlotFromTheModelOrTheGround() {
         assertEquals(4, IslandMap.plotAt(IsoHit.Item("plot4"), 9, farmView = true))
-        assertEquals(5, IslandMap.plotAt(IsoHit.Cell(3, 2), 9, farmView = true))
-        assertNull(IslandMap.plotAt(IsoHit.Cell(0, 2), 9, farmView = true))
+        // Beds are 2 x 2 farm cells from (1, 1); the farm view is built FINE engine cells per farm cell.
+        val f = com.break8t.unknown.ui.iso.IsoFarm.FINE
+        assertEquals(5, IslandMap.plotAt(IsoHit.Cell(5 * f, 3 * f), 9, farmView = true))
+        assertEquals(5, IslandMap.plotAt(IsoHit.Cell(7 * f - 1, 5 * f - 1), 9, farmView = true))
+        assertNull(IslandMap.plotAt(IsoHit.Cell(0, 2 * f), 9, farmView = true))
+        assertNull(IslandMap.plotAt(IsoHit.Cell(7 * f, 2 * f), 9, farmView = true))
+        assertEquals(5, IslandMap.plotAt(IsoHit.Cell(7, 5), 9, farmView = false))
         assertNull(IslandMap.plotAt(IsoHit.Item("fence1"), 9, farmView = true))
         assertEquals(IslandSpot.HOUSE, IslandMap.spotAt(IsoHit.Item("house"), 9))
         assertEquals(IslandSpot.SHOP, IslandMap.spotAt(IsoHit.Item("stall"), 9))

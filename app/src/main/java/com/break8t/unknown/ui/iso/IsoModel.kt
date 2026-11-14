@@ -122,9 +122,9 @@ data class IsoObject(
 }
 
 /**
- * Row-major [cells]; the floor slab reaches [floorDepth] cells below each cell's height.
- * [wallHeight] > 0 puts walls on the sides facing away from the camera.
+ * Row-major [cells], slabs [floorDepth] deep; [wallHeight] > 0 puts walls on the sides facing away from the camera.
  * [frame], when set, is the world box the camera fits instead of the whole grid.
+ * Floor outlines go round [tile] x [tile] blocks, for scenes built finer than the tiles they show.
  */
 @Immutable
 data class IsoScene(
@@ -136,6 +136,7 @@ data class IsoScene(
     val floorDepth: Float = 0.5f,
     val frame: FrameBox? = null,
     val roads: List<RoadRay> = emptyList(),
+    val tile: Int = 1,
 ) {
     init {
         require(cells.size == width * depth) { "cells must be width * depth" }

@@ -1,11 +1,9 @@
 package com.break8t.unknown.ui.photo
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +12,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -37,8 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -63,16 +58,32 @@ import com.break8t.unknown.ui.house.ScreenPad
 import com.break8t.unknown.ui.house.SquareIconButton
 import com.break8t.unknown.ui.house.TopChip
 import com.break8t.unknown.ui.house.WindowPreviews
-import com.break8t.unknown.ui.house.characterImage
 import com.break8t.unknown.ui.house.presetLabel
 import com.break8t.unknown.ui.house.trimToOwned
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.ui.island.FarmStore
 import com.break8t.unknown.ui.island.IslandMap
 import com.break8t.unknown.ui.island.plotViews
+import com.break8t.unknown.ui.house.SceneCharacter
 import com.break8t.unknown.ui.iso.IsoHit
+import com.break8t.unknown.ui.iso.IsoThumbnail
+import com.break8t.unknown.ui.iso.rememberIsoViewState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.break8t.unknown.ui.theme.AppColors
 import java.time.LocalTime
+
+private val PanelWidth = 243.dp
+private val PanelGap = 26.dp
+private const val CHARACTER_ID = "character"
+private const val ISLAND_CHARACTER_SCALE = 1.6f // the island is framed smaller than the room; S-16-f shows a larger figure
+
+// Where a new character first stands: open ground in front of the house (S-16-f) or the room (S-16-g).
+private val ISLAND_SPAWN = 0.27f to 0.36f
+private val HOUSE_SPAWN = 0.5f to 0.7f
 
 private val PhotoStateSaver = listSaver<PhotoState, Any>({ it.toList() }, { PhotoState.fromList(it) })
 
@@ -97,7 +108,10 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
         carId = profile.selectedCarId,
     )
     val grid = if (inHouse) BalanceConfig.DEFAULT.houseGridSize else IslandMap.SIZE
-    val extra = listOfNotNull(s.character?.let { characterObject(it, grid) })
+    val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE) })
+    val view = rememberIsoViewState()
+    // While the character is being set up it carries the scene's selection frame, as S-16-f shows.
+    LaunchedEffect(s.editing) { view.selectedId = if (s.editing) CHARACTER_ID else null }
     BackHandler {
         when {
             s.shot -> s = s.copy(shot = false)
@@ -108,32 +122,38 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
     if (s.shot) {
         ShareQrLayout(ShareKind.PHOTO, onClose, onRetake = { s = s.copy(shot = false) }) {
             // 카메라 화면과 같은 비율(1144x901)이라 찍을 때 본 구도가 그대로 보인다.
-            RoomScene(scene, Modifier.aspectRatio(1144f / 901f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(10.dp)), extra = extra)
+            RoomScene(
+                scene, Modifier.aspectRatio(1144f / 901f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(10.dp)),
+                extra = extra,
+            )
         }
         return
     }
     val options = poseOptions(profile.selectedCharacterId, profile.owned)
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
         // The scene takes drags for panning, so while editing a tap on the ground moves the character there.
         RoomScene(
             scene,
             Modifier.fillMaxSize(),
+            view = view,
             extra = extra,
             onTapCell = { hit -> if (s.editing && hit is IsoHit.Cell) s = s.placedAt(hit.x, hit.y, grid) },
         )
-        // 찍히는 범위. Figma S-16의 흰 테두리(760x640 / 1144x901)와 같은 비율이다.
-        Box(Modifier.align(Alignment.Center).fillMaxWidth(0.66f).fillMaxHeight(0.71f).border(5.dp, Color.White))
+        // 찍히는 범위(Figma S-16의 흰 테두리). 오른쪽 각도 카드와 겹치지 않게 그 왼쪽에 둔다.
+        val panelLeft = maxWidth - ScreenPad - PanelWidth
+        val f = captureFrame(maxWidth.value, maxHeight.value, panelLeft.value, PanelGap.value)
+        Box(Modifier.offset(f.left.dp, f.top.dp).size(f.width.dp, f.height.dp).border(5.dp, Color.White))
         Row(Modifier.padding(ScreenPad), horizontalArrangement = Arrangement.spacedBy(ChipGap)) {
             TopChip(stringResource(R.string.photo_cancel), onClose, icon = R.drawable.house_ic_back)
             TopChip(stringResource(R.string.photo_title), null)
         }
-        PresetCard(s, { s = it }, Modifier.align(Alignment.TopEnd).padding(top = 195.dp, end = ScreenPad))
+        if (!s.editing) PresetCard(s, { s = it }, Modifier.align(Alignment.TopEnd).padding(top = 195.dp, end = ScreenPad))
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(ScreenPad)) {
             if (s.editing) {
                 CharacterCard(s, options, { s = it })
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TopChip(stringResource(R.string.photo_character), { s = s.startCharacter(options) })
+                    TopChip(stringResource(R.string.photo_character), { s = s.startCharacter(options, if (inHouse) HOUSE_SPAWN else ISLAND_SPAWN) })
                     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         PrimaryIconButton(
                             stringResource(R.string.photo_shoot),
@@ -150,7 +170,7 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
 
 @Composable
 private fun PresetCard(s: PhotoState, onChange: (PhotoState) -> Unit, modifier: Modifier = Modifier) {
-    AppCard(modifier.width(243.dp)) {
+    AppCard(modifier.width(PanelWidth)) {
         Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
             for (p in CameraPreset.entries) {
                 val on = s.preset == p
@@ -193,16 +213,18 @@ private fun CharacterCard(s: PhotoState, options: List<String>, onChange: (Photo
                 Row(Modifier.widthIn(max = 620.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (id in options) {
                         val on = s.poseId == id
-                        Image(
-                            painterResource(characterImage(id)),
-                            Catalog.item(id)?.name,
+                        val model = characterObject(SceneCharacter(id, 0f, 0f, CharacterSizes[1], false), 1)
+                        IsoThumbnail(
+                            model.shape,
                             Modifier
                                 .size(109.dp)
                                 .clip(ControlShape)
                                 .background(AppColors.Accent)
                                 .border(if (on) 6.5.dp else BorderWidth, if (on) AppColors.Selected else AppColors.Line, ControlShape)
                                 .clickable(role = Role.RadioButton) { onChange(s.copy(poseId = id)) }
+                                .semantics { contentDescription = Catalog.item(id)?.name.orEmpty() }
                                 .padding(8.dp),
+                            rotation = model.rotation,
                         )
                     }
                 }

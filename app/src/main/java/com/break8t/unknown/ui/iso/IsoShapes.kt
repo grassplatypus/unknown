@@ -193,18 +193,11 @@ object IsoShapes {
     /** Soil bed with a plant drawn like the S-13 art: a pixel sprite two voxels deep standing across the cell. Cached. */
     fun plot(stage: PlotStage, crop: Crop = Crop.CARROT): IsoShape = plotCache.getValue(stage to crop)
 
-    /**
-     * The farm screen's close-up plot: 2 x 2 cells of 16-wide sprite, meant to be drawn at scale 0.5 so it
-     * fills one cell with twice the detail. Rows are two voxels tall against the steep camera's squash.
-     */
-    fun farmPlot(stage: PlotStage, crop: Crop): IsoShape = farmCache.getValue(stage to crop)
 
     private val plotCache: Map<Pair<PlotStage, Crop>, IsoShape> by lazy {
         PlotStage.entries.flatMap { st -> Crop.entries.map { st to it } }.associateWith { (st, cr) -> buildPlot(st, cr) }
     }
-    private val farmCache: Map<Pair<PlotStage, Crop>, IsoShape> by lazy {
-        PlotStage.entries.flatMap { st -> Crop.entries.map { st to it } }.associateWith { (st, cr) -> buildFarmPlot(st, cr) }
-    }
+
 
     private val spriteColors = mapOf(
         'l' to P.LeafLight, 'L' to P.Leaf, 'd' to P.LeafDark, 'O' to P.Carrot, 'o' to P.Stripe,
@@ -231,36 +224,6 @@ object IsoShapes {
         add(c(0, 0, 0, 8, 8, 1, P.SoilC))
         add(c(0, 2, 0, 8, 1, 1, P.SoilDarkC)); add(c(0, 6, 0, 8, 1, 1, P.SoilDarkC))
         sprite(sprite(stage, crop), 3, 1)
-    })
-
-    private fun bigSprite(stage: PlotStage, crop: Crop): List<String> {
-        val grown = stage == PlotStage.GROWN
-        return when {
-            stage == PlotStage.EMPTY -> emptyList()
-            stage == PlotStage.SPROUT -> listOf("....l......l....", "...lLl....lLl...", "....L......L....")
-            crop == Crop.CARROT -> listOf(
-                "...l.l....l.l...", "..lLlLl..lLlLl..", ".lLdLdLl.lLdLdLl", ".LdLLLdL.LdLLLdL", "..lLdLl...lLdLl.",
-                "...dLd.....dLd..", "..OOOOO...OOOOO.", "..OoOOO...OoOOO.",
-            ) + if (grown) listOf("...OOOo....OOOo.", "...OOO.....OOO..", "....Oo......Oo..", "....O.......O...") else emptyList()
-            crop == Crop.SWEET_POTATO -> listOf(
-                "...lLl....lLl...", "..lLLLl..lLLLl..", ".lLLdLLllLLdLLl.", ".LLdddLLLLdddLL.", "..LLdLL..LLdLL..",
-                "...dLd....dLd...",
-            ) + if (grown) listOf("..PPPPP..PPPPP..", ".PPpPPPPPPpPPPP.", ".PPPPPP..PPPPPP.", "..PPPP....PPPP..")
-            else listOf("...PPP....PPP...")
-            else -> {
-                val rows = listOf(
-                    "..Y....Y....Y...", ".YsY..YsY..YsY..", ".YYY..YYY..YYY..", ".YsY..YsY..YsY..", ".YYY..YYY..YYY..",
-                    "..w....w....w...", ".LwL..LwL..LwL..", "..w....w....w...", "..w....w....w...", ".www..www..www..",
-                )
-                if (grown) rows else rows.map { it.replace('Y', 'l').replace('s', 'g').replace('w', 'L') }
-            }
-        }
-    }
-
-    private fun buildFarmPlot(stage: PlotStage, crop: Crop): IsoShape = IsoShape(2, 2, buildList {
-        add(c(0, 0, 0, 16, 16, 1, P.SoilC))
-        for (y in intArrayOf(3, 7, 11, 15)) add(c(0, y, 0, 16, 1, 1, P.SoilDarkC))
-        sprite(bigSprite(stage, crop), 8, 2)
     })
 
     /** 8 x 8 x 12, a round canopy over a short trunk. */

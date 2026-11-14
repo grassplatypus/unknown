@@ -98,7 +98,8 @@ private fun rememberNow(): Long {
 /** S-11-a. */
 @Composable
 internal fun IslandEntrance(scene: IslandSceneState, coins: Int, onEnter: () -> Unit) = Box(Modifier.fillMaxSize()) {
-    IslandScene(scene, Modifier.fillMaxSize())
+    // S-11-a: the car is still on the road in, so the parking space is empty.
+    IslandScene(scene.copy(carId = ""), Modifier.fillMaxSize())
     IslandTopBar(coins, start = { IslandChip(stringResource(R.string.island_entrance_title), selected = true) })
     PrimaryButton(
         stringResource(R.string.island_enter),

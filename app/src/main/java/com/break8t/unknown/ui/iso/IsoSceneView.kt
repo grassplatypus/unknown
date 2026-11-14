@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
@@ -30,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -77,6 +77,10 @@ class IsoViewState(preset: ViewPreset = ViewPreset.OBLIQUE, step: Int = 0, night
     var pan by mutableStateOf(Offset.Zero)
     var selectedId by mutableStateOf<String?>(null)
     var ghost by mutableStateOf<Ghost?>(null)
+        internal set
+
+    /** True from the moment a finger starts moving the selected object until it lifts. */
+    var dragging by mutableStateOf(false)
         internal set
 
     /** Wall time of the last render, for checking smoothness on the device. */
@@ -168,7 +172,11 @@ class IsoOverlayScope internal constructor(
         layout(p.width, p.height) {
             val s = point(x, y, z, Size(c.maxWidth.toFloat(), c.maxHeight.toFloat()))
             val pin = align.align(IntSize.Zero, IntSize(p.width, p.height), layoutDirection)
-            p.place(s.x.roundToInt() - pin.x, s.y.roundToInt() - pin.y)
+            // Kept inside the view, so a label near the edge of a narrow window is not cut off.
+            p.place(
+                (s.x.roundToInt() - pin.x).coerceIn(0, max(0, c.maxWidth - p.width)),
+                (s.y.roundToInt() - pin.y).coerceIn(0, max(0, c.maxHeight - p.height)),
+            )
         }
     }
 
@@ -227,8 +235,10 @@ private fun SceneCanvas(
     val rendered = previewFrame ?: produced
     val live = rememberUpdatedState(Live(scene, rendered, editMode && camera.pitch >= EDIT_MIN_PITCH, onTap, canPlace, onPlace))
 
-    Box(Modifier.fillMaxSize().pointerInput(state, base) { gestures(state, live, base) }) {
-        Canvas(Modifier.fillMaxSize()) {
+    // The rendered window is larger than the view, so clip it to the view.
+    Box(Modifier.fillMaxSize().clipToBounds()) {
+        // The overlay is a sibling on top, so a tap on a label button does not also reach the scene.
+        Canvas(Modifier.fillMaxSize().pointerInput(state, base) { gestures(state, live, base) }) {
             if (night) drawRect(IsoPalette.Night.copy(alpha = NIGHT_OVERLAY))
             val r = rendered ?: return@Canvas
             val l = layout(r.frame, size, state, base)
@@ -242,7 +252,7 @@ private fun SceneCanvas(
             )
         }
         if (rendered == null && bw > 0 && bh > 0) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center), color = AppColors.Primary)
+            PixelBusy(Modifier.align(Alignment.Center))
         } else if (rendered != null) {
             // Same framing renderScene uses, so labels line up with the drawn pixels.
             val proj = remember(scene, camera, bw, bh) { Projection.framing(scene, camera, bw.toFloat(), bh.toFloat(), 1f, Offset.Zero) }
@@ -367,29 +377,35 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<
         val grab = if (dragged != null && proj != null && lay != null) {
             proj.floorCell(lay.bx(start.x), lay.by(start.y))?.let { (gx, gy) -> (gx - dragged.x) to (gy - dragged.y) }
         } else null
-        while (true) {
-            val e = awaitPointerEvent()
-            val pressed = e.changes.count { it.pressed }
-            if (pressed == 0) break
-            if (pressed > 1) {
-                state.ghost = null
-                dragId = null
-                val centroid = e.calculateCentroid()
-                val k = (state.zoom * e.calculateZoom()).coerceIn(IsoViewState.MIN_ZOOM, IsoViewState.MAX_ZOOM) / state.zoom
-                val c = Offset(view.width / 2f, view.height / 2f)
-                state.zoom *= k
-                state.pan = clampPan(centroid - c - (centroid - c - state.pan) * k + e.calculatePan(), state.zoom, view)
-            } else if (dragged != null && grab != null && dragId != null && proj != null && lay != null) {
-                val pos = e.changes.first { it.pressed }.position
-                proj.floorCell(lay.bx(pos.x), lay.by(pos.y))?.let { (cx, cy) ->
-                    val p = l.scene.snap(dragged, cx, cy, grab.first, grab.second)
-                    if (state.ghost?.placement != p) state.ghost = Ghost(p, live.value.canPlace(p))
+        state.dragging = dragged != null && grab != null
+        try {
+            while (true) {
+                val e = awaitPointerEvent()
+                val pressed = e.changes.count { it.pressed }
+                if (pressed == 0) break
+                if (pressed > 1) {
+                    state.ghost = null
+                    state.dragging = false
+                    dragId = null
+                    val centroid = e.calculateCentroid()
+                    val k = (state.zoom * e.calculateZoom()).coerceIn(IsoViewState.MIN_ZOOM, IsoViewState.MAX_ZOOM) / state.zoom
+                    val c = Offset(view.width / 2f, view.height / 2f)
+                    state.zoom *= k
+                    state.pan = clampPan(centroid - c - (centroid - c - state.pan) * k + e.calculatePan(), state.zoom, view)
+                } else if (dragged != null && grab != null && dragId != null && proj != null && lay != null) {
+                    val pos = e.changes.first { it.pressed }.position
+                    proj.floorCell(lay.bx(pos.x), lay.by(pos.y))?.let { (cx, cy) ->
+                        val p = l.scene.snap(dragged, cx, cy, grab.first, grab.second)
+                        if (state.ghost?.placement != p) state.ghost = Ghost(p, live.value.canPlace(p))
+                    }
+                } else {
+                    val c = e.changes.first { it.pressed }
+                    state.pan = clampPan(state.pan + c.positionChange(), state.zoom, view)
                 }
-            } else {
-                val c = e.changes.first { it.pressed }
-                state.pan = clampPan(state.pan + c.positionChange(), state.zoom, view)
+                e.changes.forEach { it.consume() }
             }
-            e.changes.forEach { it.consume() }
+        } finally {
+            state.dragging = false
         }
         state.ghost?.let { g ->
             state.ghost = null

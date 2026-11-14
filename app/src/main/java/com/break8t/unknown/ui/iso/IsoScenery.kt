@@ -119,17 +119,16 @@ object IsoScenery {
         add(c(2, 14, 8, 1, 1, 2, P.Light, P.Light)); add(c(13, 14, 8, 1, 1, 2, P.Light, P.Light))
     })
 
-    /** 8 x 8 x 10, runs along x: two posts, a rail and a string of lights that glow at night. */
-    val lightFence = IsoShape(1, 1, listOf(
-        c(0, 2, 0, 3, 3, 11, P.Wood), c(0, 2, 11, 3, 3, 1, P.WoodLight),
-        c(1, 5, 8, 1, 1, 1, P.WoodDeep), c(1, 5, 4, 1, 1, 1, P.WoodDeep),
-        c(3, 3, 8, 5, 2, 2, P.WoodDark), c(3, 3, 9, 5, 2, 1, P.WoodLight),
-        c(3, 4, 6, 1, 1, 2, P.WoodDeep), c(4, 4, 5, 3, 1, 1, P.WoodDeep), c(7, 4, 6, 1, 1, 2, P.WoodDeep),
-        c(3, 5, 5, 2, 1, 2, P.Light, P.Light), c(6, 5, 5, 2, 1, 2, P.Light, P.Light),
+    /** The island's knee-high farm fence (S-12-a): low enough that the parked car behind it stays visible. */
+    val lowFence = IsoShape(1, 1, listOf(
+        c(0, 3, 0, 2, 2, 6, P.Wood), c(0, 3, 6, 2, 2, 1, P.WoodLight),
+        c(2, 4, 4, 6, 1, 1, P.WoodDark), c(2, 4, 2, 6, 1, 1, P.WoodDark),
+        c(3, 5, 3, 1, 1, 1, P.Light, P.Light), c(6, 5, 3, 1, 1, 1, P.Light, P.Light),
     ))
 
-    /** A closing post for the end of a [lightFence] run. */
-    val fencePost = IsoShape(1, 1, listOf(c(0, 2, 0, 3, 3, 11, P.Wood), c(0, 2, 11, 3, 3, 1, P.WoodLight)))
+    /** A closing post for the end of a [lowFence] run. */
+    val lowPost = IsoShape(1, 1, listOf(c(0, 3, 0, 2, 2, 6, P.Wood), c(0, 3, 6, 2, 2, 1, P.WoodLight)))
+
 
     /** Flat road paint for a road running along y: kerbs on both sides, a dash in the middle. */
     val laneY = IsoShape(1, 1, listOf(

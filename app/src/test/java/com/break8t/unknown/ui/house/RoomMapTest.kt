@@ -80,6 +80,13 @@ class RoomMapTest {
         assertTrue(RoomMap.decor(IsoCamera.of(ViewPreset.OBLIQUE, 0), cfg).none { it.pickable })
     }
 
+    @Test fun pieceButtonsHideWhileDraggingAndReturnAfterRelease() {
+        assertFalse(showPieceButtons(-1, dragging = false))
+        assertTrue(showPieceButtons(0, dragging = false))
+        assertFalse(showPieceButtons(0, dragging = true))
+        assertFalse(showPieceButtons(-1, dragging = true))
+    }
+
     @Test fun buttonsHangUnderTheFrontCornerOfAFloorPiece() {
         assertEquals(Triple(1f, 3f, 0f), RoomMap.buttonAnchor(DefaultLayout[0], cfg))
         assertNotNull(RoomMap.buttonAnchor(DefaultLayout[2], cfg))

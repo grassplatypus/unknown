@@ -1,6 +1,5 @@
 package com.break8t.unknown.ui.house
 
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -33,7 +32,6 @@ import com.break8t.unknown.ui.iso.IsoSceneView
 import com.break8t.unknown.ui.iso.IsoScenery
 import com.break8t.unknown.ui.iso.IsoShapes
 import com.break8t.unknown.ui.iso.IsoViewState
-import com.break8t.unknown.ui.iso.PIXEL_DP
 import com.break8t.unknown.ui.iso.Placement
 import com.break8t.unknown.ui.iso.Projection
 import com.break8t.unknown.ui.iso.ViewPreset
@@ -155,6 +153,9 @@ object RoomMap {
     private const val POST_IN = 0.075f
 }
 
+/** The rotate and put-away buttons show for a selected piece, but not while a finger is moving it. */
+fun showPieceButtons(selected: Int, dragging: Boolean): Boolean = selected >= 0 && !dragging
+
 /** [fits] with the window and lantern cells taken. */
 fun fitsRoom(layout: List<Placed>, candidate: Placed, config: BalanceConfig, ignore: Int = -1): Boolean =
     fits(layout + RoomMap.Fixed, candidate, config, ignore)
@@ -174,30 +175,6 @@ fun placeAt(layout: List<Placed>, index: Int, pl: Placement, config: BalanceConf
     return if (fitsRoom(layout, moved, config, index)) layout.toMutableList().also { it[index] = moved } else null
 }
 
-@DrawableRes
-internal fun furnitureImage(itemId: String): Int = when (itemId) {
-    "it_sofa" -> R.drawable.house_it_sofa
-    "it_picture" -> R.drawable.house_it_picture
-    "it_rug" -> R.drawable.house_it_rug
-    "it_lamp" -> R.drawable.house_it_lamp
-    "it_shelf" -> R.drawable.house_it_shelf
-    else -> R.drawable.house_it_plant
-}
-
-@DrawableRes
-internal fun characterImage(id: String): Int = when (id) {
-    "ch_cat" -> R.drawable.photo_ch_cat
-    "ch_mush" -> R.drawable.photo_ch_mush
-    "ch_cloud" -> R.drawable.photo_ch_cloud
-    "ch_firefly" -> R.drawable.photo_ch_firefly
-    "pose_wave" -> R.drawable.photo_pose_wave
-    "pose_jump" -> R.drawable.photo_pose_jump
-    "pose_sit" -> R.drawable.photo_pose_sit
-    "pose_side" -> R.drawable.photo_pose_side
-    "pose_back" -> R.drawable.photo_pose_back
-    else -> R.drawable.photo_ch_sprout
-}
-
 /**
  * 집과 섬 장면을 그리는 한 자리. 방은 [editMode]일 때 엔진의 편집(고르기, 끌기, 놓을 수 있는지 색)을 쓴다.
  * [canPlace]와 [onPlace]는 집의 배치 규칙을 거친다. [overlay]는 장면 위의 버튼 자리다.
@@ -208,6 +185,7 @@ fun RoomScene(
     modifier: Modifier = Modifier,
     config: BalanceConfig = BalanceConfig.DEFAULT,
     view: IsoViewState = rememberIsoViewState(),
+    backdrop: Boolean = true,
     editMode: Boolean = false,
     extra: List<IsoObject> = emptyList(),
     onSelect: (Int) -> Unit = {},
@@ -227,8 +205,8 @@ fun RoomScene(
     LaunchedEffect(view, editMode) {
         if (editMode) snapshotFlow { view.selectedId }.collect { onSelect(RoomMap.indexOf(it)) }
     }
-    Box(modifier.background(if (house) HouseBg else sceneSky(state.night))) {
-        if (house) PixelNoise(Modifier.fillMaxSize()) else PixelSky(state.night, Modifier.fillMaxSize())
+    Box(if (!backdrop) modifier else modifier.background(if (house) HouseBg else sceneSky(state.night))) {
+        if (backdrop) { if (house) PixelNoise(Modifier.fillMaxSize()) else PixelSky(state.night, Modifier.fillMaxSize()) }
         IsoSceneView(
             scene, view, Modifier.fillMaxSize(),
             editMode = editMode, onTap = onTapCell, canPlace = canPlace, onPlace = onPlace, camera = camera, overlay = overlay,
@@ -266,7 +244,7 @@ internal fun PixelNoise(modifier: Modifier = Modifier) {
 }
 
 private const val NOISE_DP = 18f
-private val HouseBg = Color(0xFF020A12)
+internal val HouseBg = Color(0xFF020A12)
 private val NoiseColors = listOf(
     Color(0xFF01233F), Color(0xFF01233F), Color(0xFF01233F), Color(0xFF004674), Color(0xFF004674),
     Color(0xFF088DB3), Color(0xFF00D3F3), Color(0xFF02142A),
