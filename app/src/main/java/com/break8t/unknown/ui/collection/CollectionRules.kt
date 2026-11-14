@@ -60,3 +60,6 @@ object Josa {
     fun waGwa(word: String) = word + if (finalIndex(word) != 0) "과" else "와"
     fun euroRo(word: String) = word + finalIndex(word).let { if (it != 0 && it != FINAL_RIEUL) "으로" else "로" }
 }
+
+/** 방문 뱃지에 보일 단계 숫자. 만난 횟수가 처음 단계(5)에 못 미치면 뱃지를 붙이지 않는다. 14번이면 10이다. */
+fun visitBadge(count: Int, config: BalanceConfig = BalanceConfig.DEFAULT): Int? = config.visitBadgeSteps.lastOrNull { count >= it }

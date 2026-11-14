@@ -45,6 +45,8 @@ data class BalanceConfig(
     val avatarFrameLevels: List<Int> = listOf(5, 10, 20),
     // 도감 NEW 뱃지: 얻은 뒤 이 시간이 지나기 전에 아직 눌러 보지 않은 항목에 붙는다.
     val newBadgeHours: Int = 36,
+    // 정체 카드 방문 뱃지: 만난 횟수가 이 수에 닿을 때만 그 단계 숫자를 그림 오른쪽 위에 보인다.
+    val visitBadgeSteps: List<Int> = listOf(5, 10, 15, 20),
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

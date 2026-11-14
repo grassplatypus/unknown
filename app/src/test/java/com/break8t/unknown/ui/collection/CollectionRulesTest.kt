@@ -164,4 +164,9 @@ class CollectionRulesTest {
         assertEquals("버섯이를", Josa.eulReul("버섯이"))
         assertEquals("주말캠퍼와", Josa.waGwa("주말캠퍼"))
     }
+
+    @Test
+    fun visitBadgeShowsReachedStepOnly() {
+        assertEquals(listOf(null, null, 5, 5, 10, 10, 15, 20, 20), listOf(0, 4, 5, 9, 10, 14, 19, 20, 99).map { visitBadge(it) })
+    }
 }

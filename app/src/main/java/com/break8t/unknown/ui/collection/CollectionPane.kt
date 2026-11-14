@@ -253,7 +253,7 @@ private fun CardTile(item: Collectible, new: Boolean, onClick: () -> Unit) = Til
         Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Crop, if (item.owned) 1f else 0.25f)
         if (!item.owned) LockIcon()
         if (new) NewBadge(26.sp, Modifier.align(Alignment.TopStart).padding(10.dp))
-        item.meetCount?.let { CountBadge(it, 30.sp, Modifier.align(Alignment.TopEnd).padding(10.dp)) }
+        visitBadge(item.meetCount ?: 0)?.let { CountBadge(it, 30.sp, Modifier.align(Alignment.TopEnd).padding(10.dp)) }
     }
     Spacer(Modifier.height(17.dp))
     Name(item, 36)
@@ -395,7 +395,7 @@ private fun CardDetail(item: Collectible, onClose: () -> Unit, onShare: ShareHan
             val art = @Composable { m: Modifier ->
                 Box(m.aspectRatio(390f / 260f).clip(ArtShape)) {
                     Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Crop)
-                    item.meetCount?.let { CountBadge(it, 40.sp, Modifier.align(Alignment.TopEnd).padding(16.dp)) }
+                    visitBadge(item.meetCount ?: 0)?.let { CountBadge(it, 40.sp, Modifier.align(Alignment.TopEnd).padding(16.dp)) }
                 }
             }
             val stats = @Composable { m: Modifier ->
