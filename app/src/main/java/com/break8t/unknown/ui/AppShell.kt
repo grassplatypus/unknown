@@ -27,6 +27,8 @@ import com.break8t.unknown.ui.fielddrop.FieldDropScreen
 import com.break8t.unknown.ui.home.HomeScreen
 import com.break8t.unknown.ui.home.HomeStore
 import com.break8t.unknown.ui.inventory.InventoryScreen
+import com.break8t.unknown.ui.island.IslandPlace
+import com.break8t.unknown.ui.island.IslandScreen
 import com.break8t.unknown.ui.settings.SettingsScreen
 import com.break8t.unknown.ui.shop.ShopScreen
 import com.break8t.unknown.ui.theme.AppColors
@@ -76,6 +78,14 @@ private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav) 
             ShopScreen(onBack = nav.back, onOpenInventory = { nav.open(IslandSub.INVENTORY) })
         route == Route.ISLAND && sub == IslandSub.INVENTORY ->
             InventoryScreen(onBack = nav.back, onOpenShop = { nav.open(IslandSub.SHOP) }, onPlaceFurniture = nav.back)
+        // 집과 사진 화면은 아직 합치지 않았다.
+        route == Route.ISLAND -> IslandScreen(onOpen = { place ->
+            when (place) {
+                IslandPlace.SHOP -> nav.open(IslandSub.SHOP)
+                IslandPlace.INVENTORY -> nav.open(IslandSub.INVENTORY)
+                IslandPlace.HOUSE, IslandPlace.PHOTO -> Unit
+            }
+        })
         route == Route.HOME -> HomeScreen(mode, nav.go)
         route == Route.FIELD_DROP -> FieldDropScreen()
         // 계정 화면은 아직 합치지 않았다. 합치면 계정 전환과 로그아웃을 연결한다.
