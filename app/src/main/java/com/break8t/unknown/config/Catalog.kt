@@ -4,7 +4,11 @@ package com.break8t.unknown.config
  * 아이템 이름, 가격, 작물 시간. 여러 화면이 같은 값을 써야 해서 한 곳에 둔다.
  * id는 Figma 그림 이름과 같다. 가격은 Figma 견본, "임시" 표시는 팀이 정하지 않은 값이다.
  */
-enum class ItemKind { SEED, FURNITURE, CHARACTER, CAR, VOICE_PACK, POSE }
+enum class ItemKind {
+    SEED, FURNITURE, CHARACTER, CAR, VOICE_PACK, POSE,
+    // 섬 풀밭에 세우는 야외 장식. 집 가구와 따로 센다(섬 꾸미기의 야외 장식 탭 자리)
+    OUTDOOR,
+}
 
 data class CatalogItem(val id: String, val name: String, val kind: ItemKind, val price: Int?)
 
@@ -37,6 +41,8 @@ object Catalog {
         CatalogItem("pose_sit", "앉기", ItemKind.POSE, null),
         CatalogItem("pose_side", "옆모습", ItemKind.POSE, 80),
         CatalogItem("pose_back", "뒷모습", ItemKind.POSE, null),
+        // 음성 방명록 게시판. 누구나 하나 가지고 시작하며 팔지도 버리지도 않는다
+        CatalogItem("deco_board", "게시판", ItemKind.OUTDOOR, null),
     )
 
     // 수확 코인은 Figma T-05(밀 2칸, 코인 40)에서 밀만 나온다. 나머지는 임시.

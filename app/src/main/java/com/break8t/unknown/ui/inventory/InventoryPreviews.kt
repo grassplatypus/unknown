@@ -32,6 +32,8 @@ private fun Inventory(
 @ScreenPreviews @Composable private fun S18Seed() = Inventory(InventoryTab.SEED)
 @ScreenPreviews @Composable private fun S18Empty() = Inventory(InventoryTab.SEED, Profile(items = emptyMap()))
 @ScreenPreviews @Composable private fun D13Discard() = Inventory(discard = true)
+@ScreenPreviews @Composable private fun OutdoorBoardPlaced() = Inventory(InventoryTab.OUTDOOR)
+@ScreenPreviews @Composable private fun OutdoorBoardStored() = Inventory(InventoryTab.OUTDOOR, Profile(guestbookBoardPlaced = false))
 
 @ScreenPreviews @Composable
 private fun T07Discarded() = Inventory(toast = stringResource(R.string.inventory_toast_discarded, "러그", 3))

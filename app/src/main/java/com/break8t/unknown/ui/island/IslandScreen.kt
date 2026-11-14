@@ -60,6 +60,12 @@ import com.break8t.unknown.ui.components.BorderWidth
 import com.break8t.unknown.ui.components.ControlShape
 import com.break8t.unknown.ui.components.PrimaryButton
 import com.break8t.unknown.ui.components.SideRail
+import com.break8t.unknown.ui.guestbook.GuestbookNoticeDialog
+import com.break8t.unknown.ui.guestbook.GuestbookStore
+import com.break8t.unknown.ui.guestbook.MyGuestbookPanel
+import com.break8t.unknown.ui.guestbook.guestbookOn
+import com.break8t.unknown.ui.guestbook.noticeCount
+import androidx.compose.runtime.mutableIntStateOf
 import com.break8t.unknown.ui.theme.AppColors
 import com.break8t.unknown.ui.theme.AppTheme
 import kotlinx.coroutines.delay
@@ -92,24 +98,51 @@ fun IslandScreen(onOpen: (IslandPlace) -> Unit) {
     }
     val night = isNight(profile.islandRealTime, profile.islandNight, hourOf(now))
     val drive = CarDrive(trip.phase, TripRules.progress(trip, frameNow))
-    val scene = IslandSceneState(night, SceneFocus.MAIN, plotViews(plots, now), profile.selectedCarId, drive)
-    when (stage) {
-        IslandStage.ENTRANCE, IslandStage.ISLAND -> IslandStageView(
-            entrance = stage == IslandStage.ENTRANCE,
-            scene,
-            profile.coins,
-            farmReady = scene.plots.any { it.grown },
-            onEnter = {
-                frameNow = System.currentTimeMillis()
-                trip = TripRules.enter(frameNow)
-                stage = IslandStage.ISLAND
-            },
-            onOpen = onOpen,
-            onFarm = { stage = IslandStage.FARM },
-            driving = TripRules.driving(trip),
-            onSkip = { trip = TripRules.skip(trip) },
-        )
-        IslandStage.FARM -> FarmScreen(night, plots, now, profile, onBack = { stage = IslandStage.ISLAND }, onShop = { onOpen(IslandPlace.SHOP) })
+    val board = guestbookOn(profile)
+    val scene = IslandSceneState(night, SceneFocus.MAIN, plotViews(plots, now), profile.selectedCarId, drive, board)
+    // Worked out once on entering and saved, so a trip to the shop or a window split neither repeats nor loses it.
+    var visitSince by rememberSaveable { mutableStateOf(GuestbookStore.sampleLastVisitMs) }
+    var notice by rememberSaveable { mutableIntStateOf(0) }
+    var unread by rememberSaveable { mutableStateOf(false) }
+    var guestbookOpen by rememberSaveable { mutableStateOf(false) }
+    val demo = LocalDemoState.current
+    val driving = TripRules.driving(trip)
+    Box(Modifier.fillMaxSize()) {
+        when (stage) {
+            IslandStage.ENTRANCE, IslandStage.ISLAND -> IslandStageView(
+                entrance = stage == IslandStage.ENTRANCE,
+                scene,
+                profile.coins,
+                farmReady = scene.plots.any { it.grown },
+                onEnter = {
+                    frameNow = System.currentTimeMillis()
+                    trip = TripRules.enter(frameNow)
+                    stage = IslandStage.ISLAND
+                    val mine = GuestbookStore.entries.value[GuestbookStore.MY_ISLAND].orEmpty()
+                    visitSince = profile.guestbookLastVisitMs ?: GuestbookStore.sampleLastVisitMs
+                    notice = noticeCount(profile, mine, GuestbookStore.sampleLastVisitMs)
+                    unread = notice > 0
+                    demo.update { it.copy(guestbookLastVisitMs = frameNow) }
+                },
+                onOpen = onOpen,
+                onFarm = { stage = IslandStage.FARM },
+                driving = driving,
+                onSkip = { trip = TripRules.skip(trip) },
+                onBoard = { notice = 0; unread = false; guestbookOpen = true },
+                boardBadge = unread,
+            )
+            IslandStage.FARM -> FarmScreen(night, plots, now, profile, onBack = { stage = IslandStage.ISLAND }, onShop = { onOpen(IslandPlace.SHOP) })
+        }
+        if (stage == IslandStage.ISLAND && board && guestbookOpen) {
+            MyGuestbookPanel(visitSince, onClose = { guestbookOpen = false })
+        }
+        if (stage == IslandStage.ISLAND && board && !driving && !guestbookOpen && notice > 0) {
+            GuestbookNoticeDialog(
+                notice,
+                onListen = { notice = 0; unread = false; guestbookOpen = true },
+                onLater = { notice = 0 },
+            )
+        }
     }
 }
 
@@ -168,6 +201,8 @@ internal fun IslandStageView(
     onFarm: () -> Unit,
     driving: Boolean = false,
     onSkip: () -> Unit = {},
+    onBoard: () -> Unit = {},
+    boardBadge: Boolean = false,
 ) = Box(Modifier.fillMaxSize()) {
     val open: (IslandSpot) -> Unit = { spot ->
         when (spot) {
@@ -189,6 +224,10 @@ internal fun IslandStageView(
             // Chips stand on their objects (Figma S-12): a gap above the roof, below the farm's front edge.
             val gap = if (spot == IslandSpot.FARM) Modifier.padding(top = 12.dp) else Modifier.padding(bottom = 16.dp)
             IslandChip(stringResource(text), gap, badge = spot == IslandSpot.FARM && farmReady, onClick = { open(spot) })
+        },
+        onBoard = if (entrance) ({}) else onBoard,
+        boardLabel = if (entrance || driving) null else {
+            { IslandChip(stringResource(R.string.guestbook_chip), Modifier.padding(bottom = 16.dp), badge = boardBadge, onClick = onBoard) }
         },
     )
     if (entrance) {
@@ -321,3 +360,17 @@ private fun DayPreview() = IslandPreviewFrame { IslandMain(previewScene(false), 
 @IslandPreviews
 @Composable
 private fun NightPreview() = IslandPreviewFrame { IslandMain(previewScene(true), 240, farmReady = true, onOpen = {}, onFarm = {}) }
+
+/** 지난 방문 뒤 새 방명록이 있어서 게시판 칩에 알림 점이 붙은 섬. */
+@IslandPreviews
+@Composable
+private fun BoardNewPreview() = IslandPreviewFrame {
+    IslandStageView(false, previewScene(false), 240, farmReady = false, onEnter = {}, onOpen = {}, onFarm = {}, boardBadge = true)
+}
+
+/** 게시판을 보관함에 넣어 둔 섬. 게시판과 방명록 칩이 없다. */
+@IslandPreviews
+@Composable
+private fun BoardStoredPreview() = IslandPreviewFrame {
+    IslandMain(previewScene(false).copy(board = false), 240, farmReady = true, onOpen = {}, onFarm = {})
+}

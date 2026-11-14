@@ -31,6 +31,10 @@ data class Profile(
         "ch_sprout", "ch_cat", "ch_mush", "ch_cloud", "car_red", "car_blue",
         "voice_default", "pose_wave", "pose_sit", "pose_back",
     ),
+    // 게시판(deco_board)이 섬에 있는지. 보관함에 넣으면 방명록이 꺼진다
+    val guestbookBoardPlaced: Boolean = true,
+    // 내 섬에 마지막으로 들어온 시각(ms). null이면 견본의 지난 방문 시각을 쓴다
+    val guestbookLastVisitMs: Long? = null,
 )
 
 class DemoState(initial: Profile = Profile()) {

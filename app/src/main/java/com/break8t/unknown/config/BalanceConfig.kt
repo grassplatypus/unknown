@@ -41,6 +41,9 @@ data class BalanceConfig(
 
     // 도감 뱃지: 모은 엽서가 이 수에 닿을 때마다 뱃지 하나가 열린다. 작은 수부터 적는다.
     val postcardBadgeSteps: List<Int> = listOf(3, 5, 10),
+
+    // 음성 방명록 한 개의 최대 녹음 길이(초)
+    val guestbookMaxSec: Int = 15,
 ) {
     companion object {
         val DEFAULT = BalanceConfig()
