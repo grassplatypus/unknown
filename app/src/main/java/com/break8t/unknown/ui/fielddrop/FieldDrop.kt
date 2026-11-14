@@ -77,8 +77,8 @@ fun distanceRoundedM(car: GeoPoint, m: Mushroom): Int = distanceM(car, m.at).rou
 
 fun minutesFor(meters: Int): Int = (meters / CITY_M_PER_MIN).roundToInt()
 
-/** 처음 열 때와 현재 위치 버튼을 누를 때의 카메라 높이(m). 합칠 때 BalanceConfig.fieldDropAltitudeM으로 바꾼다. */
-const val FIELD_DROP_ALTITUDE_M = 50.0
+/** 처음 열 때와 현재 위치 버튼을 누를 때의 카메라 높이(m). 값은 BalanceConfig에 있다. */
+val FIELD_DROP_ALTITUDE_M: Double get() = com.break8t.unknown.config.BalanceConfig.DEFAULT.fieldDropAltitudeM.toDouble()
 
 /** MapLibre 기본 세로 시야각(0.6435 rad). 첫 화면과 현재 위치 버튼이 같은 값을 쓴다. */
 const val MAP_DEFAULT_FOV_DEG = 36.8699
