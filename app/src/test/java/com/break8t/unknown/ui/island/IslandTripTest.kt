@@ -19,28 +19,17 @@ class IslandTripTest {
         assertEquals(0.5f, TripRules.progress(a, t0 + d / 2), 1e-3f)
     }
 
-    @Test fun leavingWhileParkedDrivesOutThenIsGone() {
-        val l = TripRules.leave(Trip(TripPhase.PARKED), t0, parked = true)
-        assertEquals(TripPhase.LEAVING, l.phase)
-        assertEquals(TripPhase.GONE, TripRules.tick(l, t0 + d).phase)
-    }
-
-    @Test fun aTapSkipsEitherDriveToItsEnd() {
+    @Test fun aTapSkipsTheDriveToItsEnd() {
         assertEquals(TripPhase.PARKED, TripRules.skip(TripRules.enter(t0)).phase)
-        assertEquals(TripPhase.GONE, TripRules.skip(TripRules.leave(Trip(TripPhase.PARKED), t0, true)).phase)
         assertEquals(TripPhase.PARKED, TripRules.skip(Trip(TripPhase.PARKED)).phase)
     }
 
-    /** Leaving P mid-drive never leaves a drive running: arrival parks, departure is gone (navigates now). */
-    @Test fun gearLeavingParkEndsAnyDriveAtOnce() {
-        val arriving = TripRules.enter(t0)
-        val leaving = TripRules.leave(Trip(TripPhase.PARKED), t0, true)
-        assertEquals(TripPhase.PARKED, TripRules.gear(arriving, parked = false).phase)
-        assertEquals(TripPhase.GONE, TripRules.gear(leaving, parked = false).phase)
-        assertEquals(arriving, TripRules.gear(arriving, parked = true))
-        // A leave asked while not parked skips the drive entirely.
-        assertEquals(TripPhase.GONE, TripRules.leave(Trip(TripPhase.PARKED), t0, parked = false).phase)
-        assertFalse(TripRules.driving(TripRules.gear(leaving, false)))
+    /** Leaving P mid-drive drops the island screen; it comes back with the car parked and no drive running. */
+    @Test fun anInterruptedDriveComesBackParked() {
+        val r = TripRules.interrupted(TripRules.enter(t0))
+        assertEquals(TripPhase.PARKED, r.phase)
+        assertFalse(TripRules.driving(r))
+        assertEquals(1f, TripRules.progress(r, t0), 0f)
     }
 
     @Test fun theCarMovesInWholeVoxelStepsAlongTheRoad() {
@@ -54,11 +43,6 @@ class IslandTripTest {
             assertTrue("never backs up", y <= last)
             last = y
         }
-        // Leaving turns round in the spot first (3, then 0), then drives down the road facing it (1).
-        assertEquals(CarPose(park, 3), carPose(TripPhase.LEAVING, 0.05f, park, far))
-        assertEquals(0, carPose(TripPhase.LEAVING, 0.15f, park, far).rotation)
-        assertEquals(1, carPose(TripPhase.LEAVING, 0.6f, park, far).rotation)
-        assertEquals(far, carPose(TripPhase.LEAVING, 1f, park, far).y, 1f / VPC)
     }
 
     /** The drive starts and ends past the visible end of the road, for each window and rotation. */

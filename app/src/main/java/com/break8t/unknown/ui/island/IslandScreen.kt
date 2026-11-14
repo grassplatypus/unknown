@@ -74,47 +74,35 @@ private const val TICK_MS = 10_000L
 
 /** 섬 진입점. 입구, 내 섬, 텃밭을 이 안에서 오간다. */
 @Composable
-fun IslandScreen(onOpen: (IslandPlace) -> Unit, leaving: Boolean = false, onLeft: () -> Unit = {}) {
+fun IslandScreen(onOpen: (IslandPlace) -> Unit) {
     val profile by LocalDemoState.current.profile.collectAsState()
     val plots by FarmStore.plots.collectAsState()
     val now = rememberNow()
     var stage by rememberSaveable { mutableStateOf(IslandStage.ENTRANCE) }
     var trip by rememberSaveable(stateSaver = TripSaver) { mutableStateOf(Trip(TripPhase.PARKED)) }
     var frameNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    // Frame clock for a drive; the car's place is a pure function of the time since it started.
+    // Frame clock for the drive in; the car's place is a pure function of the time since it started.
     LaunchedEffect(trip) {
         while (TripRules.driving(trip)) {
             withFrameMillis { }
             frameNow = System.currentTimeMillis()
             trip = TripRules.tick(trip, frameNow)
         }
-        if (trip.phase == TripPhase.GONE) {
-            stage = IslandStage.ENTRANCE
-            trip = Trip(TripPhase.PARKED)
-            onLeft()
-        }
-    }
-    // The shell only asks to leave while parked; with no car on the island (the entrance) there is nothing to drive.
-    LaunchedEffect(leaving) {
-        if (!leaving) return@LaunchedEffect
-        if (stage == IslandStage.ENTRANCE) trip = Trip(TripPhase.GONE) else {
-            stage = IslandStage.ISLAND
-            trip = TripRules.leave(trip, System.currentTimeMillis(), parked = true)
-        }
     }
     val night = isNight(profile.islandRealTime, profile.islandNight, hourOf(now))
     val drive = CarDrive(trip.phase, TripRules.progress(trip, frameNow))
     val scene = IslandSceneState(night, SceneFocus.MAIN, plotViews(plots, now), profile.selectedCarId, drive)
     when (stage) {
-        IslandStage.ENTRANCE -> IslandEntrance(scene, profile.coins, onEnter = {
-            frameNow = System.currentTimeMillis()
-            trip = TripRules.enter(frameNow)
-            stage = IslandStage.ISLAND
-        })
-        IslandStage.ISLAND -> IslandMain(
+        IslandStage.ENTRANCE, IslandStage.ISLAND -> IslandStageView(
+            entrance = stage == IslandStage.ENTRANCE,
             scene,
             profile.coins,
             farmReady = scene.plots.any { it.grown },
+            onEnter = {
+                frameNow = System.currentTimeMillis()
+                trip = TripRules.enter(frameNow)
+                stage = IslandStage.ISLAND
+            },
             onOpen = onOpen,
             onFarm = { stage = IslandStage.FARM },
             driving = TripRules.driving(trip),
@@ -124,10 +112,13 @@ fun IslandScreen(onOpen: (IslandPlace) -> Unit, leaving: Boolean = false, onLeft
     }
 }
 
-/** A drive does not survive the screen being rebuilt (cover, window change): it comes back parked. */
+/**
+ * Leaving P covers the island and drops this screen, so the drive does not hold anything up; when the screen
+ * comes back (P again, or a window change) the drive is over and the car is parked.
+ */
 private val TripSaver = listSaver<Trip, Any>(
     save = { listOf(it.phase.name, it.startMs) },
-    restore = { Trip(TripPhase.PARKED, it[1] as Long) },
+    restore = { TripRules.interrupted(Trip(TripPhase.valueOf(it[0] as String), it[1] as Long)) },
 )
 
 private fun hourOf(epochMs: Long) = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).hour
@@ -146,16 +137,8 @@ private fun rememberNow(): Long {
 
 /** S-11-a. */
 @Composable
-internal fun IslandEntrance(scene: IslandSceneState, coins: Int, onEnter: () -> Unit) = Box(Modifier.fillMaxSize()) {
-    // S-11-a: the car is still on the road in, so the parking space is empty.
-    IslandScene(scene.copy(drive = null), Modifier.fillMaxSize())
-    IslandTopBar(coins, start = { IslandChip(stringResource(R.string.island_entrance_title), selected = true) })
-    PrimaryButton(
-        stringResource(R.string.island_enter),
-        onEnter,
-        Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp).widthIn(min = 520.dp),
-    )
-}
+internal fun IslandEntrance(scene: IslandSceneState, coins: Int, onEnter: () -> Unit) =
+    IslandStageView(entrance = true, scene, coins, farmReady = false, onEnter = onEnter, onOpen = {}, onFarm = {})
 
 /** S-12-a, S-12-b. 낮밤은 scene.night로 장면이 그린다. */
 @Composable
@@ -167,16 +150,36 @@ internal fun IslandMain(
     onFarm: () -> Unit,
     driving: Boolean = false,
     onSkip: () -> Unit = {},
-) =
-    Box(Modifier.fillMaxSize()) {
-        val open: (IslandSpot) -> Unit = { spot ->
-            when (spot) {
-                IslandSpot.HOUSE -> onOpen(IslandPlace.HOUSE)
-                IslandSpot.SHOP -> onOpen(IslandPlace.SHOP)
-                IslandSpot.FARM -> onFarm()
-            }
+) = IslandStageView(entrance = false, scene, coins, farmReady, onEnter = {}, onOpen, onFarm, driving, onSkip)
+
+/**
+ * The entrance and the island share one scene, so entering keeps the rendered island on screen and the car
+ * starts driving at once instead of after a fresh first render.
+ */
+@Composable
+internal fun IslandStageView(
+    entrance: Boolean,
+    scene: IslandSceneState,
+    coins: Int,
+    farmReady: Boolean,
+    onEnter: () -> Unit,
+    onOpen: (IslandPlace) -> Unit,
+    onFarm: () -> Unit,
+    driving: Boolean = false,
+    onSkip: () -> Unit = {},
+) = Box(Modifier.fillMaxSize()) {
+    val open: (IslandSpot) -> Unit = { spot ->
+        when (spot) {
+            IslandSpot.HOUSE -> onOpen(IslandPlace.HOUSE)
+            IslandSpot.SHOP -> onOpen(IslandPlace.SHOP)
+            IslandSpot.FARM -> onFarm()
         }
-        IslandScene(scene, Modifier.fillMaxSize(), onSpot = open, spotLabel = if (driving) null else { spot ->
+    }
+    // S-11-a: the car is still on the road in, so the parking space is empty.
+    IslandScene(
+        if (entrance) scene.copy(drive = null) else scene, Modifier.fillMaxSize(),
+        onSpot = if (entrance) { _ -> } else open,
+        spotLabel = if (entrance || driving) null else { spot ->
             val text = when (spot) {
                 IslandSpot.HOUSE -> R.string.island_house
                 IslandSpot.SHOP -> R.string.island_shop
@@ -185,7 +188,16 @@ internal fun IslandMain(
             // Chips stand on their objects (Figma S-12): a gap above the roof, below the farm's front edge.
             val gap = if (spot == IslandSpot.FARM) Modifier.padding(top = 12.dp) else Modifier.padding(bottom = 16.dp)
             IslandChip(stringResource(text), gap, badge = spot == IslandSpot.FARM && farmReady, onClick = { open(spot) })
-        })
+        },
+    )
+    if (entrance) {
+        IslandTopBar(coins, start = { IslandChip(stringResource(R.string.island_entrance_title), selected = true) })
+        PrimaryButton(
+            stringResource(R.string.island_enter),
+            onEnter,
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp).widthIn(min = 520.dp),
+        )
+    } else {
         IslandTopBar(
             coins,
             start = { IslandChip(stringResource(R.string.island_title), selected = true) },
@@ -194,15 +206,16 @@ internal fun IslandMain(
                 IslandChip(stringResource(R.string.island_photo), icon = R.drawable.island_ic_cam, onClick = { onOpen(IslandPlace.PHOTO) })
             },
         )
-        // While the car drives, any tap ends the drive instead of reaching the chips underneath.
-        if (driving) {
-            Box(
-                Modifier.fillMaxSize().pointerInput(Unit) {
-                    awaitEachGesture { awaitFirstDown().consume(); onSkip() }
-                },
-            )
-        }
     }
+    // While the car drives, any tap ends the drive instead of reaching the chips underneath.
+    if (driving) {
+        Box(
+            Modifier.fillMaxSize().pointerInput(Unit) {
+                awaitEachGesture { awaitFirstDown().consume(); onSkip() }
+            },
+        )
+    }
+}
 
 /** 위쪽 칩 줄. 창이 좁아도 한 줄로 두고, 다 들어가지 않으면 줄 전체를 같은 비율로 줄인다. */
 @Composable
