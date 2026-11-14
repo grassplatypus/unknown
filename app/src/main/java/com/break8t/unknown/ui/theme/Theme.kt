@@ -1,6 +1,10 @@
 package com.break8t.unknown.ui.theme
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -40,5 +44,13 @@ private val scheme = lightColorScheme(
     error = AppColors.Error,
 )
 
+/** Material 물결 대신 PixelIndication을 앱 전체 누름 표시로 쓴다. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = scheme, content = content)
+fun AppTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = scheme) {
+    CompositionLocalProvider(
+        LocalIndication provides PixelIndication,
+        LocalRippleConfiguration provides null,
+        content = content,
+    )
+}
