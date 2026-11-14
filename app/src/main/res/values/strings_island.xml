@@ -11,12 +11,23 @@
     <string name="island_farm">텃밭</string>
     <string name="island_alert">!</string>
 
+    <!-- 섬 넓히기: 코인 수 뒤에 "개"를 붙여 조사가 숫자에 따라 바뀌지 않게 한다 -->
+    <string name="island_expand">섬 넓히기</string>
+    <string name="island_expand_title">섬을 넓힐까요?</string>
+    <string name="island_expand_cost">코인 %d개</string>
+    <string name="island_expand_body">섬이 한 단계 넓어져요. 집과 상점, 텃밭은 그대로 있어요.</string>
+    <string name="island_expand_short">코인이 %1$d개 모자라요. 지금 %2$d개 있어요.</string>
+    <string name="island_expand_confirm">넓히기</string>
+    <string name="island_expanded">섬이 넓어졌어요</string>
+
     <!-- S-13 -->
     <string name="island_back">섬으로</string>
     <string name="island_plant_title">고른 빈 칸에 심기</string>
     <string name="island_seed_count">%1$s %2$d</string>
     <string name="island_plant">%s 심기</string>
     <string name="island_grown">다 자람</string>
+    <string name="island_plant_here">여기에 심어요</string>
+    <string name="island_seed_empty">%s 씨앗이 없어요.</string>
     <string name="island_remaining">%s 남음</string>
     <string name="island_days_hours">%1$d일 %2$d시간</string>
     <string name="island_days">%d일</string>

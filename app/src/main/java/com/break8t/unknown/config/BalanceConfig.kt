@@ -47,6 +47,9 @@ data class BalanceConfig(
     val newBadgeHours: Int = 36,
     // 정체 카드 방문 뱃지: 만난 횟수가 이 수에 닿을 때만 그 단계 숫자를 그림 오른쪽 위에 보인다.
     val visitBadgeSteps: List<Int> = listOf(5, 10, 15, 20),
+    // 섬 넓히기: 단계별 섬 한 변의 칸 수, 그리고 i단계에서 i+1단계로 넓히는 코인(임시).
+    val islandSizes: List<Int> = listOf(10, 12, 14),
+    val islandExpandCoins: List<Int> = listOf(200, 400), // 임시
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

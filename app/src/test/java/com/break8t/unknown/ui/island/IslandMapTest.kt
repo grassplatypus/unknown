@@ -2,6 +2,7 @@ package com.break8t.unknown.ui.island
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.ui.iso.Crop
 import com.break8t.unknown.ui.iso.IsoCamera
 import com.break8t.unknown.ui.iso.IsoHit
@@ -73,8 +74,8 @@ class IslandMapTest {
      * Chip anchors land on their objects on screen for both window sizes, also zoomed and panned:
      * the house chip above the house's drawn pixels, the shop chip at the stall, the farm chip below the plots.
      */
-    @Test fun chipAnchorsSitOnTheirObjects() {
-        val scene = IslandMap.scene(plots, "car_red")
+    @Test fun chipAnchorsSitOnTheirObjects() = BalanceConfig.DEFAULT.islandSizes.forEach { size ->
+        val scene = IslandMap.scene(plots, "car_red", size = size)
         val cam = IsoCamera.of(ViewPreset.OBLIQUE, 0)
         for ((vw, vh) in listOf(1487f to 1171f, 841f * 1.3f to 1100f)) for ((zoom, pan) in listOf(1f to Offset.Zero, 2f to Offset(80f, -40f))) {
             val base = 3
@@ -92,13 +93,34 @@ class IslandMapTest {
                 val a = IslandMap.anchor(spot).first
                 return screenPoint(f.projection, l, a[0], a[1], a[2])
             }
-            val tag = "$vw x $vh zoom $zoom"
+            val tag = "size $size $vw x $vh zoom $zoom"
             val house = box("house"); val h = at(IslandSpot.HOUSE)
             assertTrue(tag, h.x in house[0]..house[2] && h.y <= house[1] + 2 * l.px)
             val stall = box("stall"); val s = at(IslandSpot.SHOP)
             assertTrue(tag, s.x in stall[0]..stall[2] + 2 * l.px && s.y <= stall[1] + (stall[3] - stall[1]) / 2)
             val farm = box("plot"); val fm = at(IslandSpot.FARM)
             assertTrue(tag, fm.x in farm[0]..farm[2] && fm.y >= farm[3])
+        }
+    }
+
+    /** Expanding grows the floor but keeps every place where it was, and new scenery stays off the road. */
+    @Test fun expandedIslandKeepsPlaces() {
+        val base = IslandMap.scene(plots, "car_red")
+        for (size in BalanceConfig.DEFAULT.islandSizes) {
+            val big = IslandMap.scene(plots, "car_red", size = size)
+            assertEquals(size, big.width)
+            assertEquals(size, big.depth)
+            for (id in listOf("house", "stall", "parking", "mailbox", "fence0") + plots.indices.map { "plot$it" }) {
+                val a = base.find(id)!!; val b = big.find(id)!!
+                assertEquals("$id at $size", a.x to a.y, b.x to b.y)
+            }
+            assertEquals(size, big.roads.single().y)
+            for (o in big.objects.filter { it.id.startsWith("grow") }) {
+                assertTrue("${o.id} inside $size", o.x + o.footW <= size && o.y + o.footD <= size)
+                assertTrue("${o.id} off the road", big.cell(o.x, o.y).floor != com.break8t.unknown.ui.iso.FloorType.ROAD)
+            }
+            val islet = big.find("islet2")!!
+            assertTrue("islet floats outside", !big.inside(islet.x, islet.y))
         }
     }
 }

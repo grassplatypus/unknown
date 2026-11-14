@@ -2,6 +2,7 @@ package com.break8t.unknown.ui.island
 
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.config.CropSpec
+import com.break8t.unknown.data.Profile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.math.ceil
 
@@ -91,6 +92,20 @@ fun demoPlots(now: Long, gridSize: Int): List<Plot> = List(gridSize * gridSize) 
             Plot(s.seedId, readyAt - total, readyAt)
         }
     }
+}
+
+/** [level] 단계 섬의 한 변 칸 수. 표 밖의 단계는 가장 가까운 단계로 본다. */
+fun islandSize(level: Int, cfg: BalanceConfig): Int = cfg.islandSizes[level.coerceIn(0, cfg.islandSizes.lastIndex)]
+
+/** [level]에서 한 단계 넓히는 코인. 이미 가장 넓으면 null. */
+fun expandCost(level: Int, cfg: BalanceConfig): Int? =
+    if (level + 1 in cfg.islandSizes.indices) cfg.islandExpandCoins.getOrNull(level) else null
+
+/** 한 단계 넓힌 프로필. 가장 넓거나 코인이 모자라면 null이고 아무것도 바꾸지 않는다. */
+fun expandIsland(p: Profile, cfg: BalanceConfig): Profile? {
+    val cost = expandCost(p.islandLevel, cfg) ?: return null
+    if (p.coins < cost) return null
+    return p.copy(coins = p.coins - cost, islandLevel = p.islandLevel + 1)
 }
 
 /** 화면을 나누면 Activity가 다시 만들어지므로 밭은 프로세스에 하나만 둔다(시연용). */

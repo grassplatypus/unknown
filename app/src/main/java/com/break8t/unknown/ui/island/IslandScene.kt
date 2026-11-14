@@ -39,6 +39,8 @@ import com.break8t.unknown.ui.iso.RoadRay
 import com.break8t.unknown.ui.iso.roadCellsInView
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import com.break8t.unknown.ui.theme.AppColors
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -58,6 +60,7 @@ data class IslandSceneState(
     val plots: List<PlotView>,
     val carId: String,
     val drive: CarDrive? = CarDrive(TripPhase.PARKED, 1f),
+    val islandSize: Int = IslandMap.SIZE,
 )
 
 /** Where the car is in its trip; null means no car on the island (the entrance, S-11-a). */
@@ -97,18 +100,18 @@ object IslandMap {
     private const val FARM_X = 5
     private const val FARM_Y = 4
 
-    private fun cells(): List<Cell> = List(SIZE * SIZE) { i ->
-        val x = i % SIZE
-        val y = i / SIZE
+    private fun cells(size: Int): List<Cell> = List(size * size) { i ->
+        val x = i % size
+        val y = i / size
         when {
-            x == ROAD_X && y >= 1 -> Cell(FloorType.ROAD, depth = underside(x, y))
-            else -> Cell(FloorType.GRASS, depth = underside(x, y))
+            x == ROAD_X && y >= 1 -> Cell(FloorType.ROAD, depth = underside(x, y, size))
+            else -> Cell(FloorType.GRASS, depth = underside(x, y, size))
         }
     }
 
     /** Deeper toward the middle, so the rock under the island steps inward like the art. */
-    internal fun underside(x: Int, y: Int): Float {
-        val edge = min(min(x, y), min(SIZE - 1 - x, SIZE - 1 - y))
+    internal fun underside(x: Int, y: Int, size: Int = SIZE): Float {
+        val edge = min(min(x, y), min(size - 1 - x, size - 1 - y))
         val jitter = ((x * 7 + y * 13) % 5) * 0.12f
         return if (edge == 0) EDGE_DEPTH else EDGE_DEPTH + min(edge, 4) * RING_DEPTH + jitter
     }
@@ -126,12 +129,12 @@ object IslandMap {
     }
 
     /** First road position past the edge of a [w] x [h] px view, where a drive in starts and a drive out ends. */
-    fun farY(camera: IsoCamera, w: Float, h: Float): Float =
-        SIZE + roadCellsInView(ROAD, IsoScene(SIZE, SIZE, frame = FRAME), camera, w, h).toFloat()
+    fun farY(camera: IsoCamera, w: Float, h: Float, size: Int = SIZE): Float =
+        size + roadCellsInView(road(size), IsoScene(size, size, frame = frame(size)), camera, w, h).toFloat()
 
     fun scene(
         plots: List<PlotView>, carId: String, extra: List<IsoObject> = emptyList(),
-        car: CarPose? = CarPose(PARK_Y, 3), carLit: Boolean = false,
+        car: CarPose? = CarPose(PARK_Y, 3), carLit: Boolean = false, size: Int = SIZE,
     ): IsoScene {
         val n = sqrt(plots.size.toDouble()).roundToInt().coerceAtLeast(1)
         val farm = plots.mapIndexed { k, v ->
@@ -139,7 +142,7 @@ object IslandMap {
         }
         val fence = (0 until n).map { o("fence$it", IsoScenery.lowFence, FARM_X + it, FARM_Y - 1, pick = true) } +
             o("fence_end", IsoScenery.lowPost, FARM_X + n, FARM_Y - 1, pick = true)
-        val lanes = (3 until SIZE).map { o("lane$it", IsoScenery.laneY, ROAD_X, it) }
+        val lanes = (3 until size).map { o("lane$it", IsoScenery.laneY, ROAD_X, it) }
         val scenery = listOf(
             o("house", IsoShapes.house, 1, 0, pick = true),
             o("stall", IsoScenery.stall, 7, 0, pick = true),
@@ -172,13 +175,23 @@ object IslandMap {
             o("cloud1", IsoScenery.cloud, -2, 3, z = 2.5f),
             o("cloud2", IsoScenery.cloud, 9, -2, z = 3f),
             o("islet1", IsoScenery.islet, -1, 6, z = 1.5f),
-            o("islet2", IsoScenery.islet, 11, 1, z = 2f),
-        )
+            o("islet2", IsoScenery.islet, size + 1, 1, z = 2f),
+        ) + grownScenery.filter { it.x + it.footW <= size && it.y + it.footD <= size }
         return IsoScene(
-            SIZE, SIZE, cells(), lanes + scenery + fence + farm + extra, floorDepth = EDGE_DEPTH, frame = FRAME,
-            roads = listOf(ROAD),
+            size, size, cells(size), lanes + scenery + fence + farm + extra, floorDepth = EDGE_DEPTH, frame = frame(size),
+            roads = listOf(road(size)),
         )
     }
+
+    // Land added by expanding grows toward +x and +y, so every cell above keeps its place; these fill it.
+    private val grownScenery = listOf(
+        o("grow1", IsoScenery.tree, 10, 2), o("grow2", IsoScenery.bush, 11, 5), o("grow3", IsoScenery.redFlowers, 10, 7),
+        o("grow4", IsoScenery.appleTree, 11, 9), o("grow5", IsoScenery.yellowFlowers, 8, 10), o("grow6", IsoScenery.tree, 6, 11),
+        o("grow7", IsoScenery.bush, 1, 11), o("grow8", IsoScenery.rocks, 10, 11), o("grow9", IsoScenery.redFlowers, 3, 10),
+        o("grow10", IsoScenery.bigTree, 12, 3), o("grow11", IsoScenery.bush, 13, 7), o("grow12", IsoScenery.yellowFlowers, 12, 10),
+        o("grow13", IsoScenery.tree, 13, 12), o("grow14", IsoScenery.rocks, 9, 13), o("grow15", IsoScenery.appleTree, 6, 13),
+        o("grow16", IsoScenery.redFlowers, 2, 12), o("grow17", IsoScenery.bush, 0, 13), o("grow18", IsoScenery.tree, 12, 0),
+    )
 
     /** The farm screen (S-13): plots ringed by grass, a fence of lights at the back, seen from the front. */
     // Each farm-screen bed is 2 x 2 cells inside a one-cell grass ring, so the beds dominate like S-13.
@@ -256,8 +269,9 @@ object IslandMap {
     private const val BRIDGE_DEPTH = 0.25f
 
     /** The road leaves the island as a thin bridge and runs on to the edge of whatever the screen shows. */
-    val ROAD = RoadRay(ROAD_X, SIZE, 0, 1, BRIDGE_DEPTH, IsoScenery.laneY)
-    private val FRAME = FrameBox(0f, 0f, SIZE.toFloat(), SIZE.toFloat(), -4.5f, 6.5f) // headroom for the chips above the roof
+    val ROAD = road(SIZE)
+    fun road(size: Int) = RoadRay(ROAD_X, size, 0, 1, BRIDGE_DEPTH, IsoScenery.laneY)
+    private fun frame(size: Int) = FrameBox(0f, 0f, size.toFloat(), size.toFloat(), -4.5f, 6.5f) // headroom for the chips above the roof
 }
 
 /**
@@ -276,8 +290,9 @@ fun IslandScene(
     val farm = state.focus == SceneFocus.FARM
     // Keyed on what is drawn, not on progress, so the 10 s clock does not re-render the island.
     val stages = state.plots.map { it.seedId to plotStage(it) }
-    val base = remember(farm, stages, state.carId) {
-        if (farm) IslandMap.farmScene(state.plots) else IslandMap.scene(state.plots, state.carId, car = null)
+    val size = state.islandSize
+    val base = remember(farm, stages, state.carId, size) {
+        if (farm) IslandMap.farmScene(state.plots) else IslandMap.scene(state.plots, state.carId, car = null, size = size)
     }
     val view = rememberIsoViewState(night = state.night)
     SideEffect { view.night = state.night }
@@ -285,7 +300,7 @@ fun IslandScene(
     BoxWithConstraints(modifier.background(sceneSky(state.night))) {
         val camera = if (farm) IslandMap.FARM_CAMERA else view.camera
         val w = constraints.maxWidth.toFloat(); val h = constraints.maxHeight.toFloat()
-        val farY = remember(camera, w, h) { IslandMap.farY(camera, w, h) }
+        val farY = remember(camera, w, h, size) { IslandMap.farY(camera, w, h, size) }
         // The car is added per frame, so a drive only rebuilds the object list, not the island.
         val car = if (farm) null else state.drive?.let { d ->
             IslandMap.carObject(state.carId, carPose(d.phase, d.progress, IslandMap.PARK_Y, farY), lit = d.phase != TripPhase.PARKED)
@@ -321,11 +336,15 @@ private fun IsoOverlayScope.SpotAnchor(spot: IslandSpot, content: @Composable ()
 }
 
 /**
- * 하늘의 픽셀 장식. 밤에는 별과 초승달(Figma S-12-b), 낮에는 그리지 않는다(구름은 장면의 복셀이다).
- * 별 자리는 고정된 표에서 뽑아서 다시 그려도 깜빡이지 않는다.
+ * 하늘의 픽셀 장식. 밤에는 별과 그날 위상의 달([phase], [moonPhase]), 낮에는 그리지 않는다(구름은 장면의 복셀이다).
+ * 별 자리는 고정된 표에서 뽑아서 다시 그려도 깜빡이지 않는다. 달의 어두운 쪽도 흐리게 칠해서 신월에도 자리가 보인다.
  */
 @Composable
-internal fun PixelSky(night: Boolean, modifier: Modifier = Modifier) {
+internal fun PixelSky(
+    night: Boolean,
+    modifier: Modifier = Modifier,
+    phase: Double = moonPhase(LocalDate.now(), ZoneId.systemDefault()),
+) {
     if (!night) return
     val px = max(1f, (PIXEL_DP * LocalDensity.current.density).roundToInt().toFloat())
     Canvas(modifier) {
@@ -342,17 +361,17 @@ internal fun PixelSky(night: Boolean, modifier: Modifier = Modifier) {
                 drawRect(StarDim, at + Offset(0f, -px), Size(px, px)); drawRect(StarDim, at + Offset(0f, px), Size(px, px))
             }
         }
-        // Crescent: a lit disc with a sky-coloured disc cut out of it, both drawn in whole pixels.
-        val cx = (cols * 0.86f).toInt(); val cy = (rows * 0.16f).toInt(); val r = 6
+        val cx = (cols * 0.86f).toInt(); val cy = (rows * 0.16f).toInt(); val r = MOON_R
         for (j in -r..r) for (i in -r..r) {
-            val lit = i * i + j * j <= r * r
-            val cut = (i - 3) * (i - 3) + (j + 2) * (j + 2) <= r * r
-            if (lit && !cut) drawRect(Moon, Offset((cx + i) * px, (cy + j) * px), Size(px, px))
+            if (i * i + j * j > r * r) continue
+            drawRect(if (moonLit(i, j, r, phase)) Moon else MoonDark, Offset((cx + i) * px, (cy + j) * px), Size(px, px))
         }
     }
 }
 
 private const val STAR_COUNT = 70
+private const val MOON_R = 6
 private val Star = Color(0xFFF7F4EC)
 private val StarDim = Color(0xFF8C9AC8)
 private val Moon = Color(0xFFFFE7A8)
+private val MoonDark = Color(0xFF1C2A5E) // a step above the night sky (IsoPalette.Night)

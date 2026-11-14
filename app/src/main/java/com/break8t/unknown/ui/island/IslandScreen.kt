@@ -53,7 +53,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
+import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.data.LocalDemoState
+import com.break8t.unknown.ui.components.AppToast
 import com.break8t.unknown.data.Profile
 import com.break8t.unknown.ui.Route
 import com.break8t.unknown.ui.components.BorderWidth
@@ -90,28 +92,81 @@ fun IslandScreen(onOpen: (IslandPlace) -> Unit) {
             trip = TripRules.tick(trip, frameNow)
         }
     }
+    val demo = LocalDemoState.current
+    val cfg = BalanceConfig.DEFAULT
+    var expanding by rememberSaveable { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+    val cost = expandCost(profile.islandLevel, cfg)
     val night = isNight(profile.islandRealTime, profile.islandNight, hourOf(now))
     val drive = CarDrive(trip.phase, TripRules.progress(trip, frameNow))
-    val scene = IslandSceneState(night, SceneFocus.MAIN, plotViews(plots, now), profile.selectedCarId, drive)
-    when (stage) {
-        IslandStage.ENTRANCE, IslandStage.ISLAND -> IslandStageView(
-            entrance = stage == IslandStage.ENTRANCE,
-            scene,
-            profile.coins,
-            farmReady = scene.plots.any { it.grown },
-            onEnter = {
-                frameNow = System.currentTimeMillis()
-                trip = TripRules.enter(frameNow)
-                stage = IslandStage.ISLAND
-            },
-            onOpen = onOpen,
-            onFarm = { stage = IslandStage.FARM },
-            driving = TripRules.driving(trip),
-            onSkip = { trip = TripRules.skip(trip) },
-        )
-        IslandStage.FARM -> FarmScreen(night, plots, now, profile, onBack = { stage = IslandStage.ISLAND }, onShop = { onOpen(IslandPlace.SHOP) })
+    val scene = IslandSceneState(
+        night, SceneFocus.MAIN, plotViews(plots, now), profile.selectedCarId, drive, islandSize(profile.islandLevel, cfg),
+    )
+    Box(Modifier.fillMaxSize()) {
+        when (stage) {
+            IslandStage.ENTRANCE, IslandStage.ISLAND -> IslandStageView(
+                entrance = stage == IslandStage.ENTRANCE,
+                scene,
+                profile.coins,
+                farmReady = scene.plots.any { it.grown },
+                onEnter = {
+                    frameNow = System.currentTimeMillis()
+                    trip = TripRules.enter(frameNow)
+                    stage = IslandStage.ISLAND
+                },
+                onOpen = onOpen,
+                onFarm = { stage = IslandStage.FARM },
+                driving = TripRules.driving(trip),
+                onSkip = { trip = TripRules.skip(trip) },
+                expandCost = cost.takeUnless { expanded }, // the toast takes the bottom edge in the split window
+                onExpand = { expanding = true },
+            )
+            IslandStage.FARM -> FarmScreen(night, plots, now, profile, onBack = { stage = IslandStage.ISLAND }, onShop = { onOpen(IslandPlace.SHOP) })
+        }
+        if (expanded && stage == IslandStage.ISLAND) ExpandedToast(Modifier.align(Alignment.BottomCenter))
+    }
+    if (expanding && cost != null && stage == IslandStage.ISLAND) {
+        FarmDialog(onDismiss = { expanding = false }) { m ->
+            ExpandPanel(cost, profile.coins, onExpand = {
+                var ok = false
+                demo.update { p -> expandIsland(p, cfg)?.also { ok = true } ?: p }
+                expanding = false
+                expanded = ok
+            }, onClose = { expanding = false }, modifier = m)
+        }
+    }
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            delay(TOAST_MS)
+            expanded = false
+        }
     }
 }
+
+/** 섬 넓히기 확인 창. 코인이 모자라면 얼마나 모자란지 보이고 넓히기 버튼을 끈다. */
+@Composable
+internal fun ExpandPanel(cost: Int, coins: Int, onExpand: () -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
+    val short = cost - coins
+    DialogPanel(
+        stringResource(R.string.island_expand_title),
+        stringResource(if (short > 0) R.string.island_close else R.string.components_cancel),
+        stringResource(R.string.island_expand_confirm),
+        onConfirm = onExpand,
+        onDismiss = onClose,
+        modifier = modifier,
+        body = if (short > 0) stringResource(R.string.island_expand_short, short, coins) else stringResource(R.string.island_expand_body),
+        header = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
+                Coin()
+                Text(stringResource(R.string.island_expand_cost, cost), color = AppColors.Text, fontSize = 47.sp, fontWeight = FontWeight.Bold)
+            }
+        },
+        confirmEnabled = short <= 0,
+    )
+}
+
+@Composable
+private fun ExpandedToast(modifier: Modifier) = AppToast(stringResource(R.string.island_expanded), modifier.padding(bottom = 48.dp))
 
 /**
  * Leaving P covers the island and drops this screen, so the drive does not hold anything up; when the screen
@@ -151,7 +206,8 @@ internal fun IslandMain(
     onFarm: () -> Unit,
     driving: Boolean = false,
     onSkip: () -> Unit = {},
-) = IslandStageView(entrance = false, scene, coins, farmReady, onEnter = {}, onOpen, onFarm, driving, onSkip)
+    expandCost: Int? = null,
+) = IslandStageView(entrance = false, scene, coins, farmReady, onEnter = {}, onOpen, onFarm, driving, onSkip, expandCost)
 
 /**
  * The entrance and the island share one scene, so entering keeps the rendered island on screen and the car
@@ -168,6 +224,8 @@ internal fun IslandStageView(
     onFarm: () -> Unit,
     driving: Boolean = false,
     onSkip: () -> Unit = {},
+    expandCost: Int? = null,
+    onExpand: () -> Unit = {},
 ) = Box(Modifier.fillMaxSize()) {
     val open: (IslandSpot) -> Unit = { spot ->
         when (spot) {
@@ -208,6 +266,16 @@ internal fun IslandStageView(
                 IslandChip(stringResource(R.string.island_photo), icon = R.drawable.island_ic_cam, onClick = { onOpen(IslandPlace.PHOTO) })
             },
         )
+        // Bottom right, away from the road that leaves to the bottom left; gone once the island is at its largest.
+        if (expandCost != null && !driving) {
+            val narrow = LocalConfiguration.current.screenWidthDp < WideLayout.value
+            IslandChip(
+                stringResource(R.string.island_expand),
+                Modifier.align(Alignment.BottomEnd).padding(if (narrow) 24.dp else 35.dp),
+                leading = { Coin() },
+                onClick = onExpand,
+            )
+        }
     }
     // While the car drives, any tap ends the drive instead of reaching the chips underneath.
     if (driving) {
@@ -307,8 +375,12 @@ internal fun IslandPreviewFrame(content: @Composable BoxScope.() -> Unit) = AppT
 
 internal const val PREVIEW_NOW = 1_700_000_000_000L
 
-private fun previewScene(night: Boolean) =
-    IslandSceneState(night, SceneFocus.MAIN, plotViews(demoPlots(PREVIEW_NOW, 3), PREVIEW_NOW), Profile().selectedCarId)
+private fun previewScene(night: Boolean, level: Int = 0) = IslandSceneState(
+    night, SceneFocus.MAIN, plotViews(demoPlots(PREVIEW_NOW, 3), PREVIEW_NOW), Profile().selectedCarId,
+    islandSize = islandSize(level, BalanceConfig.DEFAULT),
+)
+
+private val previewCost = expandCost(0, BalanceConfig.DEFAULT)
 
 @IslandPreviews
 @Composable
@@ -316,8 +388,54 @@ private fun EntrancePreview() = IslandPreviewFrame { IslandEntrance(previewScene
 
 @IslandPreviews
 @Composable
-private fun DayPreview() = IslandPreviewFrame { IslandMain(previewScene(false), 240, farmReady = true, onOpen = {}, onFarm = {}) }
+private fun DayPreview() = IslandPreviewFrame {
+    IslandMain(previewScene(false), 240, farmReady = true, onOpen = {}, onFarm = {}, expandCost = previewCost)
+}
 
 @IslandPreviews
 @Composable
-private fun NightPreview() = IslandPreviewFrame { IslandMain(previewScene(true), 240, farmReady = true, onOpen = {}, onFarm = {}) }
+private fun NightPreview() = IslandPreviewFrame {
+    IslandMain(previewScene(true), 240, farmReady = true, onOpen = {}, onFarm = {}, expandCost = previewCost)
+}
+
+/** 가장 넓힌 섬. 넓히기 칩이 사라진다. */
+@IslandPreviews
+@Composable
+private fun LargestIslandPreview() = IslandPreviewFrame {
+    IslandMain(previewScene(false, level = BalanceConfig.DEFAULT.islandSizes.lastIndex), 40, farmReady = true, onOpen = {}, onFarm = {})
+}
+
+@Composable
+private fun ExpandPreviewBody(coins: Int) = IslandPreviewFrame {
+    IslandMain(previewScene(false), coins, farmReady = true, onOpen = {}, onFarm = {}, expandCost = previewCost)
+    Box(Modifier.fillMaxSize().background(AppColors.Scrim))
+    ExpandPanel(previewCost ?: 0, coins, {}, {}, Modifier.align(Alignment.Center).padding(24.dp))
+}
+
+@IslandPreviews
+@Composable
+private fun ExpandConfirmPreview() = ExpandPreviewBody(240)
+
+@IslandPreviews
+@Composable
+private fun ExpandShortPreview() = ExpandPreviewBody(40)
+
+@IslandPreviews
+@Composable
+private fun ExpandedPreview() = IslandPreviewFrame {
+    IslandMain(previewScene(false, level = 1), 40, farmReady = true, onOpen = {}, onFarm = {}, expandCost = expandCost(1, BalanceConfig.DEFAULT))
+    ExpandedToast(Modifier.align(Alignment.BottomCenter))
+}
+
+/** 신월, 초승달, 상현, 보름, 하현, 그믐달. 별은 같고 달만 바뀐다. */
+@IslandPreviews
+@Composable
+private fun MoonPhasesPreview() = IslandPreviewFrame {
+    Column(Modifier.fillMaxSize()) {
+        for (row in listOf(listOf(0.0, 0.12, 0.25), listOf(0.5, 0.75, 0.88))) {
+            Row(Modifier.weight(1f).fillMaxWidth()) {
+                for (p in row) PixelSky(true, Modifier.weight(1f).fillMaxHeight().background(sceneSky(true)), phase = p)
+            }
+        }
+    }
+}

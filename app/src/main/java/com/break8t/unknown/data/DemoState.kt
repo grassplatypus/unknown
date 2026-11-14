@@ -33,6 +33,8 @@ data class Profile(
     ),
     // 도감과 내 정보에서 눌러 본 항목 id. 여기 있으면 NEW 뱃지를 붙이지 않는다.
     val seenIds: Set<String> = emptySet(),
+    // 섬을 넓힌 단계. 0이 처음 크기이고 크기는 BalanceConfig.islandSizes[islandLevel]이다.
+    val islandLevel: Int = 0,
 )
 
 class DemoState(initial: Profile = Profile()) {
