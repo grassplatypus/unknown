@@ -143,6 +143,12 @@ internal fun NewBadge(size: TextUnit, modifier: Modifier = Modifier) =
 internal fun CountBadge(count: Int, size: TextUnit, modifier: Modifier = Modifier) =
     PixelLabel(count.toString(), AppColors.Accent, AppColors.Text, AppColors.Line, size, modifier)
 
+/** 같은 판 엽서를 여러 장 가졌을 때 그림 오른쪽 아래의 "×N". 1장이면 그리지 않는다. */
+@Composable
+internal fun CopiesBadge(copies: Int, size: TextUnit, modifier: Modifier = Modifier) {
+    if (copies > 1) PixelLabel(stringResource(R.string.collection_copies, copies), AppColors.Card, AppColors.Text, AppColors.Line, size, modifier)
+}
+
 /** 엽서 판의 이름과 색. 테두리는 바깥 한 줄 [edge]와 안쪽 한 줄 [pattern] 무늬다. 노말은 테두리가 없다. */
 private class RarityLook(val label: Int, val badge: Color, val badgeText: Color, val edge: Color, val pattern: List<Color>)
 

@@ -8,6 +8,8 @@
     <string name="fielddrop_guide_cancel">안내 취소</string>
     <string name="fielddrop_toast_guide">경유지에 넣었어요</string>
     <string name="fielddrop_toast_cancel">안내를 취소했어요</string>
+    <string name="fielddrop_toast_destination">목적지로 안내해요</string>
+    <string name="fielddrop_toast_navi_failed">내비에 연결하지 못했어요</string>
     <string name="fielddrop_limit">오늘 버섯 %1$d개를 다 받았어요</string>
     <string name="fielddrop_gold">금색</string>
     <string name="fielddrop_blue">파란</string>

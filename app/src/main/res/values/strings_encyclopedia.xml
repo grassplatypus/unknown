@@ -61,4 +61,5 @@
     <string name="collection_hint_postcard">그 지점을 지나면 열려요</string>
     <string name="collection_hint_badge">조건을 채우면 열려요</string>
     <string name="collection_hint_unknown">아직 얻을 수 없어요</string>
+    <string name="collection_copies">×%1$d</string>
 </resources>

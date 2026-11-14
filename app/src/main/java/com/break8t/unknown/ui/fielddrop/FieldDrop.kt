@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.fielddrop
 
+import kotlinx.coroutines.launch
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.data.DemoState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -193,6 +194,35 @@ interface WaypointSink {
     fun remove(mushroom: Mushroom)
 }
 
+/**
+ * 실제 내비로 보내는 경유지 등록. 앱 화면이 처음 열릴 때 [attach]로 내비에 붙는다(그 전에는 결과가 null).
+ * 결과(경유지인지 목적지인지, 실패면 null)는 [results]로 흘려 화면이 토스트로 알린다.
+ */
+object NaviWaypoints : WaypointSink {
+    private var route: com.break8t.unknown.navi.NaviRoute? = null
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
+    private val kinds = java.util.concurrent.ConcurrentHashMap<String, com.break8t.unknown.navi.RouteKind>()
+    val results = kotlinx.coroutines.flow.MutableSharedFlow<com.break8t.unknown.navi.RouteKind?>(extraBufferCapacity = 4)
+
+    @Synchronized
+    fun attach(context: android.content.Context) {
+        if (route == null) route = com.break8t.unknown.navi.NaviRoute(context.applicationContext)
+    }
+
+    override fun add(mushroom: Mushroom) {
+        val r = route ?: return run { results.tryEmit(null) }
+        scope.launch {
+            val kind = r.guide(mushroom.at.lat, mushroom.at.lng, mushroom.place, mushroom.id)
+            if (kind != null) kinds[mushroom.id] = kind
+            results.emit(kind)
+        }
+    }
+
+    override fun remove(mushroom: Mushroom) {
+        kinds.remove(mushroom.id)?.let { k -> route?.cancel(k) }
+    }
+}
+
 class FakeWaypointSink : WaypointSink {
     val waypoints = mutableListOf<String>()
     override fun add(mushroom: Mushroom) { waypoints += mushroom.id }
@@ -230,6 +260,9 @@ class FieldDrop(
 
     fun dismissCard() = mutable.update { it.copy(selectedId = null) }
 
+    /** 내비가 안내를 받지 못했을 때 안내 중 표시를 거둔다. */
+    fun clearGuide() = mutable.update { it.copy(guidingId = null) }
+
     fun closeReward() = mutable.update { it.copy(openId = null) }
 
     /** 안내 중인 버섯이면 취소하고, 아니면 안내를 이 버섯으로 바꾼다. 안내 중이 되면 true. */
@@ -260,6 +293,6 @@ class FieldDrop(
 
 /** 화면을 나누거나 메뉴를 옮겨도 오늘 받은 수가 남도록 프로세스에 하나만 둔다. */
 object FieldDropStore {
-    val model = FieldDrop(FieldDropSamples.mushrooms, FakeWaypointSink())
+    val model = FieldDrop(FieldDropSamples.mushrooms, NaviWaypoints)
     val car: CarLocationSource = DemoCarLocation()
 }

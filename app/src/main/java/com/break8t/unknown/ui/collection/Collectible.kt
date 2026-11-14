@@ -43,6 +43,7 @@ data class Collectible(
     val visits: List<Visit> = emptyList(),
     val rarity: PostcardRarity? = null,
     val gotAt: Long? = null,
+    val copies: Int = 1, // 같은 장소, 같은 판의 엽서를 몇 장 가졌는지. 2장부터 그림에 ×N을 보인다
 )
 
 /** 견본의 "최근에 얻은 것"은 이 시각을 기준으로 정한다. 그래야 언제 시연해도 NEW가 보인다. */
@@ -97,8 +98,8 @@ private val demoPostcards = listOf(
     Collectible(CollectionKind.POSTCARD, "post_cheomseongdae_gold", "경주 첨성대", R.drawable.myinfo_post_cheomseongdae,
         owned = false, rarity = PostcardRarity.GOLD),
     postcard("post_coast_gold", "등대 해안도로", R.drawable.myinfo_post_coast, "통과", launchDay, PostcardRarity.GOLD),
-    postcard("post_coast", "등대 해안도로", R.drawable.myinfo_post_coast, "통과", LocalDate.parse("2026-09-28")),
-    postcard("post_blossom", "벚꽃길", R.drawable.myinfo_post_blossom, "통과", LocalDate.parse("2026-04-05")),
+    postcard("post_coast", "등대 해안도로", R.drawable.myinfo_post_coast, "통과", LocalDate.parse("2026-09-28"), copies = 2),
+    postcard("post_blossom", "벚꽃길", R.drawable.myinfo_post_blossom, "통과", LocalDate.parse("2026-04-05"), copies = 3),
 )
 
 private val demoBadges = listOf(
@@ -182,9 +183,10 @@ private fun card(id: String, name: String, art: Int, route: String, usualTime: S
         route = route, usualTime = usualTime, visits = recentFirst(visits), gotAt = startMs(first))
 }
 
-private fun postcard(id: String, name: String, art: Int, how: String, on: LocalDate, rarity: PostcardRarity = PostcardRarity.NORMAL) =
-    Collectible(CollectionKind.POSTCARD, id, name, art, true, on.toEpochDay(), note = "${dotted(on)} $how",
-        rarity = rarity, gotAt = startMs(on))
+private fun postcard(
+    id: String, name: String, art: Int, how: String, on: LocalDate, rarity: PostcardRarity = PostcardRarity.NORMAL, copies: Int = 1,
+) = Collectible(CollectionKind.POSTCARD, id, name, art, true, on.toEpochDay(), note = "${dotted(on)} $how",
+    rarity = rarity, gotAt = startMs(on), copies = copies)
 
 private fun badge(id: String, name: String, art: Int, condition: String, on: LocalDate) =
     Collectible(CollectionKind.BADGE, id, name, art, true, on.toEpochDay(), note = condition, date = dotted(on), gotAt = startMs(on))

@@ -270,6 +270,7 @@ private fun PostcardTile(item: Collectible, new: Boolean, onClick: () -> Unit) =
         item.rarity?.let { RarityMarks(it, 24.sp, Modifier.matchParentSize().alpha(alpha)) }
         if (!item.owned) LockIcon()
         if (new) NewBadge(26.sp, Modifier.align(Alignment.TopStart).padding(14.dp))
+        if (item.owned) CopiesBadge(item.copies, 26.sp, Modifier.align(Alignment.BottomEnd).padding(14.dp))
     }
     Spacer(Modifier.height(20.dp))
     Name(item, 39)
@@ -480,6 +481,7 @@ private fun PostcardDetail(item: Collectible, onClose: () -> Unit, onShare: Shar
         Box(Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT)) {
             Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Fit)
             item.rarity?.let { RarityMarks(it, 36.sp, Modifier.matchParentSize()) }
+            CopiesBadge(item.copies, 36.sp, Modifier.align(Alignment.BottomEnd).padding(20.dp))
         }
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             DialogTitle(item.name)

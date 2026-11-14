@@ -233,4 +233,10 @@ class FieldDropTest {
             assertTrue(side >= 114 && side <= 162)
         }
     }
+
+    @Test fun guideBecomesWaypointOnlyWhileARouteIsActive() {
+        assertEquals(com.break8t.unknown.navi.RouteKind.WAYPOINT, com.break8t.unknown.navi.routeKind(37_000))
+        assertEquals(com.break8t.unknown.navi.RouteKind.DESTINATION, com.break8t.unknown.navi.routeKind(0))
+        assertEquals(com.break8t.unknown.navi.RouteKind.DESTINATION, com.break8t.unknown.navi.routeKind(null))
+    }
 }

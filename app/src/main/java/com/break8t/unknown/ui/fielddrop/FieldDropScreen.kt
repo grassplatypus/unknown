@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.fielddrop
 
+import com.break8t.unknown.navi.RouteKind
 import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
@@ -118,6 +119,19 @@ fun FieldDropScreen() {
             toast = null
         }
     }
+    // 길 안내는 실제 내비로 간다. 안내 중인 목적지가 있었으면 경유지, 없었으면 목적지가 되고 그 결과를 알린다.
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        NaviWaypoints.attach(context)
+        NaviWaypoints.results.collect { kind ->
+            toast = when (kind) {
+                RouteKind.WAYPOINT -> R.string.fielddrop_toast_guide
+                RouteKind.DESTINATION -> R.string.fielddrop_toast_destination
+                null -> R.string.fielddrop_toast_navi_failed.also { model.clearGuide() }
+            }
+            toastSeq++
+        }
+    }
     FieldDropContent(
         coins = profile.coins,
         carId = profile.selectedCarId,
@@ -129,8 +143,11 @@ fun FieldDropScreen() {
         onTap = { model.tap(it, car.at, config) },
         onDismissCard = model::dismissCard,
         onGuide = { m ->
-            toast = if (model.toggleGuide(m)) R.string.fielddrop_toast_guide else R.string.fielddrop_toast_cancel
-            toastSeq++
+            // 안내를 걸 때는 내비의 답을 받은 뒤 위에서 알리고, 취소는 바로 알린다.
+            if (!model.toggleGuide(m)) {
+                toast = R.string.fielddrop_toast_cancel
+                toastSeq++
+            }
         },
         onReceive = { model.receive(config, demo) },
         onCloseReward = model::closeReward,
