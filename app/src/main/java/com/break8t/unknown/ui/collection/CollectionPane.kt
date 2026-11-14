@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.collection
 
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
@@ -207,14 +208,23 @@ private fun Name(item: Collectible, size: Int) = Text(
     if (item.owned) item.name else stringResource(R.string.collection_locked_name),
     color = if (item.owned) AppColors.Text else AppColors.TextSub,
     fontSize = size.sp,
+    lineHeight = (size * 1.4f).sp, // "???"와 한글 이름의 줄 높이를 같게 둔다
     fontWeight = FontWeight.Bold,
     maxLines = 1,
     overflow = TextOverflow.Ellipsis,
 )
 
+// 빈 문자열은 한글 줄보다 낮게 잡혀 잠긴 카드만 키가 작아진다. 빈 줄도 한글 한 글자를 투명하게 그려 높이를 맞춘다.
 @Composable
-private fun Sub(text: String, color: androidx.compose.ui.graphics.Color = AppColors.TextSub, bold: Boolean = false) =
-    Text(text, color = color, fontSize = 29.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+private fun Sub(text: String, color: androidx.compose.ui.graphics.Color = AppColors.TextSub, bold: Boolean = false) = Text(
+    text.ifEmpty { "가" },
+    Modifier.alpha(if (text.isEmpty()) 0f else 1f),
+    color = color,
+    fontSize = 29.sp,
+    lineHeight = 40.sp,
+    fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+    maxLines = 1,
+)
 
 @Composable
 private fun CardTile(item: Collectible, onClick: () -> Unit) = Tile(onClick) {
