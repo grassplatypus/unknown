@@ -71,6 +71,8 @@ dependencies {
     // 정체 레이드(경로 위 정체 목록)와 필드 드랍 경유지
     implementation("ai.pleos.playground:NaviHelper:3.0.5")
     implementation("ai.pleos.playground:navi-data:3.0.4")
+    // 필드 드랍 지도. 에뮬레이터에서 OpenFreeMap 타일로 도로와 한글 지명이 뜨는 것을 확인했다.
+    implementation("org.maplibre.gl:android-sdk:13.6.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
