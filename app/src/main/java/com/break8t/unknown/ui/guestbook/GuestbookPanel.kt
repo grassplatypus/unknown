@@ -46,6 +46,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
@@ -53,6 +56,9 @@ import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.drive.LocalUxLimits
 import com.break8t.unknown.ui.account.Avatar
+import com.break8t.unknown.ui.myinfo.Friend
+import com.break8t.unknown.ui.myinfo.FriendProfileCard
+import com.break8t.unknown.ui.myinfo.FriendStore
 import com.break8t.unknown.ui.components.AppDialog
 import com.break8t.unknown.ui.components.ControlShape
 import com.break8t.unknown.ui.components.PrimaryButton
@@ -75,7 +81,13 @@ fun MyGuestbookPanel(newSince: Long, onClose: () -> Unit) {
     val entries = all[GuestbookStore.MY_ISLAND].orEmpty()
     var deleteId by rememberSaveable { mutableStateOf<String?>(null) }
     var askStore by rememberSaveable { mutableStateOf(false) }
-    MyGuestbookContent(entries, newSince, System.currentTimeMillis(), onDelete = { deleteId = it.id }, onStore = { askStore = true }, onClose = onClose)
+    val friends by FriendStore.friends.collectAsState()
+    var profileId by rememberSaveable { mutableStateOf<String?>(null) }
+    MyGuestbookContent(
+        entries, newSince, System.currentTimeMillis(), friends,
+        onAuthor = { profileId = it.id }, onDelete = { deleteId = it.id }, onStore = { askStore = true }, onClose = onClose,
+    )
+    friends.firstOrNull { it.id == profileId }?.let { ProfileDialog(it) { profileId = null } }
     entries.firstOrNull { it.id == deleteId }?.let { e ->
         DeleteDialog(e, onCancel = { deleteId = null }) {
             GuestbookStore.remove(GuestbookStore.MY_ISLAND, e.id)
@@ -100,10 +112,14 @@ fun FriendGuestbookPanel(friendId: String, friendNickname: String, onClose: () -
     val entries = all[friendId].orEmpty()
     var deleteId by rememberSaveable { mutableStateOf<String?>(null) }
     var writing by rememberSaveable { mutableStateOf(false) }
+    val friends by FriendStore.friends.collectAsState()
+    var profileId by rememberSaveable { mutableStateOf<String?>(null) }
     FriendGuestbookContent(
-        friendNickname, friendBoardShown(friendId), entries, System.currentTimeMillis(),
-        canDelete = { canDelete(friendId, it) }, onDelete = { deleteId = it.id }, onWrite = { writing = true }, onClose = onClose,
+        friendNickname, friendBoardShown(friendId), entries, System.currentTimeMillis(), friends,
+        canDelete = { canDelete(friendId, it) }, onAuthor = { profileId = it.id }, onDelete = { deleteId = it.id },
+        onWrite = { writing = true }, onClose = onClose,
     )
+    friends.firstOrNull { it.id == profileId }?.let { ProfileDialog(it) { profileId = null } }
     if (writing) {
         WriteDialog(friendNickname, onCancel = { writing = false }) { text ->
             GuestbookStore.add(
@@ -134,6 +150,11 @@ internal fun ColumnScope.GuestbookNoticeBody(count: Int, onOpen: () -> Unit, onL
         SecondaryButton(stringResource(R.string.guestbook_notice_later), onLater, Modifier.weight(1f))
         PrimaryButton(stringResource(R.string.guestbook_notice_open), onOpen, Modifier.weight(1f))
     }
+}
+
+@Composable
+private fun ProfileDialog(friend: Friend, onClose: () -> Unit) = Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false)) {
+    FriendProfileCard(friend, onClose, Modifier.padding(24.dp))
 }
 
 @Composable
@@ -213,6 +234,8 @@ internal fun MyGuestbookContent(
     entries: List<GuestbookEntry>,
     newSince: Long,
     now: Long,
+    friends: List<Friend>,
+    onAuthor: (Friend) -> Unit,
     onDelete: (GuestbookEntry) -> Unit,
     onStore: () -> Unit,
     onClose: () -> Unit,
@@ -222,7 +245,7 @@ internal fun MyGuestbookContent(
 ) {
     val fresh = newSince(entries, newSince).map { it.id }.toSet()
     EntryList(entries, Modifier.weight(1f)) { e ->
-        EntryRow(e, isNew = e.id in fresh, now, onDelete.takeIf { canDelete(GuestbookStore.MY_ISLAND, e) })
+        EntryRow(e, isNew = e.id in fresh, now, authorOf(e, friends, onAuthor), onDelete.takeIf { canDelete(GuestbookStore.MY_ISLAND, e) })
     }
 }
 
@@ -232,7 +255,9 @@ internal fun FriendGuestbookContent(
     boardShown: Boolean,
     entries: List<GuestbookEntry>,
     now: Long,
+    friends: List<Friend>,
     canDelete: (GuestbookEntry) -> Boolean,
+    onAuthor: (Friend) -> Unit,
     onDelete: (GuestbookEntry) -> Unit,
     onWrite: () -> Unit,
     onClose: () -> Unit,
@@ -244,7 +269,7 @@ internal fun FriendGuestbookContent(
         Text(stringResource(R.string.guestbook_board_off), color = AppColors.TextSub, fontSize = 39.sp)
         return@PanelFrame
     }
-    EntryList(entries, Modifier.weight(1f)) { e -> EntryRow(e, isNew = false, now, onDelete.takeIf { canDelete(e) }) }
+    EntryList(entries, Modifier.weight(1f)) { e -> EntryRow(e, isNew = false, now, authorOf(e, friends, onAuthor), onDelete.takeIf { canDelete(e) }) }
 }
 
 /** 패널 틀. 아래 섬을 누르지 않게 화면 전체를 덮고, 가운데에 카드를 둔다. */
@@ -310,7 +335,7 @@ private fun EntryList(
 }
 
 @Composable
-private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, onDelete: ((GuestbookEntry) -> Unit)?) = Row(
+private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, onAuthor: (() -> Unit)?, onDelete: ((GuestbookEntry) -> Unit)?) = Row(
     Modifier
         .fillMaxWidth()
         .heightIn(min = 128.dp)
@@ -320,11 +345,13 @@ private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, onDelete:
         .padding(20.dp),
     horizontalArrangement = Arrangement.spacedBy(20.dp),
 ) {
-    Avatar(entry.characterId, 88.dp, 13.dp)
+    // 그림과 이름을 누르면 프로필이 열린다. 친구가 아닌 사람(나, 지운 친구)은 누를 수 없다.
+    val author = if (onAuthor != null) Modifier.clip(ControlShape).clickable(role = Role.Button, onClick = onAuthor) else Modifier
+    Avatar(entry.characterId, 88.dp, 13.dp, author)
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                entry.nickname, Modifier.weight(1f, fill = false), color = AppColors.Text, fontSize = 40.sp,
+                entry.nickname, Modifier.weight(1f, fill = false).then(author), color = AppColors.Text, fontSize = 40.sp,
                 fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             if (isNew) Tag(stringResource(R.string.guestbook_new), AppColors.Selected)
@@ -335,6 +362,12 @@ private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, onDelete:
     }
     if (onDelete != null) DangerButton(stringResource(R.string.guestbook_delete), { onDelete(entry) }, Modifier.align(Alignment.CenterVertically))
 }
+
+/** 남긴 사람이 지금 친구 목록에 있으면 그 친구. 나와 지운 친구는 null이라 프로필을 열 수 없다. */
+internal fun friendOf(entry: GuestbookEntry, friends: List<Friend>): Friend? = friends.firstOrNull { it.id == entry.authorId }
+
+private fun authorOf(entry: GuestbookEntry, friends: List<Friend>, onAuthor: (Friend) -> Unit): (() -> Unit)? =
+    friendOf(entry, friends)?.let { f -> { onAuthor(f) } }
 
 @Composable
 private fun Tag(text: String, fill: androidx.compose.ui.graphics.Color) = Text(

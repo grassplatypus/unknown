@@ -11,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import com.break8t.unknown.R
 import com.break8t.unknown.drive.LocalUxLimits
 import com.break8t.unknown.drive.UxLimits
+import com.break8t.unknown.ui.myinfo.demoFriends
 import com.break8t.unknown.ui.components.DialogPanel
 import com.break8t.unknown.ui.shop.PreviewFrame
 import com.break8t.unknown.ui.shop.ScreenPreviews
@@ -34,11 +35,11 @@ private fun Frame(dialog: (@Composable ColumnScope.() -> Unit)? = null, panel: @
 
 @Composable
 private fun My(entries: List<GuestbookEntry> = mine, dialog: (@Composable ColumnScope.() -> Unit)? = null) =
-    Frame(dialog) { MyGuestbookContent(entries, since, NOW, {}, {}, {}) }
+    Frame(dialog) { MyGuestbookContent(entries, since, NOW, demoFriends, {}, {}, {}, {}) }
 
 @Composable
 private fun Friend(boardShown: Boolean = true, dialog: (@Composable ColumnScope.() -> Unit)? = null) = Frame(dialog) {
-    FriendGuestbookContent("주말캠퍼", boardShown, friend, NOW, { it.authorId == GuestbookStore.ME }, {}, {}, {})
+    FriendGuestbookContent("주말캠퍼", boardShown, friend, NOW, demoFriends, { it.authorId == GuestbookStore.ME }, {}, {}, {}, {})
 }
 
 @ScreenPreviews @Composable private fun MyList() = My()
@@ -48,7 +49,7 @@ private fun Friend(boardShown: Boolean = true, dialog: (@Composable ColumnScope.
 
 @ScreenPreviews @Composable
 private fun MyStoreBoardConfirm() = Frame {
-    MyGuestbookContent(mine, since, NOW, {}, {}, {})
+    MyGuestbookContent(mine, since, NOW, demoFriends, {}, {}, {}, {})
     Box(Modifier.fillMaxSize().background(AppColors.Scrim)) {
         DialogPanel(
             stringResource(R.string.guestbook_store_title), stringResource(R.string.guestbook_store_body),

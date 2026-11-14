@@ -104,6 +104,15 @@ class GuestbookRulesTest {
         assertTrue(demoGuestbooks(now).values.flatten().all { it.text.length <= BalanceConfig.DEFAULT.guestbookMaxChars })
     }
 
+    @Test fun onlyCurrentFriendsOpenAProfile() {
+        val friends = com.break8t.unknown.ui.myinfo.demoFriends
+        assertEquals("f_dawn", friendOf(entry("f_dawn"), friends)?.id)
+        assertNull(friendOf(entry(GuestbookStore.ME), friends))
+        assertNull(friendOf(entry("f_dawn"), friends.filterNot { it.id == "f_dawn" }))
+        // Every sample author on my island is a sample friend, so each row opens a profile.
+        assertTrue(demoGuestbooks(now).getValue(GuestbookStore.MY_ISLAND).all { friendOf(it, friends) != null })
+    }
+
     @Test fun agoPicksTheLargestWholeUnit() {
         assertEquals(Ago.JustNow, ago(now, now - 30_000))
         assertEquals(Ago.Minutes(5), ago(now, now - 5 * 60_000))

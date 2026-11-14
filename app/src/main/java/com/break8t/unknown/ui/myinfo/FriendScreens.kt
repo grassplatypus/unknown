@@ -195,6 +195,25 @@ private fun FriendDetail(
     DangerButton(stringResource(R.string.myinfo_delete_friend), onDelete, Modifier.fillMaxWidth())
 }
 
+/** 방명록에서 친구를 누르면 보는 프로필. 섬 놀러 가기와 삭제는 내 정보의 친구 화면에서 한다. */
+@Composable
+fun FriendProfileCard(friend: Friend, onClose: () -> Unit, modifier: Modifier = Modifier) = DialogFrame(832.dp, modifier) {
+    Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
+        Avatar(friend, 174.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(friend.nickname, color = AppColors.Text, fontSize = 52.sp, fontWeight = FontWeight.Bold)
+            Text(friend.status, color = AppColors.TextSub, fontSize = 31.sp)
+            if (friend.driving) DrivingChip()
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Stat(R.string.myinfo_friend_jams, stringResource(R.string.myinfo_friend_jams_value, friend.jamsThisWeek))
+        Stat(R.string.myinfo_friend_postcard, friend.lastPostcard)
+        Stat(R.string.myinfo_friend_since, friend.since)
+    }
+    PrimaryButton(stringResource(R.string.myinfo_close), onClose, Modifier.fillMaxWidth())
+}
+
 @Composable
 private fun ColumnScope.Stat(label: Int, value: String) {
     Text(stringResource(label), color = AppColors.TextSub, fontSize = 31.sp)
@@ -448,4 +467,10 @@ private fun FriendAddFullPreview() = PreviewShell(Route.MY_INFO) {
 private fun FriendAddedPreview() = PreviewShell(Route.MY_INFO) {
     FriendAddPane(FriendCode.DEMO, AddCheck.OK, false, "482913", 252, 6, BalanceConfig.DEFAULT, {}, {}, {}, {})
     Overlay({}) { FriendAddedDialog(demoNewFriend(), {}) }
+}
+
+@ScreenPreviews
+@Composable
+private fun FriendProfilePreview() = PreviewShell(Route.MY_INFO) {
+    Overlay({}) { FriendProfileCard(demoFriends.first(), {}) }
 }
