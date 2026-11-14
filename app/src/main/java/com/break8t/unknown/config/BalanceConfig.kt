@@ -39,10 +39,12 @@ data class BalanceConfig(
     val houseWallHeight: Int = 4,
     val shopMaxQty: Int = 10,
 
-    // 도감 뱃지: 모은 엽서가 이 수에 닿을 때마다 뱃지 하나가 열린다. 작은 수부터 적는다.
+    // 도감 뱃지: 엽서를 모은 장소 수가 이 수에 닿을 때마다 뱃지 하나가 열린다(같은 장소의 다른 판은 한 곳). 작은 수부터 적는다.
     val postcardBadgeSteps: List<Int> = listOf(3, 5, 10),
     // 레이드 아바타 테두리: 레벨이 이 수에 닿을 때마다 기본, 은, 금, 금과 보석 순으로 한 단계 오른다.
     val avatarFrameLevels: List<Int> = listOf(5, 10, 20),
+    // 도감 NEW 뱃지: 얻은 뒤 이 시간이 지나기 전에 아직 눌러 보지 않은 항목에 붙는다.
+    val newBadgeHours: Int = 36,
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

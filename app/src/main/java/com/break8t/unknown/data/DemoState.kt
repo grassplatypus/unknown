@@ -31,6 +31,8 @@ data class Profile(
         "ch_sprout", "ch_cat", "ch_mush", "ch_cloud", "car_red", "car_blue",
         "voice_default", "pose_wave", "pose_sit", "pose_back",
     ),
+    // 도감과 내 정보에서 눌러 본 항목 id. 여기 있으면 NEW 뱃지를 붙이지 않는다.
+    val seenIds: Set<String> = emptySet(),
 )
 
 class DemoState(initial: Profile = Profile()) {

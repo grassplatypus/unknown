@@ -1,8 +1,12 @@
 package com.break8t.unknown.ui.collection
 
+import com.break8t.unknown.R
+import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.data.Profile
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CollectionRulesTest {
@@ -30,10 +34,12 @@ class CollectionRulesTest {
     }
 
     @Test
-    fun demoPostcardAndBadgeThumbnailsMatchFigma() {
+    fun demoThumbnailsShowTheRecentSample() {
+        // 묶음마다 방금 얻은 견본(NEW 시연용)이 가장 최근 것이라 내 정보 썸네일이 된다.
         val all = collections(Profile())
-        assertEquals("post_cheomseongdae", newestOwned(all.getValue(CollectionKind.POSTCARD))?.id)
-        assertEquals("badge_safe", newestOwned(all.getValue(CollectionKind.BADGE))?.id)
+        assertEquals("card_yangjae", newestOwned(all.getValue(CollectionKind.CARD))?.id)
+        assertEquals("post_coast_gold", newestOwned(all.getValue(CollectionKind.POSTCARD))?.id)
+        assertEquals("badge_night", newestOwned(all.getValue(CollectionKind.BADGE))?.id)
     }
 
     @Test
@@ -45,7 +51,94 @@ class CollectionRulesTest {
         // 2번째로 얻은 엽서(b, 20일)가 첫 뱃지를 연다. 잠긴 엽서는 세지 않는다.
         assertEquals(20L, badges[0].recency)
         assertEquals(30L, badges[1].recency)
-        assertEquals("엽서를 4장 모으면 열려요. 지금 3장이에요.", badges[2].note)
+        assertEquals("4곳의 엽서를 모으면 열려요. 지금 3곳이에요.", badges[2].note)
+    }
+
+    @Test
+    fun otherRaritiesOfTheSamePlaceCountOnce() {
+        fun post(id: String, place: String, day: Long, rarity: PostcardRarity) =
+            Collectible(CollectionKind.POSTCARD, id, place, null, true, day, rarity = rarity)
+        val posts = listOf(
+            post("a", "첨성대", 50, PostcardRarity.NORMAL),
+            post("a_xmas", "첨성대", 5, PostcardRarity.CHRISTMAS),
+            post("a_gold", "첨성대", 60, PostcardRarity.GOLD),
+            post("b", "해안도로", 20, PostcardRarity.NORMAL),
+        )
+        val badges = postcardBadges(posts, listOf(2, 3))
+        // 엽서는 네 장이지만 장소는 두 곳이다. 첨성대는 처음 얻은 판(5일)으로 줄 선다.
+        assertEquals(listOf(true, false), badges.map { it.owned })
+        assertEquals(20L, badges[0].recency)
+        assertEquals("3곳의 엽서를 모으면 열려요. 지금 2곳이에요.", badges[1].note)
+    }
+
+    @Test
+    fun demoPostcardBadgesCountPlacesNotRarities() {
+        val all = collections(Profile())
+        val owned = all.getValue(CollectionKind.POSTCARD).filter { it.owned }
+        assertEquals(5, owned.size)
+        assertEquals(3, owned.map { it.name }.distinct().size)
+        // 첨성대 노말과 크리스마스 판이 같은 장소라서 열린 엽서 뱃지는 3곳 하나뿐이다.
+        val opened = all.getValue(CollectionKind.BADGE).filter { it.id.startsWith("badge_postcard_") && it.owned }
+        assertEquals(listOf("badge_postcard_3"), opened.map { it.id })
+        assertEquals("2026.09.28", opened.single().date)
+    }
+
+    @Test
+    fun demoCardStatsComeFromVisits() {
+        val cards = collections(Profile()).getValue(CollectionKind.CARD).filter { it.owned }
+        for (card in cards) {
+            assertEquals(card.id, card.visits.size, card.meetCount)
+            assertEquals(card.id, card.visits.sortedByDescending { it.date }, card.visits)
+            assertEquals(card.id, card.visits.last().date.toEpochDay(), card.recency)
+        }
+        // Figma D-24 견본: 성산대교 14번, 가장 빨리 6분 10초, 가장 느리게 4시간 10분.
+        val seongsan = cards.first { it.id == "card_seongsan" }
+        assertEquals(14, seongsan.meetCount)
+        assertEquals(6 * 60 + 10, seongsan.visits.minOf { it.seconds })
+        assertEquals(4 * 3600 + 10 * 60, seongsan.visits.maxOf { it.seconds })
+    }
+
+    @Test
+    fun recentFirstSortsNewestOnTop() {
+        val d = java.time.LocalDate.parse("2026-11-01")
+        val visits = listOf(Visit(d, 1), Visit(d.plusDays(3), 2), Visit(d.plusDays(1), 3))
+        assertEquals(listOf(2, 3, 1), recentFirst(visits).map { it.seconds })
+    }
+
+    @Test
+    fun durationUsesTwoLargestUnits() {
+        assertEquals(R.string.collection_dur_hm to listOf(4, 10), durationText(4 * 3600 + 10 * 60 + 5))
+        assertEquals(R.string.collection_dur_h to listOf(1), durationText(3600))
+        assertEquals(R.string.collection_dur_ms to listOf(6, 10), durationText(6 * 60 + 10))
+        assertEquals(R.string.collection_dur_m to listOf(38), durationText(38 * 60))
+        assertEquals(R.string.collection_dur_s to listOf(45), durationText(45))
+    }
+
+    @Test
+    fun newOnlyWithinWindowAndUnseen() {
+        val config = BalanceConfig(newBadgeHours = 36)
+        val hour = 3_600_000L
+        val now = 1_000 * hour
+        fun got(hoursAgo: Long, owned: Boolean = true) =
+            Collectible(CollectionKind.CARD, "x", "x", null, owned, gotAt = now - hoursAgo * hour)
+        assertTrue(isNew(got(0), emptySet(), now, config))
+        assertTrue(isNew(got(35), emptySet(), now, config))
+        assertFalse(isNew(got(36), emptySet(), now, config))
+        assertFalse(isNew(got(1), setOf("x"), now, config))
+        assertFalse(isNew(got(1, owned = false), emptySet(), now, config))
+        assertFalse(isNew(got(-1), emptySet(), now, config))
+        assertFalse(isNew(Collectible(CollectionKind.CAR, "c", "c", null, true), emptySet(), now, config))
+    }
+
+    @Test
+    fun demoHasOneNewItemPerKindAtLaunch() {
+        val all = collections(Profile())
+        for (kind in CollectionKind.entries) {
+            val fresh = all.getValue(kind).filter { isNew(it, emptySet(), demoLaunchedAt, BalanceConfig.DEFAULT) }
+            assertEquals(kind.name, 1, fresh.size)
+        }
+        val seen = all.values.flatten().map { it.id }.toSet()
+        assertTrue(all.values.flatten().none { isNew(it, seen, demoLaunchedAt, BalanceConfig.DEFAULT) })
     }
 
     @Test

@@ -39,6 +39,21 @@
     <string name="collection_badge_date">받은 날</string>
     <string name="collection_close">닫기</string>
     <string name="collection_share">공유</string>
+    <string name="collection_history">지난 기록</string>
+    <string name="collection_dur_hm">%1$d시간 %2$d분</string>
+    <string name="collection_dur_h">%1$d시간</string>
+    <string name="collection_dur_ms">%1$d분 %2$d초</string>
+    <string name="collection_dur_m">%1$d분</string>
+    <string name="collection_dur_s">%1$d초</string>
+
+    <!-- 엽서 판. 공유 화면에는 "크리스마스 엽서 · 2025.12.25 방문"처럼 쓴다 -->
+    <string name="collection_rarity_normal">노말</string>
+    <string name="collection_rarity_christmas">크리스마스</string>
+    <string name="collection_rarity_gold">황금</string>
+    <string name="collection_rarity_share">%1$s 엽서 · %2$s</string>
+
+    <!-- 얻은 지 얼마 안 됐고 아직 눌러 보지 않은 항목의 표시 -->
+    <string name="collection_new">NEW</string>
 
     <!-- D-26. Figma 문구는 상점 힌트 하나라서 나머지는 새로 썼다 -->
     <string name="collection_hint_shop">상점에서 살 수 있어요</string>

@@ -2,7 +2,18 @@ package com.break8t.unknown.ui.collection
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -96,6 +107,88 @@ internal fun Art(
 @Composable
 internal fun LockIcon(modifier: Modifier = Modifier) =
     Icon(painterResource(R.drawable.myinfo_ic_lock), stringResource(R.string.collection_locked), modifier.size(73.dp), tint = AppColors.Text)
+
+/** 모서리를 한 칸씩 계단으로 깎은 네모. 둥근 모서리 대신 픽셀 그림처럼 보이게 한다. */
+internal class NotchShape(private val step: Dp) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val s = with(density) { step.toPx() }
+        val w = size.width
+        val h = size.height
+        return Outline.Generic(Path().apply {
+            moveTo(s, 0f); lineTo(w - s, 0f); lineTo(w - s, s); lineTo(w, s); lineTo(w, h - s); lineTo(w - s, h - s)
+            lineTo(w - s, h); lineTo(s, h); lineTo(s, h - s); lineTo(0f, h - s); lineTo(0f, s); lineTo(s, s); close()
+        })
+    }
+}
+
+/** 그림 위에 얹는 단색 꼬리표(NEW, 만난 횟수, 엽서 판). */
+@Composable
+internal fun PixelLabel(text: String, bg: Color, fg: Color, edge: Color, size: TextUnit, modifier: Modifier = Modifier) {
+    val shape = NotchShape(5.dp)
+    Text(
+        text,
+        modifier.background(bg, shape).border(3.dp, edge, shape).padding(horizontal = 14.dp, vertical = 2.dp),
+        color = fg,
+        fontSize = size,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+    )
+}
+
+@Composable
+internal fun NewBadge(size: TextUnit, modifier: Modifier = Modifier) =
+    PixelLabel(stringResource(R.string.collection_new), AppColors.Error, AppColors.OnPrimary, AppColors.Line, size, modifier)
+
+@Composable
+internal fun CountBadge(count: Int, size: TextUnit, modifier: Modifier = Modifier) =
+    PixelLabel(count.toString(), AppColors.Accent, AppColors.Text, AppColors.Line, size, modifier)
+
+/** 엽서 판의 이름과 색. 테두리는 바깥 한 줄 [edge]와 안쪽 한 줄 [pattern] 무늬다. 노말은 테두리가 없다. */
+private class RarityLook(val label: Int, val badge: Color, val badgeText: Color, val edge: Color, val pattern: List<Color>)
+
+@Composable
+private fun PostcardRarity.look() = when (this) {
+    PostcardRarity.NORMAL -> RarityLook(R.string.collection_rarity_normal, AppColors.Muted, AppColors.Text, AppColors.Line, emptyList())
+    PostcardRarity.CHRISTMAS -> RarityLook(
+        R.string.collection_rarity_christmas, AppColors.Error, AppColors.OnPrimary, AppColors.Line,
+        listOf(AppColors.Error, AppColors.Error, AppColors.OnPrimary, AppColors.Success, AppColors.Success, AppColors.OnPrimary),
+    )
+    PostcardRarity.GOLD -> RarityLook(
+        R.string.collection_rarity_gold, AppColors.Coin, AppColors.Primary, AppColors.CoinBorder,
+        listOf(AppColors.Coin, AppColors.Coin, AppColors.Coin, AppColors.Accent),
+    )
+}
+
+@Composable
+internal fun rarityName(rarity: PostcardRarity) = stringResource(rarity.look().label)
+
+// 테두리 칸은 그림 너비의 1/64로, 엽서 그림의 픽셀처럼 크기와 함께 커진다.
+private const val FRAME_COLS = 64
+
+/** 엽서 그림 위에 얹는 판 표시: 계단 모서리 픽셀 테두리와 오른쪽 위 이름 꼬리표. 움직이지 않는다. */
+@Composable
+internal fun RarityMarks(rarity: PostcardRarity, labelSize: TextUnit, modifier: Modifier = Modifier) {
+    val look = rarity.look()
+    BoxWithConstraints(modifier) {
+        if (look.pattern.isNotEmpty()) Canvas(Modifier.fillMaxSize()) {
+            val cols = FRAME_COLS
+            val rows = maxOf(4, Math.round(cols * size.height / size.width))
+            val cw = size.width / cols
+            val ch = size.height / rows
+            for (x in 0 until cols) for (y in 0 until rows) {
+                val ring = minOf(x, y, cols - 1 - x, rows - 1 - y)
+                val corner = (x == 0 || x == cols - 1) && (y == 0 || y == rows - 1)
+                if (ring > 1 || corner) continue
+                val c = if (ring == 0) look.edge else look.pattern[(x + y) % look.pattern.size]
+                drawRect(c, Offset(x * cw, y * ch), Size(cw + 0.5f, ch + 0.5f))
+            }
+        }
+        PixelLabel(
+            stringResource(look.label), look.badge, look.badgeText, look.edge, labelSize,
+            Modifier.align(Alignment.TopEnd).padding(maxWidth / FRAME_COLS * 3),
+        )
+    }
+}
 
 /** 화면 위쪽의 제목 칩. onBack이 있으면 뒤로 가는 칩(Figma S-21-c "< 내 정보")이 된다. */
 @Composable
