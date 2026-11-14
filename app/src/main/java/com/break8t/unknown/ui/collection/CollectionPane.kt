@@ -47,6 +47,11 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.ui.photo.ShareHandler
+import com.break8t.unknown.ui.photo.ShareKind
+import com.break8t.unknown.ui.photo.ShareQrScreen
+import com.break8t.unknown.config.BalanceConfig
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.break8t.unknown.R
 import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.data.Profile
@@ -94,6 +99,8 @@ fun CollectionScreen(
 
     Box(Modifier.fillMaxSize()) {
         CollectionPane(all, kind, onKind, loaded, showLocked, profile, header, onOpenFieldDrop) { item ->
+            // 눌러 본 것은 확인한 것으로 보고 NEW를 지운다. 자동차는 자세히 창 없이 바로 고르므로 누름을 기준으로 삼는다.
+            if (item.owned && item.id !in profile.seenIds) demo.update { it.copy(seenIds = it.seenIds + item.id) }
             when {
                 !item.owned || item.kind == CollectionKind.CARD || item.kind == CollectionKind.POSTCARD || item.kind == CollectionKind.BADGE -> openId = item.id
                 item.kind == CollectionKind.CHARACTER && item.id != profile.selectedCharacterId -> openId = item.id
@@ -155,6 +162,8 @@ internal fun CollectionPane(
     onItem: (Collectible) -> Unit,
 ) {
     val visible = all[kind].orEmpty().filter { showLocked || it.owned }
+    val now = System.currentTimeMillis()
+    val fresh = visible.filter { isNew(it, profile.seenIds, now, BalanceConfig.DEFAULT) }.map { it.id }.toSet()
     Column(Modifier.fillMaxSize().padding(start = ScreenPadding, top = ScreenPadding, end = ScreenPadding)) {
         header()
         FlowRow(
@@ -171,7 +180,7 @@ internal fun CollectionPane(
         when (listPhase(loaded, visible.size)) {
             ListPhase.LOADING -> Loading(kind)
             ListPhase.EMPTY -> Empty(kind, onOpenFieldDrop)
-            ListPhase.CONTENT -> Grid(kind, visible, profile, onItem)
+            ListPhase.CONTENT -> Grid(kind, visible, fresh, profile, onItem)
         }
     }
 }
@@ -196,7 +205,7 @@ private fun KindGrid(kind: CollectionKind, modifier: Modifier, scroll: Boolean, 
 }
 
 @Composable
-private fun Grid(kind: CollectionKind, items: List<Collectible>, profile: Profile, onItem: (Collectible) -> Unit) =
+private fun Grid(kind: CollectionKind, items: List<Collectible>, fresh: Set<String>, profile: Profile, onItem: (Collectible) -> Unit) =
     KindGrid(kind, Modifier.fillMaxSize(), scroll = true) {
         items(items, key = { it.id }) { item ->
             val select = when (kind) {
@@ -204,11 +213,12 @@ private fun Grid(kind: CollectionKind, items: List<Collectible>, profile: Profil
                 CollectionKind.CAR -> item.id == profile.selectedCarId
                 else -> false
             }
+            val new = item.id in fresh
             when (kind) {
-                CollectionKind.CARD -> CardTile(item) { onItem(item) }
-                CollectionKind.POSTCARD -> PostcardTile(item) { onItem(item) }
-                CollectionKind.CHARACTER, CollectionKind.CAR -> PickTile(item, select) { onItem(item) }
-                CollectionKind.BADGE -> BadgeRow(item) { onItem(item) }
+                CollectionKind.CARD -> CardTile(item, new) { onItem(item) }
+                CollectionKind.POSTCARD -> PostcardTile(item, new) { onItem(item) }
+                CollectionKind.CHARACTER, CollectionKind.CAR -> PickTile(item, select, new) { onItem(item) }
+                CollectionKind.BADGE -> BadgeRow(item, new) { onItem(item) }
             }
         }
     }
@@ -237,11 +247,13 @@ private fun Sub(text: String, color: androidx.compose.ui.graphics.Color = AppCol
 )
 
 @Composable
-private fun CardTile(item: Collectible, onClick: () -> Unit) = Tile(onClick) {
-    // Figma: 잠긴 카드는 안개 그림을 그대로 보이고 왼쪽 위에 자물쇠를 얹는다.
-    Box(Modifier.fillMaxWidth().aspectRatio(220f / 147f).clip(ArtShape)) {
-        Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Crop)
+private fun CardTile(item: Collectible, new: Boolean, onClick: () -> Unit) = Tile(onClick) {
+    // 잠긴 카드도 다른 묶음처럼 그림을 흐리게 하고 가운데에 자물쇠를 둔다(팀 피드백, Figma는 흐리지 않았다).
+    Box(Modifier.fillMaxWidth().aspectRatio(220f / 147f).clip(ArtShape), Alignment.Center) {
+        Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Crop, if (item.owned) 1f else 0.25f)
         if (!item.owned) LockIcon()
+        if (new) NewBadge(26.sp, Modifier.align(Alignment.TopStart).padding(10.dp))
+        item.meetCount?.let { CountBadge(it, 30.sp, Modifier.align(Alignment.TopEnd).padding(10.dp)) }
     }
     Spacer(Modifier.height(17.dp))
     Name(item, 36)
@@ -250,10 +262,13 @@ private fun CardTile(item: Collectible, onClick: () -> Unit) = Tile(onClick) {
 }
 
 @Composable
-private fun PostcardTile(item: Collectible, onClick: () -> Unit) = Tile(onClick) {
+private fun PostcardTile(item: Collectible, new: Boolean, onClick: () -> Unit) = Tile(onClick) {
     Box(Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT), Alignment.Center) {
-        Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Fit, if (item.owned) 1f else 0.25f)
+        val alpha = if (item.owned) 1f else 0.25f
+        Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Fit, alpha)
+        item.rarity?.let { RarityMarks(it, 24.sp, Modifier.matchParentSize().alpha(alpha)) }
         if (!item.owned) LockIcon()
+        if (new) NewBadge(26.sp, Modifier.align(Alignment.TopStart).padding(14.dp))
     }
     Spacer(Modifier.height(20.dp))
     Name(item, 39)
@@ -262,11 +277,12 @@ private fun PostcardTile(item: Collectible, onClick: () -> Unit) = Tile(onClick)
 }
 
 @Composable
-private fun PickTile(item: Collectible, selected: Boolean, onClick: () -> Unit) = Tile(onClick, selected = selected) {
+private fun PickTile(item: Collectible, selected: Boolean, new: Boolean, onClick: () -> Unit) = Tile(onClick, selected = selected) {
     Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
         Box(Modifier.size(208.dp).clip(ArtShape).background(AppColors.Accent), Alignment.Center) {
             Art(item.art, item.name, Modifier.size(182.dp), alpha = if (item.owned) 1f else 0.25f)
             if (!item.owned) LockIcon()
+            if (new) NewBadge(26.sp, Modifier.align(Alignment.TopStart).padding(8.dp))
         }
         Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Name(item, 39)
@@ -276,11 +292,12 @@ private fun PickTile(item: Collectible, selected: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun BadgeRow(item: Collectible, onClick: () -> Unit) = Tile(onClick, Modifier.heightIn(min = 164.dp)) {
+private fun BadgeRow(item: Collectible, new: Boolean, onClick: () -> Unit) = Tile(onClick, Modifier.heightIn(min = 164.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(31.dp)) {
         Box(Modifier.size(125.dp), Alignment.Center) {
             Art(item.art, item.name, Modifier.fillMaxSize(), alpha = if (item.owned) 1f else 0.25f)
             if (!item.owned) LockIcon()
+            if (new) NewBadge(22.sp, Modifier.align(Alignment.TopStart))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Name(item, 42)
@@ -365,7 +382,7 @@ private fun CloseShareRow(onClose: () -> Unit, onShare: () -> Unit) =
         SecondaryButton(stringResource(R.string.collection_share), onShare, Modifier.weight(1f))
     }
 
-/** D-24. 왼쪽에 그림, 오른쪽에 기록. 대화상자가 좁은 세로 창에서는 그림 아래에 기록을 둔다. */
+/** D-24. 왼쪽에 그림, 오른쪽에 기록, 그 아래 지난 기록. 대화상자가 좁은 세로 창에서는 그림 아래에 기록을 둔다. */
 @Composable
 private fun CardDetail(item: Collectible, onClose: () -> Unit, onShare: ShareHandler) {
     val meets = stringResource(R.string.collection_meet_count, item.meetCount ?: 0)
@@ -375,12 +392,17 @@ private fun CardDetail(item: Collectible, onClose: () -> Unit, onShare: ShareHan
             item.route?.let { DialogBody(it) }
         }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val art = @Composable { m: Modifier -> Art(item.art, item.name, m.aspectRatio(390f / 260f).clip(ArtShape), ContentScale.Crop) }
+            val art = @Composable { m: Modifier ->
+                Box(m.aspectRatio(390f / 260f).clip(ArtShape)) {
+                    Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Crop)
+                    item.meetCount?.let { CountBadge(it, 40.sp, Modifier.align(Alignment.TopEnd).padding(16.dp)) }
+                }
+            }
             val stats = @Composable { m: Modifier ->
                 Column(m, verticalArrangement = Arrangement.spacedBy(26.dp)) {
                     Stat(R.string.collection_meets, meets)
-                    item.fastest?.let { Stat(R.string.collection_fastest, it) }
-                    item.slowest?.let { Stat(R.string.collection_slowest, it) }
+                    item.visits.minOfOrNull { it.seconds }?.let { Stat(R.string.collection_fastest, duration(it)) }
+                    item.visits.maxOfOrNull { it.seconds }?.let { Stat(R.string.collection_slowest, duration(it)) }
                     item.usualTime?.let { Stat(R.string.collection_usual_time, it) }
                 }
             }
@@ -396,7 +418,36 @@ private fun CardDetail(item: Collectible, onClose: () -> Unit, onShare: ShareHan
                 }
             }
         }
+        if (item.visits.isNotEmpty()) VisitHistory(item.visits)
         CloseShareRow(onClose) { onShare(false, item.name, item.route ?: meets, item.art) }
+    }
+}
+
+@Composable
+private fun duration(seconds: Int): String {
+    val (res, args) = durationText(seconds)
+    return stringResource(res, *args.toTypedArray())
+}
+
+// 대화상자 전체가 이미 세로로 밀리므로 목록은 높이를 묶고 따로 민다. 묶지 않으면 안쪽 스크롤이 무한 높이를 받는다.
+@Composable
+private fun VisitHistory(visits: List<Visit>) = Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Text(stringResource(R.string.collection_history), color = AppColors.Text, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+    Column(
+        Modifier.fillMaxWidth().heightIn(max = 320.dp).clip(ArtShape).background(AppColors.Background)
+            .verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 6.dp),
+    ) {
+        visits.forEachIndexed { i, visit ->
+            if (i > 0) Box(Modifier.fillMaxWidth().height(2.dp).background(AppColors.Divider))
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(visit.date.toString().replace('-', '.'), color = AppColors.TextSub, fontSize = 34.sp)
+                Text(duration(visit.seconds), color = AppColors.Text, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
@@ -421,16 +472,21 @@ private fun Stat(@StringRes label: Int, value: String) =
         Text(value, color = AppColors.Text, fontSize = 42.sp, fontWeight = FontWeight.Bold)
     }
 
-/** D-25 */
+/** D-25. 공유 화면은 그림만 받으므로 판 이름을 부제 앞에 붙여 넘긴다. */
 @Composable
 private fun PostcardDetail(item: Collectible, onClose: () -> Unit, onShare: ShareHandler) =
     DialogFrame(1040.dp) {
-        Art(item.art, item.name, Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT), ContentScale.Fit)
+        Box(Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT)) {
+            Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Fit)
+            item.rarity?.let { RarityMarks(it, 36.sp, Modifier.matchParentSize()) }
+        }
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             DialogTitle(item.name)
             DialogBody(item.note.orEmpty())
         }
-        CloseShareRow(onClose) { onShare(true, item.name, item.note.orEmpty(), item.art) }
+        val subtitle = item.rarity?.let { stringResource(R.string.collection_rarity_share, rarityName(it), item.note.orEmpty()) }
+            ?: item.note.orEmpty()
+        CloseShareRow(onClose) { onShare(true, item.name, subtitle, item.art) }
     }
 
 /** D-26. Figma 힌트는 상점 문구 하나뿐이라, 값을 매긴 항목만 그 문구를 쓴다. */
@@ -475,7 +531,10 @@ private fun EncyclopediaEmptyPreview() = PreviewShell(Route.ENCYCLOPEDIA) {
 }
 
 internal class DialogStates : PreviewParameterProvider<String> {
-    override val values = sequenceOf("card_seongsan", "post_cheomseongdae", "badge_safe", "ch_cat", "ch_firefly", "car_yellow", "card_gayang")
+    override val values = sequenceOf(
+        "card_seongsan", "card_pangyo", "post_cheomseongdae", "post_cheomseongdae_xmas", "post_coast_gold", "post_cheomseongdae_gold",
+        "badge_safe", "ch_cat", "ch_firefly", "car_yellow", "card_gayang",
+    )
 }
 
 @ScreenPreviews
@@ -492,4 +551,20 @@ private fun ItemDialogPreview(@PreviewParameter(DialogStates::class) id: String)
 private fun CharacterChangedPreview() = PreviewShell(Route.ENCYCLOPEDIA) {
     CollectionPane(collections(Profile()), CollectionKind.CHARACTER, {}, true, true, Profile(selectedCharacterId = "ch_cat"), { ScreenTitle("도감") }, {}) {}
     AppToast(stringResource(R.string.collection_character_changed, Josa.euroRo("냥이")), Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp))
+}
+
+/** 공유 화면의 엽서 판. 그림에는 테두리가 없고 부제에 판 이름이 붙는다. */
+@ScreenPreviews
+@Composable
+private fun RarityPostcardSharePreview() = PreviewShell(Route.ENCYCLOPEDIA) {
+    ShareQrScreen(ShareKind.POSTCARD, "경주 첨성대", "크리스마스 엽서 · 2025.12.25 방문", R.drawable.myinfo_post_cheomseongdae) {}
+}
+
+/** NEW를 모두 확인한 뒤의 목록. */
+@ScreenPreviews
+@Composable
+private fun AllSeenPreview() = PreviewShell(Route.ENCYCLOPEDIA) {
+    val all = collections(Profile())
+    val seen = Profile(seenIds = all.values.flatten().map { it.id }.toSet())
+    CollectionPane(all, CollectionKind.CARD, {}, true, true, seen, { ScreenTitle("도감") }, {}) {}
 }

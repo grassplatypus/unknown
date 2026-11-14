@@ -41,6 +41,8 @@ data class BalanceConfig(
 
     // 도감 뱃지: 모은 엽서가 이 수에 닿을 때마다 뱃지 하나가 열린다. 작은 수부터 적는다.
     val postcardBadgeSteps: List<Int> = listOf(3, 5, 10),
+    // 도감 NEW 뱃지: 얻은 뒤 이 시간이 지나기 전에 자세히 보지 않은 항목에 붙는다.
+    val newBadgeHours: Int = 36,
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

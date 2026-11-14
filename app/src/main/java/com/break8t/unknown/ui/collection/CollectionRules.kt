@@ -1,7 +1,33 @@
 package com.break8t.unknown.ui.collection
 
+import com.break8t.unknown.R
+import com.break8t.unknown.config.BalanceConfig
+
 /** 내 정보 S-20 묶음 썸네일: 가진 것 가운데 가장 최근에 얻은 것(팀 결정). 없으면 null. */
 fun newestOwned(items: List<Collectible>): Collectible? = items.filter { it.owned }.maxByOrNull { it.recency }
+
+/** 지난 기록은 최근 것이 위에 온다. */
+fun recentFirst(visits: List<Visit>): List<Visit> = visits.sortedByDescending { it.date }
+
+/** NEW 뱃지: 가진 것 가운데 얻은 지 [BalanceConfig.newBadgeHours] 안이고 아직 눌러 보지 않은 것. */
+fun isNew(item: Collectible, seen: Set<String>, now: Long, config: BalanceConfig): Boolean {
+    val at = item.gotAt ?: return false
+    return item.owned && item.id !in seen && now - at in 0 until config.newBadgeHours * 3_600_000L
+}
+
+/** 걸린 시간 문구와 인자. "4시간 10분", "6분 10초", "38분"처럼 큰 단위 둘까지만 쓴다. */
+fun durationText(seconds: Int): Pair<Int, List<Int>> {
+    val h = seconds / 3600
+    val m = seconds % 3600 / 60
+    val s = seconds % 60
+    return when {
+        h > 0 && m > 0 -> R.string.collection_dur_hm to listOf(h, m)
+        h > 0 -> R.string.collection_dur_h to listOf(h)
+        m > 0 && s > 0 -> R.string.collection_dur_ms to listOf(m, s)
+        m > 0 -> R.string.collection_dur_m to listOf(m)
+        else -> R.string.collection_dur_s to listOf(s)
+    }
+}
 
 enum class ListPhase { LOADING, EMPTY, CONTENT }
 
