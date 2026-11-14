@@ -92,6 +92,10 @@ internal fun roadLength(road: RoadRay, p: Projection, w: Int, h: Int): Int {
 
 private const val MAX_ROAD = 4096
 
+/** Cells of [road] a [w] x [h] view of [scene] shows, counted from its start, plus a cell or two past the edge. */
+fun roadCellsInView(road: RoadRay, scene: IsoScene, camera: IsoCamera, w: Float, h: Float): Int =
+    roadLength(road, Projection.framing(scene, camera, w, h, 1f, androidx.compose.ui.geometry.Offset.Zero), w.toInt(), h.toInt())
+
 /** Walls are drawn only where they stand behind the room, so they never hide it; all four from the top. */
 internal fun wallVisible(side: WallSide, p: Projection): Boolean {
     if (p.toCamZ > 0.99f) return true

@@ -23,6 +23,14 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,25 +74,61 @@ private const val TICK_MS = 10_000L
 
 /** 섬 진입점. 입구, 내 섬, 텃밭을 이 안에서 오간다. */
 @Composable
-fun IslandScreen(onOpen: (IslandPlace) -> Unit) {
+fun IslandScreen(onOpen: (IslandPlace) -> Unit, leaving: Boolean = false, onLeft: () -> Unit = {}) {
     val profile by LocalDemoState.current.profile.collectAsState()
     val plots by FarmStore.plots.collectAsState()
     val now = rememberNow()
     var stage by rememberSaveable { mutableStateOf(IslandStage.ENTRANCE) }
+    var trip by rememberSaveable(stateSaver = TripSaver) { mutableStateOf(Trip(TripPhase.PARKED)) }
+    var frameNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    // Frame clock for a drive; the car's place is a pure function of the time since it started.
+    LaunchedEffect(trip) {
+        while (TripRules.driving(trip)) {
+            withFrameMillis { }
+            frameNow = System.currentTimeMillis()
+            trip = TripRules.tick(trip, frameNow)
+        }
+        if (trip.phase == TripPhase.GONE) {
+            stage = IslandStage.ENTRANCE
+            trip = Trip(TripPhase.PARKED)
+            onLeft()
+        }
+    }
+    // The shell only asks to leave while parked; with no car on the island (the entrance) there is nothing to drive.
+    LaunchedEffect(leaving) {
+        if (!leaving) return@LaunchedEffect
+        if (stage == IslandStage.ENTRANCE) trip = Trip(TripPhase.GONE) else {
+            stage = IslandStage.ISLAND
+            trip = TripRules.leave(trip, System.currentTimeMillis(), parked = true)
+        }
+    }
     val night = isNight(profile.islandRealTime, profile.islandNight, hourOf(now))
-    val scene = IslandSceneState(night, SceneFocus.MAIN, plotViews(plots, now), profile.selectedCarId)
+    val drive = CarDrive(trip.phase, TripRules.progress(trip, frameNow))
+    val scene = IslandSceneState(night, SceneFocus.MAIN, plotViews(plots, now), profile.selectedCarId, drive)
     when (stage) {
-        IslandStage.ENTRANCE -> IslandEntrance(scene, profile.coins, onEnter = { stage = IslandStage.ISLAND })
+        IslandStage.ENTRANCE -> IslandEntrance(scene, profile.coins, onEnter = {
+            frameNow = System.currentTimeMillis()
+            trip = TripRules.enter(frameNow)
+            stage = IslandStage.ISLAND
+        })
         IslandStage.ISLAND -> IslandMain(
             scene,
             profile.coins,
             farmReady = scene.plots.any { it.grown },
             onOpen = onOpen,
             onFarm = { stage = IslandStage.FARM },
+            driving = TripRules.driving(trip),
+            onSkip = { trip = TripRules.skip(trip) },
         )
         IslandStage.FARM -> FarmScreen(night, plots, now, profile, onBack = { stage = IslandStage.ISLAND }, onShop = { onOpen(IslandPlace.SHOP) })
     }
 }
+
+/** A drive does not survive the screen being rebuilt (cover, window change): it comes back parked. */
+private val TripSaver = listSaver<Trip, Any>(
+    save = { listOf(it.phase.name, it.startMs) },
+    restore = { Trip(TripPhase.PARKED, it[1] as Long) },
+)
 
 private fun hourOf(epochMs: Long) = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).hour
 
@@ -104,7 +148,7 @@ private fun rememberNow(): Long {
 @Composable
 internal fun IslandEntrance(scene: IslandSceneState, coins: Int, onEnter: () -> Unit) = Box(Modifier.fillMaxSize()) {
     // S-11-a: the car is still on the road in, so the parking space is empty.
-    IslandScene(scene.copy(carId = ""), Modifier.fillMaxSize())
+    IslandScene(scene.copy(drive = null), Modifier.fillMaxSize())
     IslandTopBar(coins, start = { IslandChip(stringResource(R.string.island_entrance_title), selected = true) })
     PrimaryButton(
         stringResource(R.string.island_enter),
@@ -115,7 +159,15 @@ internal fun IslandEntrance(scene: IslandSceneState, coins: Int, onEnter: () -> 
 
 /** S-12-a, S-12-b. 낮밤은 scene.night로 장면이 그린다. */
 @Composable
-internal fun IslandMain(scene: IslandSceneState, coins: Int, farmReady: Boolean, onOpen: (IslandPlace) -> Unit, onFarm: () -> Unit) =
+internal fun IslandMain(
+    scene: IslandSceneState,
+    coins: Int,
+    farmReady: Boolean,
+    onOpen: (IslandPlace) -> Unit,
+    onFarm: () -> Unit,
+    driving: Boolean = false,
+    onSkip: () -> Unit = {},
+) =
     Box(Modifier.fillMaxSize()) {
         val open: (IslandSpot) -> Unit = { spot ->
             when (spot) {
@@ -124,7 +176,7 @@ internal fun IslandMain(scene: IslandSceneState, coins: Int, farmReady: Boolean,
                 IslandSpot.FARM -> onFarm()
             }
         }
-        IslandScene(scene, Modifier.fillMaxSize(), onSpot = open, spotLabel = { spot ->
+        IslandScene(scene, Modifier.fillMaxSize(), onSpot = open, spotLabel = if (driving) null else { spot ->
             val text = when (spot) {
                 IslandSpot.HOUSE -> R.string.island_house
                 IslandSpot.SHOP -> R.string.island_shop
@@ -142,6 +194,14 @@ internal fun IslandMain(scene: IslandSceneState, coins: Int, farmReady: Boolean,
                 IslandChip(stringResource(R.string.island_photo), icon = R.drawable.island_ic_cam, onClick = { onOpen(IslandPlace.PHOTO) })
             },
         )
+        // While the car drives, any tap ends the drive instead of reaching the chips underneath.
+        if (driving) {
+            Box(
+                Modifier.fillMaxSize().pointerInput(Unit) {
+                    awaitEachGesture { awaitFirstDown().consume(); onSkip() }
+                },
+            )
+        }
     }
 
 /** 위쪽 칩 줄. 창이 좁아도 한 줄로 두고, 다 들어가지 않으면 줄 전체를 같은 비율로 줄인다. */

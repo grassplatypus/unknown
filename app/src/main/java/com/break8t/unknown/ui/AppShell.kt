@@ -61,8 +61,15 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
     var shareTitle by rememberSaveable { mutableStateOf("") }
     var shareSubtitle by rememberSaveable { mutableStateOf("") }
     var shareImage by rememberSaveable { mutableStateOf<Int?>(null) }
+    // 섬에서 다른 메뉴로 갈 때 차가 길로 나간 뒤에 옮긴다. P가 아니면 기다리지 않는다.
+    var leavingTo by rememberSaveable { mutableStateOf<Route?>(null) }
+    val finishLeave = { leavingTo?.let { route = it; sub = null; shareKind = null }; leavingTo = null }
+    LaunchedEffect(mode) { if (!mode.isParked) finishLeave() }
     val nav = Nav(
-        go = { route = it; sub = null; shareKind = null },
+        go = {
+            if (route == Route.ISLAND && it != Route.ISLAND && mode.isParked && shareKind == null) { sub = null; leavingTo = it }
+            else { route = it; sub = null; shareKind = null; leavingTo = null }
+        },
         open = { route = Route.ISLAND; sub = it },
         back = { sub = null },
         signOut = onSignOut,
@@ -72,6 +79,8 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
             shareSubtitle = subtitle
             shareImage = image
         },
+        leaving = leavingTo != null,
+        left = finishLeave,
     )
     Row(Modifier.fillMaxSize().background(AppColors.Background)) {
         SideRail(current = route, onSelect = nav.go)
@@ -97,6 +106,8 @@ private class Nav(
     val back: () -> Unit,
     val signOut: () -> Unit,
     val share: ShareHandler,
+    val leaving: Boolean,
+    val left: () -> Unit,
 )
 
 @Composable
@@ -117,7 +128,7 @@ private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav) 
                 IslandPlace.HOUSE -> nav.open(IslandSub.HOUSE)
                 IslandPlace.PHOTO -> nav.open(IslandSub.PHOTO_ISLAND)
             }
-        })
+        }, leaving = nav.leaving, onLeft = nav.left)
         route == Route.MY_INFO -> MyInfoScreen(onShare = nav.share)
         route == Route.ENCYCLOPEDIA -> EncyclopediaScreen(onShare = nav.share, onOpenFieldDrop = { nav.go(Route.FIELD_DROP) })
         route == Route.HOME -> HomeScreen(mode, nav.go)

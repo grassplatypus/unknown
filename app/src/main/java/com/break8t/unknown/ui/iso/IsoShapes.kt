@@ -255,12 +255,12 @@ object IsoShapes {
     ))
 
     /** 16 x 8 x 8, facing +x. */
-    fun car(body: Color): IsoShape = IsoShape(2, 1, listOf(
+    fun car(body: Color, lit: Boolean = false): IsoShape = IsoShape(2, 1, listOf(
         c(2, 0, 0, 3, 1, 2, P.Tire), c(11, 0, 0, 3, 1, 2, P.Tire), c(2, 7, 0, 3, 1, 2, P.Tire), c(11, 7, 0, 3, 1, 2, P.Tire),
         c(0, 1, 1, 16, 6, 3, body),
         c(4, 1, 4, 8, 6, 3, P.Glass), c(4, 1, 4, 1, 6, 3, body), c(8, 1, 4, 1, 6, 3, body), c(11, 1, 4, 1, 6, 3, body),
         c(4, 1, 7, 8, 6, 1, body),
-        c(15, 1, 2, 1, 1, 1, P.Cream, P.Light), c(15, 6, 2, 1, 1, 1, P.Cream, P.Light),
+        c(15, 1, 2, 1, 1, 1, if (lit) P.Light else P.Cream, P.Light), c(15, 6, 2, 1, 1, 1, if (lit) P.Light else P.Cream, P.Light),
         c(15, 2, 1, 1, 4, 1, P.StoneC), c(0, 1, 2, 1, 1, 1, P.Red), c(0, 6, 2, 1, 1, 1, P.Red),
     ))
 
@@ -327,6 +327,10 @@ object IsoShapes {
     }
 
     private val cars = mapOf("car_red" to car(P.Red), "car_blue" to car(P.Blue), "car_yellow" to car(P.Yellow))
+    private val litCars = mapOf("car_red" to car(P.Red, true), "car_blue" to car(P.Blue, true), "car_yellow" to car(P.Yellow, true))
+
+    /** The car [id] with its headlights on (the night glow), for a car that is driving. */
+    fun litCar(id: String): IsoShape? = litCars[id] ?: litCars["car_red"].takeIf { id == "car" }
 
     /** Shape for a catalog or island id, or null for ids this library does not know. */
     fun of(id: String): IsoShape? = when (id) {

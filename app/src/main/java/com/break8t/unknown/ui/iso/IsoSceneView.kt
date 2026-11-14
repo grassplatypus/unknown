@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.listSaver
@@ -51,6 +52,7 @@ import com.break8t.unknown.ui.components.PixelBusy
 import com.break8t.unknown.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.withContext
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -242,14 +244,20 @@ private fun SceneCanvas(
     val previewFrame = if (inPreview && bw > 0 && bh > 0) {
         remember(scene, camera, night, selected, ghost, bw, bh) { render(scene, camera, bw, bh, night, selected, ghost, window) }
     } else null
-    val produced by produceState<Rendered?>(null, scene, camera, night, selected, ghost, bw, bh, window) {
-        if (inPreview || bw <= 0 || bh <= 0) return@produceState
-        val prev = value
-        if (prev != null && prev.window != window && prev.same(scene, camera, night, selected, ghost)) delay(WINDOW_SETTLE_MS)
-        val r = withContext(Dispatchers.Default) { render(scene, camera, bw, bh, night, selected, ghost, window) }
-        value = r
-        state.lastRenderMs = r.ms
-        Log.d(LOG_TAG, "render ${r.frame.w}x${r.frame.h} of ${bw}x$bh, ${scene.objects.size} objects, ${r.ms} ms")
+    // One render at a time, always of the newest inputs: a scene that changes every frame (the driving car)
+    // still gets drawn, where restarting on each change would cancel every render before it finished.
+    val inputs = rememberUpdatedState(RenderInput(scene, camera, night, selected, ghost, bw, bh, window))
+    val produced by produceState<Rendered?>(null, inPreview) {
+        if (inPreview) return@produceState
+        snapshotFlow { inputs.value }.conflate().collect { i ->
+            if (i.bw <= 0 || i.bh <= 0) return@collect
+            val prev = value
+            if (prev != null && prev.window != i.window && prev.same(i.scene, i.camera, i.night, i.selected, i.ghost)) delay(WINDOW_SETTLE_MS)
+            val r = withContext(Dispatchers.Default) { render(i.scene, i.camera, i.bw, i.bh, i.night, i.selected, i.ghost, i.window) }
+            value = r
+            state.lastRenderMs = r.ms
+            Log.d(LOG_TAG, "render ${r.frame.w}x${r.frame.h} of ${i.bw}x${i.bh}, ${i.scene.objects.size} objects, ${r.ms} ms")
+        }
     }
     val rendered = previewFrame ?: produced
     val live = rememberUpdatedState(Live(scene, rendered, editMode && camera.pitch >= EDIT_MIN_PITCH, onTap, canPlace, onPlace))
@@ -279,6 +287,11 @@ private fun SceneCanvas(
         }
     }
 }
+
+private data class RenderInput(
+    val scene: IsoScene, val camera: IsoCamera, val night: Boolean, val selected: String?, val ghost: Ghost?,
+    val bw: Int, val bh: Int, val window: Window,
+)
 
 private class Rendered(
     val frame: IsoFrame, val image: ImageBitmap, val ms: Long, val window: Window,
