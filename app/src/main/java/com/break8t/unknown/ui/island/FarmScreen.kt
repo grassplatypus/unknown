@@ -117,7 +117,7 @@ internal fun FarmScreen(night: Boolean, plots: List<Plot>, now: Long, profile: P
                 val p = plots[i]
                 when {
                     p.isEmpty -> picked = i
-                    p.isGrown(now) -> harvest()
+                    p.isGrown(System.currentTimeMillis()) -> harvest() // the ticker can be seconds old
                     else -> pullAt = i
                 }
             },
@@ -403,9 +403,9 @@ internal fun NoSeedPanel(seedId: String, onShop: () -> Unit, onClose: () -> Unit
 private val previewPlots = demoPlots(PREVIEW_NOW, 3)
 
 @Composable
-private fun FarmPreviewBody(overlay: @Composable (Modifier) -> Unit = {}) = IslandPreviewFrame {
+private fun FarmPreviewBody(at: Alignment = Alignment.Center, overlay: @Composable (Modifier) -> Unit = {}) = IslandPreviewFrame {
     FarmContent(false, previewPlots, PREVIEW_NOW, Profile(), target = 8, seedId = "seed_carrot", {}, {}, {}, {})
-    overlay(Modifier.align(Alignment.Center))
+    overlay(Modifier.align(at))
 }
 
 @Composable
@@ -417,7 +417,7 @@ private fun FarmPreview() = FarmPreviewBody()
 
 @IslandPreviews
 @Composable
-private fun HarvestPreview() = FarmPreviewBody { m -> HarvestToast(Harvest(mapOf("seed_wheat" to 2), 40), m) }
+private fun HarvestPreview() = FarmPreviewBody(Alignment.BottomCenter) { m -> HarvestToast(Harvest(mapOf("seed_wheat" to 2), 40), m) }
 
 @IslandPreviews
 @Composable
