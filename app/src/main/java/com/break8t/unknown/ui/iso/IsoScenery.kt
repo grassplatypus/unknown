@@ -89,6 +89,17 @@ object IsoScenery {
         c(2, 5, 3, 6, 1, 3, P.WoodLight), c(3, 5, 4, 5, 1, 1, P.WoodDark),
     ))
 
+    /** 8 x 8 x 16: outdoor guestbook board, a light board with pinned notes on two posts under a small red roof. */
+    val guestbookBoard = IsoShape(1, 1, listOf(
+        c(0, 3, 0, 1, 2, 14, P.Wood), c(7, 3, 0, 1, 2, 14, P.Wood),
+        c(0, 3, 0, 1, 2, 1, P.WoodDark), c(7, 3, 0, 1, 2, 1, P.WoodDark),
+        c(1, 4, 4, 6, 1, 9, P.WoodDark), c(2, 4, 5, 4, 1, 7, P.WoodLight),
+        // Notes stand one voxel proud of the board so they catch the light from the front.
+        c(2, 5, 8, 2, 1, 3, P.Cream), c(2, 5, 10, 1, 1, 1, P.Red),
+        c(4, 5, 6, 2, 1, 3, P.Shade), c(5, 5, 8, 1, 1, 1, P.Leaf),
+        c(0, 2, 13, 8, 6, 1, P.RoofDark), c(0, 3, 14, 8, 4, 1, P.Roof), c(0, 4, 15, 8, 2, 1, P.Roof),
+    ))
+
     /** 8 x 8 x 9: red mailbox on a post. */
     val mailbox = IsoShape(1, 1, listOf(
         c(3, 3, 0, 2, 2, 6, P.WoodDark),

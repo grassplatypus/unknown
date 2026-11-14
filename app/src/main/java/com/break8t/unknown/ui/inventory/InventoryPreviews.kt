@@ -37,6 +37,8 @@ private fun Inventory(
 // The sample room holds the sofa, a plant and the picture, so only the second plant and the rest show.
 @ScreenPreviews @Composable private fun S18WithRoomPlaced() = Inventory(placed = DefaultLayout)
 @ScreenPreviews @Composable private fun D13Discard() = Inventory(discard = true)
+@ScreenPreviews @Composable private fun OutdoorBoardPlaced() = Inventory(InventoryTab.OUTDOOR)
+@ScreenPreviews @Composable private fun OutdoorBoardStored() = Inventory(InventoryTab.OUTDOOR, Profile(guestbookBoardPlaced = false))
 
 @ScreenPreviews @Composable
 private fun T07Discarded() = Inventory(toast = stringResource(R.string.inventory_toast_discarded, "러그", 3))

@@ -38,6 +38,10 @@ data class Profile(
     val islandLevel: Int = 0,
     // 지금 집 한 변의 칸 수. 코인으로 BalanceConfig.houseGridSteps 단계까지 넓힌다
     val houseGridSize: Int = BalanceConfig.DEFAULT.houseGridSize,
+    // 게시판(deco_board)이 섬에 있는지. 보관함에 넣으면 방명록이 꺼진다
+    val guestbookBoardPlaced: Boolean = true,
+    // 내 섬에 마지막으로 들어온 시각(ms). null이면 견본의 지난 방문 시각을 쓴다
+    val guestbookLastVisitMs: Long? = null,
 )
 
 class DemoState(initial: Profile = Profile()) {

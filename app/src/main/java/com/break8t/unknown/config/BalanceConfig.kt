@@ -53,6 +53,9 @@ data class BalanceConfig(
     // 집 넓히기: houseGridSize 다음 단계의 칸 수와 그 단계로 가는 코인(같은 순서, 임시)
     val houseGridSteps: List<Int> = listOf(6, 7),
     val houseGridStepPrices: List<Int> = listOf(150, 300),
+
+    // 음성 방명록 한 개의 최대 녹음 길이(초)
+    val guestbookMaxSec: Int = 15,
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

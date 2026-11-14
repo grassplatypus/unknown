@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import com.break8t.unknown.data.LocalDemoState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -230,8 +232,10 @@ fun RoomScene(
     val camera = state.camera.iso
     val house = state.place == ScenePlace.HOUSE
     val stages = state.plots.map { it.seedId to it.grown }
-    val scene = remember(house, state.layout, camera, extra, stages, state.carId, state.islandSize, lockScenery) {
-        val s = if (house) RoomMap.scene(state.layout, config, camera, extra) else IslandMap.scene(state.plots, state.carId, extra, size = state.islandSize)
+    // The island photo shows the guestbook board only while it stands on the island.
+    val board = LocalDemoState.current.profile.collectAsState().value.guestbookBoardPlaced
+    val scene = remember(house, state.layout, camera, extra, stages, state.carId, state.islandSize, lockScenery, board) {
+        val s = if (house) RoomMap.scene(state.layout, config, camera, extra) else IslandMap.scene(state.plots, state.carId, extra, size = state.islandSize, board = board)
         // A friend's island: only the pieces in extra can be picked or dragged; a tap on anything else lands on the floor.
         if (!lockScenery) s else s.copy(objects = s.objects.map { o -> if (extra.any { it.id == o.id }) o else o.copy(pickable = false) })
     }

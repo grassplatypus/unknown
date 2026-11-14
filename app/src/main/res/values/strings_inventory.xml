@@ -16,4 +16,13 @@
     <string name="inventory_cancel">취소</string>
     <string name="inventory_discard_note">버리면 되돌릴 수 없고 코인도 돌려받지 못해요.</string>
     <string name="inventory_toast_discarded">%1$s %2$d개를 버렸어요</string>
+
+    <string name="inventory_tab_outdoor">야외 장식 %1$d</string>
+    <string name="inventory_empty_outdoor">보관함에 야외 장식이 없어요</string>
+    <string name="inventory_place_board">섬에 놓기</string>
+    <string name="inventory_store_board">보관함에 넣기</string>
+    <string name="inventory_board_on_island">섬에 놓여 있어요</string>
+    <string name="inventory_board_in_box">보관함에 있어요. 방명록이 꺼져 있어요.</string>
+    <string name="inventory_toast_board_placed">게시판을 섬에 놓았어요</string>
+    <string name="inventory_toast_board_stored">게시판을 보관함에 넣었어요</string>
 </resources>

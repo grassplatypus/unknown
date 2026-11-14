@@ -40,8 +40,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
+import androidx.compose.ui.unit.Dp
 import com.break8t.unknown.config.Catalog
+import com.break8t.unknown.config.CatalogItem
 import com.break8t.unknown.config.ItemKind
+import com.break8t.unknown.ui.guestbook.withBoard
+import com.break8t.unknown.ui.iso.IsoScenery
+import com.break8t.unknown.ui.iso.IsoThumbnail
 import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.data.Profile
 import com.break8t.unknown.ui.components.AppChip
@@ -83,6 +88,10 @@ fun InventoryScreen(onBack: () -> Unit, onOpenShop: () -> Unit, onPlaceFurniture
             onTab = { tab = it },
             onSelect = { selectedId = it },
             onDiscard = { discardId = it; qty = 1 },
+            onBoard = { placed ->
+                state.update { withBoard(it, placed) }
+                toast = context.getString(if (placed) R.string.inventory_toast_board_placed else R.string.inventory_toast_board_stored)
+            },
         )
         ToastHost(toast) { toast = null }
     }
@@ -113,6 +122,7 @@ internal fun InventoryContent(
     onTab: (InventoryTab) -> Unit,
     onSelect: (String) -> Unit,
     onDiscard: (String) -> Unit,
+    onBoard: (placed: Boolean) -> Unit = {},
 ) {
     val entries = inventoryEntries(profile, tab, placed)
     // After the last one is thrown away the selection falls back to the first tile.
@@ -137,7 +147,7 @@ internal fun InventoryContent(
             }
             val grid = @Composable { m: Modifier -> EntryGrid(entries, selected?.item?.id, onSelect, m) }
             val card = @Composable { m: Modifier ->
-                selected?.let { DetailCard(it, wide, { onDiscard(it.item.id) }, onPlaceFurniture, m) }
+                selected?.let { DetailCard(it, wide, { onDiscard(it.item.id) }, onPlaceFurniture, m, profile.guestbookBoardPlaced, onBoard) }
             }
             if (wide) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Gap)) {
@@ -157,12 +167,20 @@ internal fun InventoryContent(
 private fun tabLabel(tab: InventoryTab) = when (tab) {
     InventoryTab.FURNITURE -> R.string.inventory_tab_furniture
     InventoryTab.SEED -> R.string.inventory_tab_seed
+    InventoryTab.OUTDOOR -> R.string.inventory_tab_outdoor
 }
 
 private fun emptyLabel(tab: InventoryTab) = when (tab) {
     InventoryTab.FURNITURE -> R.string.inventory_empty_furniture
     InventoryTab.SEED -> R.string.inventory_empty_seed
+    InventoryTab.OUTDOOR -> R.string.inventory_empty_outdoor
 }
+
+// ponytail: the board is the only outdoor decoration, so its model is fixed here; map by id when a second one comes.
+@Composable
+private fun EntryImage(item: CatalogItem, size: Dp) =
+    if (item.kind == ItemKind.OUTDOOR) IsoThumbnail(IsoScenery.guestbookBoard, Modifier.size(size))
+    else ItemImage(item.id, item.name, size)
 
 @Composable
 private fun EntryGrid(entries: List<InventoryEntry>, selectedId: String?, onSelect: (String) -> Unit, modifier: Modifier) {
@@ -185,7 +203,7 @@ private fun EntryGrid(entries: List<InventoryEntry>, selectedId: String?, onSele
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Box(Modifier.fillMaxWidth().height(135.dp).clip(BoxShape).background(AppColors.Accent), Alignment.Center) {
-                    ItemImage(entry.item.id, entry.item.name, 120.dp)
+                    EntryImage(entry.item, 120.dp)
                 }
                 Text(entry.item.name, color = AppColors.Text, fontSize = 34.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(stringResource(R.string.inventory_count, entry.count), color = AppColors.TextSub, fontSize = 29.sp)
@@ -194,11 +212,35 @@ private fun EntryGrid(entries: List<InventoryEntry>, selectedId: String?, onSele
     }
 }
 
-/** 고른 아이템 카드. 방에 놓기는 가구에만 있다(씨앗은 텃밭에서 심는다). */
+/**
+ * 고른 아이템 카드. 방에 놓기는 가구에만 있다(씨앗은 텃밭에서 심는다).
+ * 야외 장식(게시판)은 버리지 못하고 섬에 놓거나 보관함에 넣기만 한다.
+ */
 @Composable
-private fun DetailCard(entry: InventoryEntry, wide: Boolean, onDiscard: () -> Unit, onPlace: () -> Unit, modifier: Modifier) {
+private fun DetailCard(
+    entry: InventoryEntry,
+    wide: Boolean,
+    onDiscard: () -> Unit,
+    onPlace: () -> Unit,
+    modifier: Modifier,
+    boardPlaced: Boolean,
+    onBoard: (Boolean) -> Unit,
+) {
     val item = entry.item
     val furniture = item.kind == ItemKind.FURNITURE
+    val outdoor = item.kind == ItemKind.OUTDOOR
+    val boardButton = @Composable { m: Modifier ->
+        SecondaryButton(
+            stringResource(if (boardPlaced) R.string.inventory_store_board else R.string.inventory_place_board),
+            { onBoard(!boardPlaced) }, m,
+        )
+    }
+    val boardStatus = @Composable {
+        Text(
+            stringResource(if (boardPlaced) R.string.inventory_board_on_island else R.string.inventory_board_in_box),
+            color = AppColors.Text, fontSize = 31.sp, fontWeight = FontWeight.Bold,
+        )
+    }
     Column(
         modifier
             .clip(TileShape)
@@ -211,22 +253,31 @@ private fun DetailCard(entry: InventoryEntry, wide: Boolean, onDiscard: () -> Un
         val count = @Composable { Text(stringResource(R.string.inventory_count, entry.count), color = AppColors.TextSub, fontSize = 31.sp) }
         if (wide) {
             Box(Modifier.fillMaxWidth().height(260.dp).clip(BoxShape).background(AppColors.Accent), Alignment.Center) {
-                ItemImage(item.id, item.name, 208.dp)
+                EntryImage(item, 208.dp)
             }
             name()
             count()
-            if (furniture) SecondaryButton(stringResource(R.string.inventory_place), onPlace, Modifier.fillMaxWidth().padding(top = 26.dp))
-            DangerButton(stringResource(R.string.inventory_discard), onDiscard, Modifier.fillMaxWidth())
+            if (outdoor) {
+                boardStatus()
+                boardButton(Modifier.fillMaxWidth().padding(top = 26.dp))
+            } else {
+                if (furniture) SecondaryButton(stringResource(R.string.inventory_place), onPlace, Modifier.fillMaxWidth().padding(top = 26.dp))
+                DangerButton(stringResource(R.string.inventory_discard), onDiscard, Modifier.fillMaxWidth())
+            }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(26.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(130.dp).clip(BoxShape).background(AppColors.Accent), Alignment.Center) {
-                    ItemImage(item.id, item.name, 110.dp)
+                    EntryImage(item, 110.dp)
                 }
-                Column { name(); count() }
+                Column { name(); if (outdoor) boardStatus() else count() }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
-                if (furniture) SecondaryButton(stringResource(R.string.inventory_place), onPlace, Modifier.weight(1f))
-                DangerButton(stringResource(R.string.inventory_discard), onDiscard, Modifier.weight(1f))
+                if (outdoor) {
+                    boardButton(Modifier.weight(1f))
+                } else {
+                    if (furniture) SecondaryButton(stringResource(R.string.inventory_place), onPlace, Modifier.weight(1f))
+                    DangerButton(stringResource(R.string.inventory_discard), onDiscard, Modifier.weight(1f))
+                }
             }
         }
     }

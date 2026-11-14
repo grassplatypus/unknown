@@ -61,6 +61,7 @@ data class IslandSceneState(
     val carId: String,
     val drive: CarDrive? = CarDrive(TripPhase.PARKED, 1f),
     val islandSize: Int = IslandMap.SIZE,
+    val board: Boolean = true,
 )
 
 /** Where the car is in its trip; null means no car on the island (the entrance, S-11-a). */
@@ -132,9 +133,20 @@ object IslandMap {
     fun farY(camera: IsoCamera, w: Float, h: Float, size: Int = SIZE): Float =
         size + roadCellsInView(road(size), IsoScene(size, size, frame = frame(size)), camera, w, h).toFloat()
 
+    /** Id of the guestbook board in the scene; a tap on it opens the guestbook. */
+    const val BOARD_ID = "board"
+
+    /** Grass beside the road, clear of the house, the stall, the farm and the road (S-12-a). */
+    private const val BOARD_X = 3
+    private const val BOARD_Y = 5
+
+    /** The world point the board's chip stands on: above its roof, touching the chip's bottom edge. */
+    val BOARD_ANCHOR = floatArrayOf(BOARD_X + 0.5f, BOARD_Y + 0.5f, 2.4f)
+
+    /** [board] false leaves the guestbook board out, as when it is put away in the inventory. */
     fun scene(
         plots: List<PlotView>, carId: String, extra: List<IsoObject> = emptyList(),
-        car: CarPose? = CarPose(PARK_Y, 3), carLit: Boolean = false, size: Int = SIZE,
+        car: CarPose? = CarPose(PARK_Y, 3), carLit: Boolean = false, size: Int = SIZE, board: Boolean = true,
     ): IsoScene {
         val n = sqrt(plots.size.toDouble()).roundToInt().coerceAtLeast(1)
         val farm = plots.mapIndexed { k, v ->
@@ -149,6 +161,8 @@ object IslandMap {
             o("parking", IsoScenery.parking, ROAD_X, 1),
         ) + listOfNotNull(
             car?.let { carObject(carId, it, carLit) },
+            // Turned so the notes face the road, where visitors arrive.
+            if (board) o(BOARD_ID, IsoScenery.guestbookBoard, BOARD_X, BOARD_Y, rot = 3, pick = true) else null,
         ) + listOf(
             o("mailbox", IsoScenery.mailbox, 3, 3),
             o("bigtree", IsoScenery.bigTree, 0, 3),
@@ -286,13 +300,15 @@ fun IslandScene(
     plotOverlay: @Composable BoxScope.(Int) -> Unit = {},
     onSpot: (IslandSpot) -> Unit = {},
     spotLabel: (@Composable (IslandSpot) -> Unit)? = null,
+    onBoard: () -> Unit = {},
+    boardLabel: (@Composable () -> Unit)? = null,
 ) {
     val farm = state.focus == SceneFocus.FARM
     // Keyed on what is drawn, not on progress, so the 10 s clock does not re-render the island.
     val stages = state.plots.map { it.seedId to plotStage(it) }
     val size = state.islandSize
-    val base = remember(farm, stages, state.carId, size) {
-        if (farm) IslandMap.farmScene(state.plots) else IslandMap.scene(state.plots, state.carId, car = null, size = size)
+    val base = remember(farm, stages, state.carId, size, state.board) {
+        if (farm) IslandMap.farmScene(state.plots) else IslandMap.scene(state.plots, state.carId, car = null, size = size, board = state.board)
     }
     val view = rememberIsoViewState(night = state.night)
     SideEffect { view.night = state.night }
@@ -313,6 +329,7 @@ fun IslandScene(
             matchVoxels = farm,
             onTap = { hit ->
                 if (farm) IslandMap.plotAt(hit, count, farmView = true)?.let(onPlot)
+                else if (hit is IsoHit.Item && hit.id == IslandMap.BOARD_ID) onBoard()
                 else IslandMap.spotAt(hit, count)?.let(onSpot)
             },
         ) {
@@ -322,8 +339,12 @@ fun IslandScene(
                     // The box takes the plot's taps: from this steep view a tall plant in front covers the bottom of the cell behind it.
                     Box(Modifier.isoRect(r[0], r[1], r[2], r[3]).clickable(role = Role.Button) { onPlot(k) }) { plotOverlay(k) }
                 }
-            } else if (spotLabel != null) {
-                for (spot in IslandSpot.entries) SpotAnchor(spot) { spotLabel(spot) }
+            } else {
+                if (spotLabel != null) for (spot in IslandSpot.entries) SpotAnchor(spot) { spotLabel(spot) }
+                if (boardLabel != null && state.board) {
+                    val p = IslandMap.BOARD_ANCHOR
+                    Box(Modifier.isoAnchor(p[0], p[1], p[2], Alignment.BottomCenter)) { boardLabel() }
+                }
             }
         }
     }
