@@ -61,6 +61,8 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
     var shareTitle by rememberSaveable { mutableStateOf("") }
     var shareSubtitle by rememberSaveable { mutableStateOf("") }
     var shareImage by rememberSaveable { mutableStateOf<Int?>(null) }
+    // 보관함의 방에 놓기로 집에 들어왔는지. 사진 찍기에 다녀와도 유지하고, 섬에서 집으로 들어오면 지운다
+    var houseFromInventory by rememberSaveable { mutableStateOf(false) }
     // 섬은 진입 상태를 기억하지 않는다. 떠나거나 주행 덮개가 덮으면 다음에 입구부터 다시 들어온다.
     val islandKey = "${Route.ISLAND.name}/null"
     val nav = Nav(
@@ -95,7 +97,9 @@ fun AppShell(mode: DriveMode, onSignOut: () -> Unit = {}) {
             } else {
                 val kind = shareKind
                 if (kind != null) ShareQrScreen(kind, shareTitle, shareSubtitle, shareImage, onClose = { shareKind = null })
-                else holder.SaveableStateProvider("${route.name}/${sub?.name}") { ScreenFor(route, sub, mode, nav) }
+                else holder.SaveableStateProvider("${route.name}/${sub?.name}") {
+                    ScreenFor(route, sub, mode, nav, houseFromInventory) { houseFromInventory = it }
+                }
             }
         }
     }
@@ -110,21 +114,32 @@ private class Nav(
 )
 
 @Composable
-private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav) {
+private fun ScreenFor(route: Route, sub: IslandSub?, mode: DriveMode, nav: Nav, fromInventory: Boolean, setFromInventory: (Boolean) -> Unit) {
     when {
         route == Route.ISLAND && sub == IslandSub.SHOP ->
             ShopScreen(onBack = nav.back, onOpenInventory = { nav.open(IslandSub.INVENTORY) })
         route == Route.ISLAND && sub == IslandSub.INVENTORY ->
-            InventoryScreen(onBack = nav.back, onOpenShop = { nav.open(IslandSub.SHOP) }, onPlaceFurniture = { nav.open(IslandSub.HOUSE) })
+            InventoryScreen(onBack = nav.back, onOpenShop = { nav.open(IslandSub.SHOP) }, onPlaceFurniture = {
+                setFromInventory(true)
+                nav.open(IslandSub.HOUSE)
+            })
         route == Route.ISLAND && sub == IslandSub.HOUSE ->
-            HouseScreen(onBack = nav.back, onOpenInventory = { nav.open(IslandSub.INVENTORY) }, onTakePhoto = { nav.open(IslandSub.PHOTO_HOUSE) })
+            HouseScreen(
+                onBack = if (fromInventory) { { nav.open(IslandSub.INVENTORY) } } else nav.back,
+                onOpenInventory = { nav.open(IslandSub.INVENTORY) },
+                onTakePhoto = { nav.open(IslandSub.PHOTO_HOUSE) },
+                backToInventory = fromInventory,
+            )
         route == Route.ISLAND && sub == IslandSub.PHOTO_ISLAND -> PhotoScreen(inHouse = false, onClose = nav.back)
         route == Route.ISLAND && sub == IslandSub.PHOTO_HOUSE -> PhotoScreen(inHouse = true, onClose = { nav.open(IslandSub.HOUSE) })
         route == Route.ISLAND -> IslandScreen(onOpen = { place ->
             when (place) {
                 IslandPlace.SHOP -> nav.open(IslandSub.SHOP)
                 IslandPlace.INVENTORY -> nav.open(IslandSub.INVENTORY)
-                IslandPlace.HOUSE -> nav.open(IslandSub.HOUSE)
+                IslandPlace.HOUSE -> {
+                    setFromInventory(false)
+                    nav.open(IslandSub.HOUSE)
+                }
                 IslandPlace.PHOTO -> nav.open(IslandSub.PHOTO_ISLAND)
             }
         })

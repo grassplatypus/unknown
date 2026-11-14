@@ -26,4 +26,17 @@
     <string name="house_exit_discard">저장 안 함</string>
     <string name="house_reset_title">배치를 초기화할까요?</string>
     <string name="house_reset_body">방에 놓은 가구가 모두 보관함으로 돌아가요.</string>
+
+    <string name="house_to_inventory">보관함으로</string>
+    <string name="house_raise">위로 올리기</string>
+    <string name="house_lower">아래로 내리기</string>
+    <string name="house_no_row">더 옮길 자리가 없어요</string>
+
+    <string name="house_expand">넓히기</string>
+    <string name="house_expand_title">집을 넓힐까요?</string>
+    <string name="house_expand_body">코인 %1$d개로 집을 %2$d×%2$d칸에서 %3$d×%3$d칸으로 넓혀요. 놓아 둔 가구는 그대로 있어요.</string>
+    <string name="house_expand_short_title">코인이 모자라요</string>
+    <string name="house_expand_short_body">집을 넓히려면 코인 %1$d개가 필요해요. 지금은 %2$d개 있어요.</string>
+    <string name="house_expand_ok">확인</string>
+    <string name="house_expand_done">집이 %1$d×%1$d칸으로 넓어졌어요</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.break8t.unknown.data
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.break8t.unknown.config.BalanceConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -31,6 +32,8 @@ data class Profile(
         "ch_sprout", "ch_cat", "ch_mush", "ch_cloud", "car_red", "car_blue",
         "voice_default", "pose_wave", "pose_sit", "pose_back",
     ),
+    // 지금 집 한 변의 칸 수. 코인으로 BalanceConfig.houseGridSteps 단계까지 넓힌다
+    val houseGridSize: Int = BalanceConfig.DEFAULT.houseGridSize,
 )
 
 class DemoState(initial: Profile = Profile()) {

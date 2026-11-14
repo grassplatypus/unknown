@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -78,6 +79,7 @@ internal fun SquareIconButton(
     modifier: Modifier = Modifier,
     size: Dp = 109.dp,
     iconSize: Dp = 52.dp,
+    iconRotation: Float = 0f,
 ) {
     Box(
         modifier
@@ -88,7 +90,7 @@ internal fun SquareIconButton(
             .clickable(role = Role.Button, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(painterResource(icon), label, Modifier.size(iconSize), tint = AppColors.Text)
+        Icon(painterResource(icon), label, Modifier.size(iconSize).rotate(iconRotation), tint = AppColors.Text)
     }
 }
 

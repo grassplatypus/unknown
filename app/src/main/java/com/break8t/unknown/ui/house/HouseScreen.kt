@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -33,6 +35,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -42,7 +47,9 @@ import com.break8t.unknown.R
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.config.Catalog
 import com.break8t.unknown.config.ItemKind
+import com.break8t.unknown.data.DemoState
 import com.break8t.unknown.data.LocalDemoState
+import com.break8t.unknown.data.Profile
 import com.break8t.unknown.ui.components.AppCard
 import com.break8t.unknown.ui.components.AppChip
 import com.break8t.unknown.ui.components.AppDialog
@@ -55,6 +62,7 @@ import com.break8t.unknown.ui.iso.IsoShapes
 import com.break8t.unknown.ui.iso.IsoThumbnail
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.runtime.CompositionLocalProvider
 
 /** 저장한 배치. Profile에 자리가 없어서 DemoStore처럼 프로세스에 하나만 둔다(시연용). */
 object HouseStore {
@@ -63,10 +71,13 @@ object HouseStore {
 
 enum class StorageTab { ALL, FLOOR, WALL }
 
-/** 집 안(S-14)과 집 꾸미기(S-15). 꾸미는 중인 배치는 저장하기 전까지 HouseStore에 쓰지 않는다. */
+/**
+ * 집 안(S-14)과 집 꾸미기(S-15). 꾸미는 중인 배치는 저장하기 전까지 HouseStore에 쓰지 않는다.
+ * @param backToInventory 보관함의 방에 놓기로 들어왔으면 true. 뒤로 칩이 "보관함으로"가 된다.
+ */
 @Composable
-fun HouseScreen(onBack: () -> Unit, onOpenInventory: () -> Unit, onTakePhoto: () -> Unit) =
-    HouseScreenImpl(onBack, onOpenInventory, onTakePhoto)
+fun HouseScreen(onBack: () -> Unit, onOpenInventory: () -> Unit, onTakePhoto: () -> Unit, backToInventory: Boolean = false) =
+    HouseScreenImpl(onBack, onOpenInventory, onTakePhoto, backToInventory)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -74,12 +85,17 @@ internal fun HouseScreenImpl(
     onBack: () -> Unit,
     onOpenInventory: () -> Unit,
     onTakePhoto: () -> Unit,
+    backToInventory: Boolean = false,
     startDraft: List<Placed>? = null,
     startSelected: Int = -1,
     startToast: String? = null,
+    startAskExpand: Boolean = false,
     config: BalanceConfig = BalanceConfig.DEFAULT,
 ) {
-    val profile by LocalDemoState.current.profile.collectAsState()
+    val demo = LocalDemoState.current
+    val profile by demo.profile.collectAsState()
+    // Every placement rule reads the grid from the config, so the bought size goes in here once.
+    val cfg = config.copy(houseGridSize = profile.houseGridSize)
     val storedLayout by HouseStore.layout.collectAsState()
     val saved = trimToOwned(storedLayout, profile.items)
 
@@ -90,12 +106,16 @@ internal fun HouseScreenImpl(
     var tab by rememberSaveable { mutableStateOf(StorageTab.ALL) }
     var askExit by rememberSaveable { mutableStateOf(false) }
     var askReset by rememberSaveable { mutableStateOf(false) }
+    var askExpand by rememberSaveable { mutableStateOf(startAskExpand) }
     var toast by remember { mutableStateOf(startToast) }
     val view = rememberIsoViewState()
     remember(view) { if (startSelected >= 0) view.selectedId = RoomMap.idOf(startSelected) }
+    // A zoom or pan kept from another window size could leave the room half off screen, so start framed.
+    LaunchedEffect(view) { view.resetView() }
 
     val noSpace = stringResource(R.string.house_no_space)
     val noTurn = stringResource(R.string.house_no_turn)
+    val noRow = stringResource(R.string.house_no_row)
     val resetDone = stringResource(R.string.house_reset_done)
 
     fun setDraft(l: List<Placed>?) { draftCodes = l?.let(::encode) }
@@ -118,20 +138,74 @@ internal fun HouseScreenImpl(
     }
     BackHandler(enabled = draft != null) { tryExit() }
 
-    // S-14: the pixel backdrop fills the whole screen, behind the chips and the tray too.
+    // The room is drawn under the chips and the tray and framed in the space between them (item 1 of the 11/15 feedback).
+    val density = LocalDensity.current
+    var chipsPx by remember { mutableIntStateOf(0) }
+    var trayPx by remember { mutableIntStateOf(0) }
+    val insets = with(density) {
+        PaddingValues(
+            start = ScreenPad, end = ScreenPad, top = ScreenPad + chipsPx.toDp() + ChipGap,
+            bottom = ScreenPad + if (draft != null) trayPx.toDp() + ChipGap else 0.dp,
+        )
+    }
+    val next = nextExpansion(profile.houseGridSize, config)
     Box(Modifier.fillMaxSize().background(HouseBg)) {
-        PixelNoise(Modifier.fillMaxSize())
+        RoomScene(
+            RoomSceneState(ScenePlace.HOUSE, draft ?: saved, selected = if (draft != null) selected else -1),
+            Modifier.fillMaxSize(),
+            cfg,
+            view,
+            backdrop = false,
+            editMode = draft != null,
+            onSelect = { if (draft != null) selected = it },
+            canPlace = { pl -> draft != null && placeAt(draft, RoomMap.indexOf(pl.id), pl, cfg) != null },
+            onPlace = { pl ->
+                val current = draftCodes?.let(::decode)
+                val i = RoomMap.indexOf(pl.id)
+                current?.let { placeAt(it, i, pl, cfg) }?.let { setDraft(it); select(i) }
+            },
+            frameInsets = insets,
+        ) {
+            // Under the selected piece, as in S-15-a; the engine projects its front corner.
+            draft?.getOrNull(selected)?.takeIf { showPieceButtons(selected, view.dragging) }?.let { p ->
+                val (x, y, z) = RoomMap.buttonAnchor(p, cfg)
+                Row(
+                    Modifier.isoAnchor(x, y, z, Alignment.TopCenter).padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (specOf(p.itemId).onWall) {
+                        // house_ic_back points left; a quarter turn either way makes the up and down arrows.
+                        SquareIconButton(R.drawable.house_ic_back, stringResource(R.string.house_raise), {
+                            shiftRowInRoom(draft, selected, 1, cfg)?.let(::setDraft) ?: run { toast = noRow }
+                        }, iconRotation = 90f)
+                        SquareIconButton(R.drawable.house_ic_back, stringResource(R.string.house_lower), {
+                            shiftRowInRoom(draft, selected, -1, cfg)?.let(::setDraft) ?: run { toast = noRow }
+                        }, iconRotation = -90f)
+                    } else {
+                        SquareIconButton(R.drawable.house_ic_turn, stringResource(R.string.house_turn), {
+                            rotateInRoom(draft, selected, cfg)?.let(::setDraft) ?: run { toast = noTurn }
+                        })
+                    }
+                    SquareIconButton(R.drawable.house_ic_box, stringResource(R.string.house_put_away), {
+                        setDraft(storeBack(draft, selected))
+                        select(-1)
+                    })
+                }
+            }
+        }
         Column(Modifier.fillMaxSize().padding(ScreenPad), verticalArrangement = Arrangement.spacedBy(ChipGap)) {
             FlowRow(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().onSizeChanged { chipsPx = it.height },
                 horizontalArrangement = Arrangement.spacedBy(ChipGap),
                 verticalArrangement = Arrangement.spacedBy(ChipGap),
             ) {
                 if (draft == null) {
-                    TopChip(stringResource(R.string.house_to_island), onBack, icon = R.drawable.house_ic_back)
+                    val back = if (backToInventory) R.string.house_to_inventory else R.string.house_to_island
+                    TopChip(stringResource(back), onBack, icon = R.drawable.house_ic_back)
                     ScreenTitle(stringResource(R.string.house_title))
                     Spacer(Modifier.weight(1f))
                     TopChip(stringResource(R.string.house_take_photo), onTakePhoto, icon = R.drawable.house_ic_cam)
+                    if (next != null) TopChip(stringResource(R.string.house_expand), { askExpand = true })
                     TopChip(stringResource(R.string.house_decorate), { setDraft(saved) })
                 } else {
                     TopChip(stringResource(R.string.house_exit), ::tryExit, icon = R.drawable.house_ic_back)
@@ -141,48 +215,16 @@ internal fun HouseScreenImpl(
                     TopChip(stringResource(R.string.house_save), { finish(save = true) })
                 }
             }
-            if (draft == null) {
-                RoomScene(RoomSceneState(ScenePlace.HOUSE, saved), Modifier.weight(1f).fillMaxWidth(), config, view, backdrop = false)
-            } else {
-                RoomScene(
-                    RoomSceneState(ScenePlace.HOUSE, draft, selected = selected),
-                    Modifier.weight(1f).fillMaxWidth(),
-                    config,
-                    view,
-                    backdrop = false,
-                    editMode = true,
-                    onSelect = { selected = it },
-                    canPlace = { pl -> placeAt(draft, RoomMap.indexOf(pl.id), pl, config) != null },
-                    onPlace = { pl ->
-                        val current = draftCodes?.let(::decode)
-                        val i = RoomMap.indexOf(pl.id)
-                        current?.let { placeAt(it, i, pl, config) }?.let { setDraft(it); select(i) }
-                    },
-                ) {
-                    // Under the selected piece, as in S-15-a; the engine projects its front corner.
-                    draft.getOrNull(selected)?.takeIf { showPieceButtons(selected, view.dragging) }?.let { p ->
-                        val (x, y, z) = RoomMap.buttonAnchor(p, config)
-                        Row(
-                            Modifier.isoAnchor(x, y, z, Alignment.TopCenter).padding(top = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            if (!specOf(p.itemId).onWall) {
-                                SquareIconButton(R.drawable.house_ic_turn, stringResource(R.string.house_turn), {
-                                    rotateInRoom(draft, selected, config)?.let(::setDraft) ?: run { toast = noTurn }
-                                })
-                            }
-                            SquareIconButton(R.drawable.house_ic_box, stringResource(R.string.house_put_away), {
-                                setDraft(storeBack(draft, selected))
-                                select(-1)
-                            })
+            Spacer(Modifier.weight(1f))
+            if (draft != null) {
+                // The empty pointerInput keeps touches on the tray from reaching the room underneath.
+                Box(Modifier.onSizeChanged { trayPx = it.height }.pointerInput(Unit) {}) {
+                    StorageCard(profile.items, draft, tab, { tab = it }) { id ->
+                        val placed = placeNewInRoom(draft, id, cfg)
+                        if (placed == null) toast = noSpace else {
+                            setDraft(placed)
+                            select(placed.lastIndex)
                         }
-                    }
-                }
-                StorageCard(profile.items, draft, tab, { tab = it }) { id ->
-                    val placed = placeNewInRoom(draft, id, config)
-                    if (placed == null) toast = noSpace else {
-                        setDraft(placed)
-                        select(placed.lastIndex)
                     }
                 }
             }
@@ -215,7 +257,34 @@ internal fun HouseScreenImpl(
             onDismiss = { askReset = false },
         )
     }
+    if (askExpand && next != null) {
+        val text = expandDialogText(profile, next)
+        val done = stringResource(R.string.house_expand_done, next.size)
+        AppDialog(text.title, text.body, text.confirm, onConfirm = {
+            askExpand = false
+            if (expandHouse(demo, config) == ExpandResult.DONE) toast = done
+        }, onDismiss = { askExpand = false })
+    }
 }
+
+private class DialogText(val title: String, val body: String, val confirm: String)
+
+/** 확인 창 문구. 코인이 모자라면 얼마나 필요한지 알리고 확인만 받는다. */
+@Composable
+private fun expandDialogText(profile: Profile, next: Expansion): DialogText =
+    if (profile.coins >= next.price) {
+        DialogText(
+            stringResource(R.string.house_expand_title),
+            stringResource(R.string.house_expand_body, next.price, profile.houseGridSize, next.size),
+            stringResource(R.string.house_expand),
+        )
+    } else {
+        DialogText(
+            stringResource(R.string.house_expand_short_title),
+            stringResource(R.string.house_expand_short_body, next.price, profile.coins),
+            stringResource(R.string.house_expand_ok),
+        )
+    }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -276,13 +345,33 @@ private fun StorageTile(id: String, name: String, count: Int, onClick: (() -> Un
     }
 }
 
+/** 미리보기용 사용자 상태. 넓힌 집과 코인이 모자란 경우를 보인다. */
+@Composable
+private fun WithProfile(profile: Profile, content: @Composable () -> Unit) =
+    CompositionLocalProvider(LocalDemoState provides remember { DemoState(profile) }, content = content)
+
 @WindowPreviews
 @Composable
 private fun HouseViewPreview() = PreviewFrame { HouseScreenImpl({}, {}, {}) }
 
 @WindowPreviews
 @Composable
+private fun HouseFromInventoryPreview() = PreviewFrame { HouseScreenImpl({}, {}, {}, backToInventory = true) }
+
+@WindowPreviews
+@Composable
+private fun HouseExpandedPreview() = PreviewFrame {
+    val done = stringResource(R.string.house_expand_done, 7)
+    WithProfile(Profile(houseGridSize = 7)) { HouseScreenImpl({}, {}, {}, startToast = done) }
+}
+
+@WindowPreviews
+@Composable
 private fun DecorateSelectedPreview() = PreviewFrame { HouseScreenImpl({}, {}, {}, startDraft = DefaultLayout, startSelected = 0) }
+
+@WindowPreviews
+@Composable
+private fun DecorateWallSelectedPreview() = PreviewFrame { HouseScreenImpl({}, {}, {}, startDraft = DefaultLayout, startSelected = 2) }
 
 @WindowPreviews
 @Composable
@@ -310,6 +399,22 @@ private fun ResetDialogPreview() = PreviewFrame {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         DialogPanel(stringResource(R.string.house_reset_title), stringResource(R.string.house_reset_body), stringResource(R.string.house_reset), {}, {})
     }
+}
+
+@WindowPreviews
+@Composable
+private fun ExpandDialogPreview() = PreviewFrame {
+    val p = Profile()
+    val text = expandDialogText(p, nextExpansion(p.houseGridSize, BalanceConfig.DEFAULT)!!)
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { DialogPanel(text.title, text.body, text.confirm, {}, {}) }
+}
+
+@WindowPreviews
+@Composable
+private fun ExpandShortDialogPreview() = PreviewFrame {
+    val p = Profile(coins = 20)
+    val text = expandDialogText(p, nextExpansion(p.houseGridSize, BalanceConfig.DEFAULT)!!)
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { DialogPanel(text.title, text.body, text.confirm, {}, {}) }
 }
 
 @WindowPreviews

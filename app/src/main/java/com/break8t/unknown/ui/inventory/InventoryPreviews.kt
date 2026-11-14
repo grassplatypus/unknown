@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.break8t.unknown.R
 import com.break8t.unknown.data.Profile
+import com.break8t.unknown.ui.house.DefaultLayout
+import com.break8t.unknown.ui.house.Placed
 import com.break8t.unknown.ui.shop.PreviewFrame
 import com.break8t.unknown.ui.shop.ScreenPreviews
 import com.break8t.unknown.ui.shop.ToastHost
@@ -21,9 +23,10 @@ private fun Inventory(
     profile: Profile = Profile(),
     toast: String? = null,
     discard: Boolean = false,
+    placed: List<Placed> = emptyList(),
 ) = PreviewFrame(if (discard) discardBody else null) {
     Box(Modifier.fillMaxSize()) {
-        InventoryContent(profile, tab, "it_rug", {}, {}, {}, {}, {}, {})
+        InventoryContent(profile, placed, tab, "it_rug", {}, {}, {}, {}, {}, {})
         ToastHost(toast) {}
     }
 }
@@ -31,6 +34,8 @@ private fun Inventory(
 @ScreenPreviews @Composable private fun S18Furniture() = Inventory()
 @ScreenPreviews @Composable private fun S18Seed() = Inventory(InventoryTab.SEED)
 @ScreenPreviews @Composable private fun S18Empty() = Inventory(InventoryTab.SEED, Profile(items = emptyMap()))
+// The sample room holds the sofa, a plant and the picture, so only the second plant and the rest show.
+@ScreenPreviews @Composable private fun S18WithRoomPlaced() = Inventory(placed = DefaultLayout)
 @ScreenPreviews @Composable private fun D13Discard() = Inventory(discard = true)
 
 @ScreenPreviews @Composable

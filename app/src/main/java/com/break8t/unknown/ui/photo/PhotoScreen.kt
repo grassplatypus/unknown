@@ -109,9 +109,13 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
         plots = plotViews(plots, remember { System.currentTimeMillis() }),
         carId = profile.selectedCarId,
     )
-    val grid = if (inHouse) BalanceConfig.DEFAULT.houseGridSize else IslandMap.SIZE
+    // The house photo shows the room at the size the player bought, with the furniture where it stands.
+    val config = BalanceConfig.DEFAULT.copy(houseGridSize = profile.houseGridSize)
+    val grid = if (inHouse) config.houseGridSize else IslandMap.SIZE
     val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, pickable = s.editing) })
     val view = rememberIsoViewState()
+    // Inside the house the view stays where it is framed: dragging the screen does nothing (11/15 feedback).
+    LaunchedEffect(view, inHouse) { if (inHouse) view.resetView() }
     // While the character is being set up it carries the scene's selection frame, as S-16-f shows.
     // Edit mode lets a tap select furniture or nothing, so the frame is put back on the character.
     LaunchedEffect(s.editing) {
@@ -130,6 +134,7 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
             // 카메라 화면과 같은 비율(1144x901)이라 찍을 때 본 구도가 그대로 보인다.
             RoomScene(
                 scene, Modifier.aspectRatio(1144f / 901f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(10.dp)),
+                config = config,
                 extra = extra,
             )
         }
@@ -142,7 +147,9 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
         RoomScene(
             scene,
             Modifier.fillMaxSize(),
+            config = config,
             view = view,
+            fixedView = inHouse,
             editMode = s.editing,
             extra = extra,
             canPlace = { it.id == CHARACTER_ID },
