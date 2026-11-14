@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fielddrop_today">오늘 %1$d / %2$d</string>
+    <string name="fielddrop_ad">광고</string>
+    <string name="fielddrop_my_car">내 차</string>
+    <string name="fielddrop_locate">내 위치로 돌아가기</string>
+    <string name="fielddrop_distance">%1$s · %2$d분</string>
+    <string name="fielddrop_guide">안내하기</string>
+    <string name="fielddrop_guide_cancel">안내 취소</string>
+    <string name="fielddrop_toast_guide">경유지에 넣었어요</string>
+    <string name="fielddrop_toast_cancel">안내를 취소했어요</string>
+    <string name="fielddrop_limit">오늘 버섯 %1$d개를 다 받았어요</string>
+    <string name="fielddrop_gold">금색</string>
+    <string name="fielddrop_blue">파란</string>
+    <string name="fielddrop_open_title">%1$s 버섯을 열었어요</string>
+    <string name="fielddrop_open_body">%1$s에서 준 선물이에요.</string>
+    <string name="fielddrop_coin">코인</string>
+    <string name="fielddrop_qty">x%1$d</string>
+    <string name="fielddrop_receive">받기</string>
+</resources>
