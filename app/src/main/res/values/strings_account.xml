@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- S-01 스플래시 -->
+    <string name="account_safety_label">이용 전 안전 안내</string>
+    <string name="account_safety_title">안전하게 주차한 뒤 이용해 주세요</string>
+    <string name="account_safety_body">운전 중에는 앱을 조작하지 마세요.</string>
+    <string name="account_safety_item1">정체로 잠시 멈췄을 때도 쓸 수 없어요.</string>
+    <string name="account_safety_item2">주행을 시작하면 화면이 자동으로 숨겨져요.</string>
+    <string name="account_loading">입장 준비 중</string>
+    <string name="account_percent">%1$d%%</string>
+
+    <!-- S-02 계정 선택, SC-00 자동 로그인 -->
+    <string name="account_select_title">누가 운전하나요?</string>
+    <string name="account_saved">저장된 계정</string>
+    <string name="account_locked">PIN으로 잠김</string>
+    <string name="account_profiles">프로필 관리</string>
+    <string name="account_auto_login">%1$d초 뒤 %2$s 계정으로 시작해요</string>
+    <string name="account_auto_login_hint">화면을 누르면 멈춰요</string>
+
+    <!-- S-03, S-06, S-07 PIN -->
+    <string name="account_back_select">계정 선택</string>
+    <string name="account_pin_prompt">PIN %1$d자리를 눌러 주세요</string>
+    <string name="account_pin_wrong">PIN이 맞지 않아요.</string>
+    <string name="account_pin_new">새 PIN %1$d자리를 눌러 주세요</string>
+    <string name="account_pin_again">한 번 더 눌러 주세요</string>
+    <string name="account_pin_mismatch">두 번 누른 PIN이 달라요.</string>
+    <string name="account_pin_current">지금 쓰는 PIN을 눌러 주세요</string>
+    <string name="account_key_delete">한 글자 삭제</string>
+    <string name="account_park_hint_pin">주차(P)하면 PIN을 누를 수 있어요</string>
+    <string name="account_park_hint_profiles">주차(P)하면 프로필을 관리할 수 있어요</string>
+
+    <!-- S-04 QR 로그인 -->
+    <string name="account_qr_title">새 계정을 연결해 주세요</string>
+    <string name="account_qr_step1">1.  휴대폰으로 QR을 찍어요</string>
+    <string name="account_qr_step2">2.  휴대폰에서 로그인해요</string>
+    <string name="account_qr_step3">3.  끝나면 이 화면이 자동으로 넘어가요</string>
+    <string name="account_qr_waiting">휴대폰에서 로그인하기를 기다리는 중</string>
+    <string name="account_qr_remaining">%1$d분 %2$d초 안에 완료해 주세요.</string>
+    <string name="account_qr_expired">시간이 지났어요</string>
+    <string name="account_qr_ttl">QR은 %1$d분 동안만 쓸 수 있어요.</string>
+    <string name="account_qr_renew">새 QR 받기</string>
+    <string name="account_qr_desc">로그인 QR</string>
+    <string name="account_qr_cancelled_title">P단을 벗어나 QR 로그인을 취소했어요</string>
+    <string name="account_qr_cancelled_body">주차(P)한 뒤에 다시 연결해 주세요.</string>
+
+    <!-- S-05 프로필 관리, D-01, T-01, T-02 -->
+    <string name="account_current">지금 쓰는 계정 · %1$s</string>
+    <string name="account_pin_on">PIN 켬</string>
+    <string name="account_pin_none">PIN 없음</string>
+    <string name="account_pin_set">PIN 설정</string>
+    <string name="account_pin_off">PIN 끄기</string>
+    <string name="account_delete">계정 삭제</string>
+    <string name="account_add">계정 추가</string>
+    <string name="account_count">%1$d / %2$d</string>
+    <string name="account_delete_title">%1$s 계정을 이 차에서 삭제할까요?</string>
+    <string name="account_delete_body">이 차에 저장된 로그인 정보만 삭제해요. 섬과 도감은 계정에 그대로 남아요.</string>
+    <string name="account_delete_confirm">삭제</string>
+    <string name="account_toast_pin_set">%1$s 계정에 PIN을 설정했어요</string>
+    <string name="account_toast_pin_off">%1$s 계정의 PIN을 껐어요</string>
+</resources>

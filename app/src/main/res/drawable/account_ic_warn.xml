@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma icon/warn -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:pathData="M24,8L42,40H6L24,8Z"
+        android:strokeWidth="4.4"
+        android:strokeColor="#3A2A1C"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M24,20V30M24,35V36"
+        android:strokeWidth="4.4"
+        android:strokeColor="#3A2A1C"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
