@@ -252,6 +252,7 @@ fun IslandScene(
         IsoSceneView(
             scene, view, Modifier.fillMaxSize(),
             camera = if (farm) IslandMap.FARM_CAMERA else view.camera,
+            matchVoxels = farm,
             onTap = { hit ->
                 if (farm) IslandMap.plotAt(hit, count, farmView = true)?.let(onPlot)
                 else IslandMap.spotAt(hit, count)?.let(onSpot)

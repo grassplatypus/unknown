@@ -45,6 +45,18 @@ class IslandMapTest {
         assertNull(IslandMap.spotAt(IsoHit.Cell(0, 9), 9))
     }
 
+    /** In both window sizes a farm voxel covers at least one buffer pixel, so outlines do not swallow the art. */
+    @Test fun farmPixelSizeNeverDropsBelowAVoxel() {
+        val scene = IslandMap.farmScene(plots)
+        // Farm panels measured on the emulator at density 1: landscape 903 x 1005 px, portrait 588 x 588 px.
+        for ((w, h) in listOf(903f to 1005f, 588f to 588f, 300f to 300f)) {
+            val base = com.break8t.unknown.ui.iso.pixelBase(scene, IslandMap.FARM_CAMERA, w, h, 3)
+            val voxel = com.break8t.unknown.ui.iso.Projection.framing(scene, IslandMap.FARM_CAMERA, w, h, 1f, Offset.Zero).unit / 8
+            assertTrue("$w x $h: base $base voxel $voxel", base <= voxel || base == 1)
+        }
+        assertEquals(3, com.break8t.unknown.ui.iso.pixelBase(scene, IslandMap.FARM_CAMERA, 903f, 1005f, 3))
+    }
+
     /** The label box of each farm plot (which also takes its taps) covers that plot's cell, and the plot model is drawn there. */
     @Test fun farmLabelBoxesCoverTheirPlots() {
         val f = renderScene(IslandMap.farmScene(plots), IslandMap.FARM_CAMERA, 300, 300)

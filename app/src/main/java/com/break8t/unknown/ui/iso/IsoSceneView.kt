@@ -142,11 +142,15 @@ fun IsoSceneView(
     canPlace: (Placement) -> Boolean = scene::isFree,
     onPlace: (Placement) -> Unit = {},
     camera: IsoCamera = state.camera,
+    matchVoxels: Boolean = false,
     overlay: @Composable IsoOverlayScope.() -> Unit = {},
 ) {
     // Whole screen pixels per buffer pixel, so the zoom-1 image matches the viewport at any density.
-    val base = max(1, (PIXEL_DP * LocalDensity.current.density).roundToInt())
+    val default = max(1, (PIXEL_DP * LocalDensity.current.density).roundToInt())
     BoxWithConstraints(modifier) {
+        val base = if (!matchVoxels) default else remember(scene, camera, constraints.maxWidth, constraints.maxHeight) {
+            pixelBase(scene, camera, constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), default)
+        }
         val bw = constraints.maxWidth / base
         val bh = constraints.maxHeight / base
         val view = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
@@ -198,6 +202,15 @@ class IsoOverlayScope internal constructor(
         val pts = listOf(point(x0, y0, z, view), point(x1, y0, z, view), point(x0, y1, z, view), point(x1, y1, z, view))
         return Rect(pts.minOf { it.x }, pts.minOf { it.y }, pts.maxOf { it.x }, pts.maxOf { it.y })
     }
+}
+
+/**
+ * Screen pixels per buffer pixel for a view of [viewW] x [viewH] px: [default], or fewer when a voxel would
+ * be drawn smaller than one buffer pixel, which makes the outline pass darken everything.
+ */
+internal fun pixelBase(scene: IsoScene, camera: IsoCamera, viewW: Float, viewH: Float, default: Int): Int {
+    val voxel = Projection.framing(scene, camera, viewW, viewH, 1f, Offset.Zero).unit / VPC
+    return floor(voxel).toInt().coerceIn(1, default)
 }
 
 /** Where world point ([x], [y], [z]) lands on screen for a frame drawn with [l]. */
