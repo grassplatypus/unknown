@@ -59,22 +59,23 @@ class RaidRulesTest {
     @Test
     fun ignoredInTheEarlyWindowAfterRouteStart() {
         val items = listOf(item(0.0, 1200.0))
-        assertEquals(RaidFix.None, decide(items, since = 26))
-        assertEquals(RaidFix.None, decide(items, since = rules.earlyWindowMs - 1))
+        assertEquals(RaidFix.Unknown, decide(items, since = 26))
+        assertEquals(RaidFix.Unknown, decide(items, since = rules.earlyWindowMs - 1))
         assertTrue(decide(items, since = rules.earlyWindowMs) is RaidFix.Inside)
     }
 
     @Test
     fun theCancelledRoutesListIsStaleEvenAfterTheWindow() {
         val old = listOf(item(0.0, 1200.0))
-        assertEquals(RaidFix.None, decide(old, stale = old))
+        assertEquals(RaidFix.Unknown, decide(old, stale = old))
         assertTrue(decide(listOf(item(0.0, 1100.0)), stale = old) is RaidFix.Inside)
     }
 
     @Test
     fun aJamWeAreInsideIsKeptWhenItsRemainderIsShort() {
-        val tail = listOf(item(-900.0, 1000.0))
-        assertEquals(RaidFix.None, decide(tail.map { it.copy(offsetM = 0.0, lengthM = 100.0) }))
+        val tail = listOf(item(0.0, 100.0))
+        assertEquals(RaidFix.None, decide(tail))
+        assertEquals(RaidFix.None, decide(tail, insideRoad = "남부순환로"))
         assertEquals(100.0, (decide(tail, insideRoad = "올림픽대로") as RaidFix.Inside).remainingM, 0.0)
     }
 
@@ -116,8 +117,8 @@ class RaidRulesTest {
         t.update(inside(1000.0), 0)
         t.update(inside(500.0), 6_000)
         assertTrue(t.update(inside(900.0, "사평대로"), 12_000) is RaidState.Solo)
-        t.update(inside(400.0, "사평대로"), 15_000)
-        assertEquals(listOf(6L, 3L), t.segmentsSec())
+        t.update(inside(400.0, "사평대로"), 17_000)
+        assertEquals(listOf(6L, 5L), t.segmentsSec())
     }
 
     @Test
@@ -127,5 +128,25 @@ class RaidRulesTest {
         t.update(inside(900.0), 70_000)
         t.update(inside(800.0), 70_000 + rules.maxCountedGapMs + 1)
         assertEquals(listOf(70L), t.segmentsSec())
+    }
+
+    @Test
+    fun unreliableResponsesDoNotEndTheJam() {
+        val t = JamTracker(rules = rules)
+        t.update(inside(1000.0), 0)
+        val held = t.update(RaidFix.Unknown, 5_000) as RaidState.Solo
+        assertEquals(1000.0, held.jam.remainingM, 0.0)
+        t.update(inside(800.0), 10_000)
+        assertEquals(listOf(10L), t.segmentsSec())
+        assertEquals(RaidState.None, RaidFix.Unknown.let { JamTracker(rules = rules).update(it, 0) })
+    }
+
+    @Test
+    fun aJamSeenInOnlyOnePollLeavesNoSegmentAndNoPassedScreen() {
+        val t = JamTracker(rules = rules)
+        t.update(inside(1000.0), 0)
+        assertEquals(emptyList<Long>(), t.segmentsSec())
+        assertEquals(RaidState.None, t.update(RaidFix.None, rules.pollMs))
+        assertEquals(emptyList<Long>(), t.segmentsSec())
     }
 }

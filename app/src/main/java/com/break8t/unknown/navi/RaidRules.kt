@@ -24,6 +24,9 @@ data class Jam(val offsetM: Double, val lengthM: Double, val road: String, val s
 
 sealed interface RaidFix {
     data object None : RaidFix
+
+    /** 경로 안내 중이지만 응답을 믿을 수 없다(시작 직후, 이전 경로 목록). 정체를 끝내지 않고 그대로 둔다. */
+    data object Unknown : RaidFix
     data class Approaching(val jam: Jam, val aheadM: Double) : RaidFix
     data class Inside(val jam: Jam, val remainingM: Double) : RaidFix
 }
@@ -74,8 +77,8 @@ fun decideRaid(
     rules: RaidRules = RaidRules(),
 ): RaidFix {
     if (mode != NaviMode.ROUTE_GUIDING) return RaidFix.None
-    if (sinceRouteStartMs < rules.earlyWindowMs) return RaidFix.None
-    if (staleItems != null && items == staleItems) return RaidFix.None
+    if (sinceRouteStartMs < rules.earlyWindowMs) return RaidFix.Unknown
+    if (staleItems != null && items == staleItems) return RaidFix.Unknown
     val jams = mergeJams(items, rules)
     val inside = jams.firstOrNull {
         it.offsetM <= 0 && it.offsetM + it.lengthM > 0 && (it.lengthM >= rules.minJamM || it.road == insideRoad)
@@ -106,7 +109,7 @@ class JamTracker(private val config: BalanceConfig = BalanceConfig.DEFAULT, priv
     val insideRoad: String? get() = open?.road
 
     /** 끝난 구간과 지금 머무는 구간의 초. RewardCalculator의 `jamSegmentsSec`에 그대로 넣는다. */
-    fun segmentsSec(): List<Long> = (closedMs + listOfNotNull(open?.let { openMs })).map { it / 1000 }
+    fun segmentsSec(): List<Long> = (closedMs + listOfNotNull(openMs.takeIf { open != null && it >= rules.pollMs })).map { it / 1000 }
 
     fun update(fix: RaidFix, nowMs: Long): RaidState = when (fix) {
         is RaidFix.Inside -> {
@@ -123,17 +126,21 @@ class JamTracker(private val config: BalanceConfig = BalanceConfig.DEFAULT, priv
             lastMs = nowMs
             RaidState.Solo(fix.jam.view(fix.remainingM, jamProgress(fix.remainingM, longestM)).also { lastView = it })
         }
+        // 믿을 수 없는 응답은 지나간 것으로 치지 않는다. 다음 Inside가 공백까지 이어서 센다.
+        RaidFix.Unknown -> lastView?.takeIf { open != null }?.let { RaidState.Solo(it) } ?: RaidState.None
         else -> {
             val passed = close()
             passed ?: if (fix is RaidFix.Approaching) RaidState.Approaching(fix.jam.view(fix.jam.lengthM, 0f), fix.aheadM) else RaidState.None
         }
     }
 
+    /** 조회 한 번 사이보다 짧게 머문 정체는 구간으로 남기지 않는다. 0초 결과 화면과 0코인 구간이 생긴다. */
     private fun close(): RaidState.Passed? {
         if (open == null) return null
         val ms = openMs
-        closedMs += ms
         open = null
+        if (ms < rules.pollMs) return null
+        closedMs += ms
         val sec = ms / 1000
         val coins = RewardCalculator.calculate(DriveSession(sec, listOf(sec), safetyScore = 0), config).raidCoin
         return RaidState.Passed(sec, coins, emptyList(), lastView!!.copy(remainingM = 0.0, progress = 1f))
