@@ -1,6 +1,13 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// 서명 키는 저장소 밖에 둔다. 경로와 비밀번호는 git이 무시하는 keystore.properties에 있다.
+val keystore = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
 }
 
 android {
@@ -17,6 +24,21 @@ android {
         versionCode = 1
         versionName = "0.1"
     }
+    signingConfigs {
+        if (keystore.isNotEmpty()) create("release") {
+            storeFile = file(keystore.getProperty("storeFile"))
+            storePassword = keystore.getProperty("storePassword")
+            keyAlias = keystore.getProperty("keyAlias")
+            keyPassword = keystore.getProperty("keyPassword")
+        }
+    }
+    buildTypes {
+        release {
+            // R8을 켜면 Pleos SDK와 car framework의 리플렉션 호출이 깨질 수 있어서 끈다.
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -25,6 +47,15 @@ android {
 }
 
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+
+/** 제출용 파일을 저장소의 apk/ 아래에 정해진 이름으로 만든다. `./gradlew submitApk` */
+tasks.register<Copy>("submitApk") {
+    dependsOn("assembleRelease")
+    doFirst { check(keystore.isNotEmpty()) { "keystore.properties가 없어 release 서명을 할 수 없습니다" } }
+    from(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
+    into(rootProject.layout.projectDirectory.dir("apk"))
+    rename { "break가고장난8톤트럭_정체불명_release.apk" }
+}
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.08.00"))

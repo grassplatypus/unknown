@@ -16,3 +16,8 @@ captures/
 
 # Claude Code work log, local only
 docs/trajectory.jsonl
+
+# Release signing secrets, never commit
+keystore.properties
+*.jks
+*.keystore

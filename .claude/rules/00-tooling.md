@@ -9,6 +9,16 @@
 - 새 worktree에는 `local.properties`(SDK 경로)가 없다. 메인 체크아웃의 것을 복사한다.
 - worktree를 지우기 전에 `./gradlew --stop`을 먼저 한다. 안 하면 Windows 파일 잠금 때문에 지워지지 않는다.
 
+## 제출용 APK
+
+```
+./gradlew submitApk
+```
+
+- release로 빌드해서 `apk/break가고장난8톤트럭_정체불명_release.apk`를 만든다. 이 파일은 커밋해서 올린다.
+- 서명 키는 저장소 밖 `D:\playground\hyundai\keys\unknown-release.jks`에 있고, 경로와 비밀번호는 git이 무시하는 `keystore.properties`에 있다. 둘 다 커밋하지 않는다. 키를 잃으면 같은 앱으로 업데이트할 수 없으니 따로 백업한다.
+- `keystore.properties`가 없는 PC에서는 `submitApk`가 이유를 말하고 멈춘다.
+
 ## 에뮬레이터
 
 - 반드시 `D:\playground\hyundai\tools\run-emulator.cmd`로 띄운다. 다른 방법으로 띄우면 멈추거나 종료 코드 139로 죽는다.
