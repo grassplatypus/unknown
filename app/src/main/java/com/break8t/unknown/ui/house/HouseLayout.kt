@@ -13,13 +13,13 @@ enum class Surface { FLOOR, LEFT_WALL, RIGHT_WALL }
 data class Placed(val itemId: String, val surface: Surface, val x: Int, val y: Int, val turns: Int = 0)
 
 /** 가구의 칸 크기. 이 기능에서만 쓰는 값이라 여기 둔다(Catalog에는 이름과 가격만 둔다). */
-data class FurnitureSpec(val w: Int, val h: Int, val onWall: Boolean = false, val flat: Boolean = false)
+data class FurnitureSpec(val w: Int, val h: Int, val onWall: Boolean = false)
 
 val FurnitureSpecs: Map<String, FurnitureSpec> = mapOf(
     "it_sofa" to FurnitureSpec(2, 1),
     "it_plant" to FurnitureSpec(1, 1),
     "it_picture" to FurnitureSpec(1, 1, onWall = true),
-    "it_rug" to FurnitureSpec(2, 2, flat = true),
+    "it_rug" to FurnitureSpec(2, 2),
     "it_lamp" to FurnitureSpec(1, 1),
     "it_shelf" to FurnitureSpec(2, 1),
 )

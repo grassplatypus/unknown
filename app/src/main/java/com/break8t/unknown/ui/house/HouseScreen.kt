@@ -135,37 +135,40 @@ internal fun HouseScreenImpl(
             if (draft == null) {
                 RoomScene(RoomSceneState(ScenePlace.HOUSE, saved), Modifier.weight(1f).fillMaxWidth(), config)
             } else {
-                RoomScene(
-                    RoomSceneState(ScenePlace.HOUSE, draft, selected = selected),
-                    Modifier.weight(1f).fillMaxWidth(),
-                    config,
-                    onTapCell = { c ->
-                        val hit = c?.let { itemAt(draft, it) } ?: -1
-                        when {
-                            hit >= 0 -> selected = if (hit == selected) -1 else hit
-                            selected >= 0 && c != null -> setDraft(moveTo(draft, selected, c, config))
-                            else -> selected = -1
-                        }
-                    },
-                    onDragStartCell = { c ->
-                        val hit = c?.let { itemAt(draft, it) } ?: -1
-                        grab = if (hit >= 0 && c != null) {
-                            selected = hit
-                            (c.x - draft[hit].x) to (c.y - draft[hit].y)
-                        } else null
-                    },
-                    onDragCell = { c ->
-                        val g = grab
-                        val current = draftCodes?.let(::decode)
-                        if (g != null && c != null && current != null && selected >= 0) {
-                            val sameSurface = current[selected].surface == c.surface
-                            val target = if (sameSurface) c.copy(x = c.x - g.first, y = c.y - g.second) else c
-                            setDraft(moveTo(current, selected, target, config))
-                        }
-                    },
-                    selectionActions = {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (draft.getOrNull(selected)?.let { specOf(it.itemId).onWall } == false) {
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    RoomScene(
+                        RoomSceneState(ScenePlace.HOUSE, draft, selected = selected),
+                        Modifier.fillMaxSize(),
+                        config,
+                        onTapCell = { c ->
+                            val hit = c?.let { itemAt(draft, it) } ?: -1
+                            when {
+                                hit >= 0 -> selected = if (hit == selected) -1 else hit
+                                selected >= 0 && c != null -> setDraft(moveTo(draft, selected, c, config))
+                                else -> selected = -1
+                            }
+                        },
+                        onDragStartCell = { c ->
+                            val hit = c?.let { itemAt(draft, it) } ?: -1
+                            grab = if (hit >= 0 && c != null) {
+                                selected = hit
+                                (c.x - draft[hit].x) to (c.y - draft[hit].y)
+                            } else null
+                        },
+                        onDragCell = { c ->
+                            val g = grab
+                            val current = draftCodes?.let(::decode)
+                            if (g != null && c != null && current != null && selected >= 0) {
+                                val sameSurface = current[selected].surface == c.surface
+                                val target = if (sameSurface) c.copy(x = c.x - g.first, y = c.y - g.second) else c
+                                setDraft(moveTo(current, selected, target, config))
+                            }
+                        },
+                    )
+                    // 고른 가구 바로 아래에 두면 옮길 칸을 가려서, 장면 오른쪽 아래에 고정한다.
+                    if (selected in draft.indices) {
+                        Row(Modifier.align(Alignment.BottomEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (!specOf(draft[selected].itemId).onWall) {
                                 SquareIconButton(R.drawable.house_ic_turn, stringResource(R.string.house_turn), {
                                     rotate(draft, selected, config)?.let(::setDraft) ?: run { toast = noTurn }
                                 })
@@ -175,8 +178,8 @@ internal fun HouseScreenImpl(
                                 selected = -1
                             })
                         }
-                    },
-                )
+                    }
+                }
                 StorageCard(profile.items, draft, tab, { tab = it }) { id ->
                     val placed = placeNew(draft, id, config)
                     if (placed == null) toast = noSpace else {

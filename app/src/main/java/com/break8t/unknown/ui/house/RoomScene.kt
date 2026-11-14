@@ -131,7 +131,6 @@ fun RoomScene(
     onTapCell: ((Cell?) -> Unit)? = null,
     onDragStartCell: ((Cell?) -> Unit)? = null,
     onDragCell: ((Cell?) -> Unit)? = null,
-    selectionActions: (@Composable () -> Unit)? = null,
 ) {
     val background = when {
         state.place == ScenePlace.HOUSE -> AppColors.Text
@@ -143,7 +142,7 @@ fun RoomScene(
         val square = minOf(maxWidth, maxHeight) * 0.8f
         Box(Modifier.align(Alignment.Center).size(square).graphicsLayer { rotationZ = 90f * state.camera.rotation }) {
             if (state.place == ScenePlace.HOUSE) {
-                HouseGrid(state, square, config, onTapCell, onDragStartCell, onDragCell, selectionActions)
+                HouseGrid(state, square, config, onTapCell, onDragStartCell, onDragCell)
             } else {
                 Box(Modifier.fillMaxSize().padding(square * 0.1f).clip(RoundedCornerShape(24.dp)).background(IslandGrass))
             }
@@ -187,7 +186,6 @@ private fun HouseGrid(
     onTapCell: ((Cell?) -> Unit)?,
     onDragStartCell: ((Cell?) -> Unit)?,
     onDragCell: ((Cell?) -> Unit)?,
-    selectionActions: (@Composable () -> Unit)?,
 ) {
     val tap by rememberUpdatedState(onTapCell)
     val dragStart by rememberUpdatedState(onDragStartCell)
@@ -236,9 +234,6 @@ private fun HouseGrid(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                 )
-            }
-            if (sel && selectionActions != null) {
-                Box(Modifier.offset(unit * r.col, unit * (r.row + r.h) + 8.dp)) { selectionActions() }
             }
         }
     }
