@@ -108,8 +108,9 @@ class SceneStashTest {
         val s = out.resize("ch_cat", 2, bounds).moveBy("ch_cat", 5f, 5f, bounds)
         val o = stageObjects(s, bounds).single()
         assertEquals("ch_cat", o.id)
-        assertEquals(bounds.grid.toFloat(), o.ox + o.scale, 1e-4f)
-        assertEquals(bounds.grid.toFloat(), o.oy + o.scale, 1e-4f)
+        // 캐릭터 모델은 여러 칸짜리라 차지하는 폭은 칸 수 x 배율이다.
+        assertEquals(bounds.grid.toFloat(), o.ox + o.footW * o.scale, 1e-4f)
+        assertEquals(bounds.grid.toFloat(), o.oy + o.footD * o.scale, 1e-4f)
     }
 
     @Test fun backClosesPanelThenCardThenLeaves() {
