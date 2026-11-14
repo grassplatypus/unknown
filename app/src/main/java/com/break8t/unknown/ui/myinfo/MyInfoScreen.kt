@@ -1,5 +1,7 @@
 package com.break8t.unknown.ui.myinfo
 
+import com.break8t.unknown.ui.island.FriendIslandScreen
+import com.break8t.unknown.ui.collection.friendCollections
 import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -71,7 +73,7 @@ import kotlinx.coroutines.flow.update
 
 private const val TICK_MS = 1_000L
 
-private enum class Page { HOME, LIST, FRIENDS, ADD }
+private enum class Page { HOME, LIST, FRIENDS, ADD, FRIEND_ISLAND, FRIEND_COLLECTION }
 
 /** 내 정보 진입점(Figma S-20 ~ S-23). 공유는 콜백으로만 알린다. */
 @Composable
@@ -89,7 +91,11 @@ fun MyInfoScreen(onShare: ShareHandler) {
     var input by rememberSaveable { mutableStateOf("") }
     var showWrong by rememberSaveable { mutableStateOf(false) }
 
-    BackHandler(enabled = page != Page.HOME) { page = if (page == Page.ADD) Page.FRIENDS else Page.HOME }
+    var friendKind by rememberSaveable { mutableStateOf(CollectionKind.POSTCARD) }
+    val toFriends = { page = Page.FRIENDS }
+    BackHandler(enabled = page != Page.HOME) {
+        page = if (page == Page.ADD || page == Page.FRIEND_ISLAND || page == Page.FRIEND_COLLECTION) Page.FRIENDS else Page.HOME
+    }
 
     when (page) {
         Page.HOME -> MyInfoHome(profile, friends.size, collections(profile), { page = Page.FRIENDS }) {
@@ -108,6 +114,8 @@ fun MyInfoScreen(onShare: ShareHandler) {
                 onTogglePublic = { on -> if (on) askPublic = true else demo.update { it.copy(drivingStatusPublic = false) } },
                 onAdd = { page = Page.ADD },
                 onDelete = { confirmDelete = true },
+                onVisit = { friendId = it.id; page = Page.FRIEND_ISLAND },
+                onCollection = { friendId = it.id; friendKind = CollectionKind.POSTCARD; page = Page.FRIEND_COLLECTION },
             )
             if (confirmDelete && selected != null) {
                 Overlay({ confirmDelete = false }) {
@@ -127,6 +135,24 @@ fun MyInfoScreen(onShare: ShareHandler) {
                 }
             }
         }
+        Page.FRIEND_ISLAND -> friends.firstOrNull { it.id == friendId }?.let { f ->
+            FriendIslandScreen(f.carId, f.islandLevel) {
+                Row(horizontalArrangement = Arrangement.spacedBy(35.dp), verticalAlignment = Alignment.CenterVertically) {
+                    HeaderChip(stringResource(R.string.myinfo_back_friends), selected = false, onBack = toFriends)
+                    ScreenTitle(stringResource(R.string.myinfo_friend_island_title, f.nickname))
+                }
+            }
+        } ?: LaunchedEffect(Unit) { page = Page.FRIENDS }
+        Page.FRIEND_COLLECTION -> friends.firstOrNull { it.id == friendId }?.let { f ->
+            val all = friendCollections(f.postcardIds, f.badgeIds)
+            // 친구 것은 보기만 한다. 눌러도 자세히 창을 열지 않고, 내 NEW 확인 기록도 바꾸지 않는다.
+            CollectionPane(all, friendKind, { friendKind = it }, loaded = true, showLocked = false, profile, {
+                Row(horizontalArrangement = Arrangement.spacedBy(35.dp), verticalAlignment = Alignment.CenterVertically) {
+                    HeaderChip(stringResource(R.string.myinfo_back_friends), selected = false, onBack = toFriends)
+                    ScreenTitle(stringResource(R.string.myinfo_friend_collection_title, f.nickname))
+                }
+            }, null) {}
+        } ?: LaunchedEffect(Unit) { page = Page.FRIENDS }
         Page.ADD -> Box(Modifier.fillMaxSize()) {
             var now by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
             LaunchedEffect(Unit) { while (true) { delay(TICK_MS); now = System.currentTimeMillis() / 1000 } }

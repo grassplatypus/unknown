@@ -42,4 +42,11 @@
     <!-- D-23. 이름 뒤 조사(와/과)는 코드가 붙인다 -->
     <string name="myinfo_friend_added">%1$s 친구가 됐어요</string>
     <string name="myinfo_ok">확인</string>
+
+    <!-- 친구 섬 놀러 가기, 친구 컬렉션 (Figma에 없는 새 화면) -->
+    <string name="myinfo_visit_island">섬 놀러 가기</string>
+    <string name="myinfo_friend_collection">컬렉션</string>
+    <string name="myinfo_back_friends">친구</string>
+    <string name="myinfo_friend_island_title">%1$s의 섬</string>
+    <string name="myinfo_friend_collection_title">%1$s의 컬렉션</string>
 </resources>

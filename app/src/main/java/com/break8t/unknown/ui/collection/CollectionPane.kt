@@ -171,7 +171,8 @@ internal fun CollectionPane(
             horizontalArrangement = Arrangement.spacedBy(35.dp),
             verticalArrangement = Arrangement.spacedBy(21.dp),
         ) {
-            CollectionKind.entries.forEach { k ->
+            // 친구 컬렉션처럼 몇 묶음만 넘기면 그 탭만 보인다.
+            CollectionKind.entries.filter { it in all }.forEach { k ->
                 val name = stringResource(k.label())
                 val text = if (loaded) stringResource(R.string.collection_tab, name, all[k].orEmpty().count { it.owned }) else name
                 AppChip(text, selected = k == kind, onClick = { onKind(k) })

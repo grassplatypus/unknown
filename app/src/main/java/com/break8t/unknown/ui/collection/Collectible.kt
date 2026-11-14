@@ -187,3 +187,13 @@ private fun postcard(id: String, name: String, art: Int, how: String, on: LocalD
 
 private fun badge(id: String, name: String, art: Int, condition: String, on: LocalDate) =
     Collectible(CollectionKind.BADGE, id, name, art, true, on.toEpochDay(), note = condition, date = dotted(on), gotAt = startMs(on))
+
+/**
+ * 친구의 컬렉션(엽서와 뱃지 두 묶음). 도감 견본에서 친구가 가진 id만 골라 가진 것으로 보인다.
+ * 친구 것이라 NEW 뱃지는 붙이지 않는다(얻은 시각을 지운다).
+ */
+fun friendCollections(postcardIds: Set<String>, badgeIds: Set<String>): Map<CollectionKind, List<Collectible>> {
+    val mine = collections(Profile())
+    fun pick(kind: CollectionKind, ids: Set<String>) = mine[kind].orEmpty().filter { it.id in ids }.map { it.copy(owned = true, gotAt = null) }
+    return mapOf(CollectionKind.POSTCARD to pick(CollectionKind.POSTCARD, postcardIds), CollectionKind.BADGE to pick(CollectionKind.BADGE, badgeIds))
+}

@@ -78,6 +78,8 @@ internal fun FriendsPane(
     onTogglePublic: (Boolean) -> Unit,
     onAdd: () -> Unit,
     onDelete: () -> Unit,
+    onVisit: (Friend) -> Unit = {},
+    onCollection: (Friend) -> Unit = {},
 ) {
     val selected = friends.firstOrNull { it.id == selectedId } ?: friends.firstOrNull()
     Column(Modifier.fillMaxSize().padding(start = ScreenPadding, top = ScreenPadding, end = ScreenPadding)) {
@@ -112,10 +114,10 @@ internal fun FriendsPane(
                     verticalArrangement = Arrangement.spacedBy(26.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = ScreenPadding),
                 ) {
-                    if (!wide) item { FriendDetail(selected, onDelete) }
+                    if (!wide) item { FriendDetail(selected, onDelete, onVisit, onCollection) }
                     items(friends, key = { it.id }) { f -> FriendRow(f, f.id == selected.id, chipBelow = !wide) { onSelect(f) } }
                 }
-                if (wide) FriendDetail(selected, onDelete, Modifier.width(550.dp))
+                if (wide) FriendDetail(selected, onDelete, onVisit, onCollection, Modifier.width(550.dp))
             }
         }
     }
@@ -161,7 +163,13 @@ private fun FriendRow(friend: Friend, selected: Boolean, chipBelow: Boolean, onC
 }
 
 @Composable
-private fun FriendDetail(friend: Friend, onDelete: () -> Unit, modifier: Modifier = Modifier) = Column(
+private fun FriendDetail(
+    friend: Friend,
+    onDelete: () -> Unit,
+    onVisit: (Friend) -> Unit,
+    onCollection: (Friend) -> Unit,
+    modifier: Modifier = Modifier,
+) = Column(
     modifier
         .clip(TileShape)
         .background(AppColors.Card)
@@ -182,6 +190,8 @@ private fun FriendDetail(friend: Friend, onDelete: () -> Unit, modifier: Modifie
     Stat(R.string.myinfo_friend_postcard, friend.lastPostcard)
     Stat(R.string.myinfo_friend_since, friend.since)
     Spacer(Modifier.height(16.dp))
+    PrimaryButton(stringResource(R.string.myinfo_visit_island), { onVisit(friend) }, Modifier.fillMaxWidth())
+    SecondaryButton(stringResource(R.string.myinfo_friend_collection), { onCollection(friend) }, Modifier.fillMaxWidth())
     DangerButton(stringResource(R.string.myinfo_delete_friend), onDelete, Modifier.fillMaxWidth())
 }
 

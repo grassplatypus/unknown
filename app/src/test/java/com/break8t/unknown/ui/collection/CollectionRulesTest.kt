@@ -169,4 +169,14 @@ class CollectionRulesTest {
     fun visitBadgeShowsReachedStepOnly() {
         assertEquals(listOf(null, null, 5, 5, 10, 10, 15, 20, 20), listOf(0, 4, 5, 9, 10, 14, 19, 20, 99).map { visitBadge(it) })
     }
+
+    @Test
+    fun friendCollectionShowsOnlyTheirPostcardsAndBadges() {
+        val all = friendCollections(setOf("post_coast", "post_cheomseongdae_gold"), setOf("badge_night", "no_such_badge"))
+        assertEquals(setOf(CollectionKind.POSTCARD, CollectionKind.BADGE), all.keys)
+        assertEquals(setOf("post_coast", "post_cheomseongdae_gold"), all.getValue(CollectionKind.POSTCARD).map { it.id }.toSet())
+        assertEquals(listOf("badge_night"), all.getValue(CollectionKind.BADGE).map { it.id })
+        // 내 도감에서 잠긴 판이어도 친구 것이면 가진 것으로, NEW 없이 보인다.
+        assertTrue(all.values.flatten().all { it.owned && it.gotAt == null })
+    }
 }
