@@ -67,6 +67,7 @@ object IsoPalette {
     internal val SoilDarkC = Color(SoilDark)
     internal val Sprout = Color(0xFF9BD46B)
     internal val Carrot = Color(0xFFF08A24)
+    internal val Purple = Color(0xFF7A3E8E)
     internal val WaterC = Color(Water)
     internal val Tire = Color(0xFF3A3532)
     internal val Red = Color(0xFFD9483B)
@@ -81,6 +82,9 @@ object IsoPalette {
 }
 
 enum class PlotStage { EMPTY, SPROUT, GROWING, GROWN }
+
+/** The catalog crops (seed_carrot, seed_potato, seed_wheat). */
+enum class Crop { CARROT, SWEET_POTATO, WHEAT }
 
 /** Voxel models for the known ids, VPC voxels per cell edge. Fronts face +y. */
 object IsoShapes {
@@ -172,17 +176,34 @@ object IsoShapes {
         add(c(16, 5, 14, 3, 3, 10, P.StoneC)); add(c(16, 5, 23, 3, 3, 1, P.StoneLight))
     })
 
-    /** 8 x 8, crops on four 2 x 2 spots. [fruit] is the ripe color (carrot by default). */
-    fun plot(stage: PlotStage, fruit: Color = P.Carrot): IsoShape = IsoShape(1, 1, buildList {
+    /** 8 x 8 soil bed with one plant that fills the cell, as in Figma S-13. Ripe crops differ in form, not just color. */
+    fun plot(stage: PlotStage, crop: Crop = Crop.CARROT): IsoShape = IsoShape(1, 1, buildList {
         add(c(0, 0, 0, 8, 8, 1, P.SoilC))
         add(c(0, 2, 0, 8, 1, 1, P.SoilDarkC)); add(c(0, 5, 0, 8, 1, 1, P.SoilDarkC))
-        for ((x, y) in listOf(1 to 1, 5 to 1, 1 to 5, 5 to 5)) when (stage) {
+        when (stage) {
             PlotStage.EMPTY -> Unit
-            PlotStage.SPROUT -> { add(c(x, y, 1, 1, 1, 2, P.Sprout)); add(c(x + 1, y, 2, 1, 1, 1, P.Sprout)) }
-            PlotStage.GROWING -> { add(c(x, y, 1, 2, 2, 2, P.Leaf)); add(c(x, y, 3, 1, 1, 1, P.LeafLight)) }
-            PlotStage.GROWN -> {
-                add(c(x, y, 1, 2, 2, 1, fruit)); add(c(x, y, 2, 2, 2, 2, P.Leaf))
-                add(c(x, y, 4, 1, 2, 1, P.LeafLight)); add(c(x + 1, y + 1, 4, 1, 1, 1, P.LeafDark))
+            PlotStage.SPROUT -> {
+                add(c(3, 3, 1, 2, 2, 1, P.Sprout)); add(c(2, 3, 2, 1, 1, 1, P.Sprout)); add(c(5, 4, 2, 1, 1, 1, P.Sprout))
+            }
+            PlotStage.GROWING -> {
+                add(c(2, 2, 1, 4, 4, 2, P.Leaf)); add(c(3, 3, 3, 2, 2, 1, P.LeafLight))
+                add(c(2, 2, 1, 1, 1, 2, P.T)); add(c(5, 5, 1, 1, 1, 2, P.T))
+            }
+            PlotStage.GROWN -> when (crop) {
+                Crop.CARROT -> {
+                    add(c(3, 3, 1, 2, 2, 2, P.Carrot))
+                    add(c(2, 2, 3, 4, 4, 2, P.Leaf)); add(c(3, 3, 5, 2, 2, 2, P.LeafLight))
+                    add(c(1, 3, 4, 1, 2, 2, P.LeafLight)); add(c(6, 3, 4, 1, 2, 2, P.LeafLight))
+                    add(c(2, 2, 3, 1, 1, 2, P.T)); add(c(5, 5, 3, 1, 1, 2, P.T))
+                }
+                Crop.SWEET_POTATO -> {
+                    add(c(1, 4, 1, 3, 3, 2, P.Purple)); add(c(4, 1, 1, 3, 3, 2, P.Purple))
+                    add(c(1, 1, 3, 6, 6, 1, P.LeafDark)); add(c(2, 2, 4, 4, 4, 1, P.Leaf)); add(c(3, 3, 5, 2, 2, 1, P.LeafLight))
+                    add(c(1, 1, 3, 1, 1, 1, P.T)); add(c(6, 6, 3, 1, 1, 1, P.T))
+                }
+                Crop.WHEAT -> for ((x, y) in listOf(1 to 1, 4 to 1, 6 to 2, 2 to 4, 5 to 4, 1 to 6, 4 to 6, 6 to 6)) {
+                    add(c(x, y, 1, 1, 1, 4, P.LeafLight)); add(c(x, y, 5, 1, 1, 2, P.Yellow))
+                }
             }
         }
     })

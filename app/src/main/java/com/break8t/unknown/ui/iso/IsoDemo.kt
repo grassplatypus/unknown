@@ -41,6 +41,18 @@ object IsoSamples {
         ),
     )
 
+    /** The farm screen (Figma S-13): 3 x 3 plots, one row per crop, a fence, seen with [FARM_CAMERA]. */
+    fun farm(): IsoScene {
+        val plots = (0 until 9).map { k ->
+            val stage = if (k / 3 == 2) PlotStage.GROWN else PlotStage.entries[k % 3 + 1]
+            IsoObject("plot$k", IsoShapes.plot(stage, Crop.entries[k / 3]), 1 + k % 3, 1 + k / 3)
+        }
+        return IsoScene(5, 5, objects = plots + (1..3).map { IsoObject("fence$it", IsoShapes.fence, it, 0) }, floorDepth = 0.75f)
+    }
+
+    /** Front and steep like S-13. Not a photo preset; pass it as IsoSceneView(camera = ...). */
+    val FARM_CAMERA = IsoCamera(0f, 55f)
+
     /** A floating island laid out like Figma S-12-a: house, road, 3 x 3 farm, pond, trees, characters. */
     fun island(): IsoScene {
         val w = 10; val d = 9
@@ -48,10 +60,10 @@ object IsoSamples {
         val cells = List(w * d) { i ->
             if ((i % w to i / w) in road) Cell(FloorType.ROAD) else Cell(FloorType.GRASS)
         }
-        val fruits = listOf(IsoPalette.Carrot, Color(0xFF7A3E8E), IsoPalette.Yellow)
+        val crops = Crop.entries
         val farm = (0 until 9).map { k ->
             val stage = PlotStage.entries[(k + k / 3) % PlotStage.entries.size]
-            IsoObject("plot$k", IsoShapes.plot(stage, fruits[k % 3]), 1 + k % 3, 1 + k / 3)
+            IsoObject("plot$k", IsoShapes.plot(stage, crops[k % 3]), 1 + k % 3, 1 + k / 3)
         }
         return IsoScene(
             w, d, cells, floorDepth = 1.75f,
@@ -131,3 +143,11 @@ private annotation class IsoSizes
 @IsoSizes @Composable private fun IslandNight() = AppTheme { IsoDemo(startInRoom = false, night = true) }
 @IsoSizes @Composable private fun IslandTop() = AppTheme { IsoDemo(startInRoom = false, preset = ViewPreset.TOP) }
 @IsoSizes @Composable private fun IslandSide() = AppTheme { IsoDemo(startInRoom = false, preset = ViewPreset.SIDE) }
+
+@IsoSizes @Composable
+private fun FarmFront() = AppTheme {
+    IsoSceneView(
+        IsoSamples.farm(), rememberIsoViewState(),
+        Modifier.fillMaxSize().background(AppColors.Sky), camera = IsoSamples.FARM_CAMERA,
+    )
+}

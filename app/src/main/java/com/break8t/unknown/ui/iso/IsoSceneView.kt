@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.break8t.unknown.ui.theme.AppColors
@@ -127,30 +129,41 @@ fun IsoSceneView(
     onTap: (IsoHit) -> Unit = {},
     canPlace: (Placement) -> Boolean = scene::isFree,
     onPlace: (Placement) -> Unit = {},
+    camera: IsoCamera = state.camera,
 ) {
-    val base = PIXEL_DP * LocalDensity.current.density
-    var viewport by remember { mutableStateOf(IntSize.Zero) }
-    val bw = (viewport.width / base).toInt()
-    val bh = (viewport.height / base).toInt()
-    val camera = state.camera
+    // Whole screen pixels per buffer pixel, so the zoom-1 image matches the viewport at any density.
+    val base = max(1, (PIXEL_DP * LocalDensity.current.density).roundToInt())
+    BoxWithConstraints(modifier) {
+        val bw = constraints.maxWidth / base
+        val bh = constraints.maxHeight / base
+        SceneCanvas(scene, state, camera, bw, bh, base, editMode, onTap, canPlace, onPlace)
+    }
+}
+
+@Composable
+private fun SceneCanvas(
+    scene: IsoScene, state: IsoViewState, camera: IsoCamera, bw: Int, bh: Int, base: Int, editMode: Boolean,
+    onTap: (IsoHit) -> Unit, canPlace: (Placement) -> Boolean, onPlace: (Placement) -> Unit,
+) {
     val night = state.night
     val selected = state.selectedId
     val ghost = state.ghost
+    // Previews do not wait for coroutines, so they render in place.
+    val inPreview = LocalInspectionMode.current
+    val previewFrame = if (inPreview && bw > 0 && bh > 0) {
+        remember(scene, camera, night, selected, ghost, bw, bh) { render(scene, camera, bw, bh, night, selected, ghost) }
+    } else null
     // Re-renders only when what is drawn changes; pan and zoom just move and scale the last image.
-    val rendered by produceState<Rendered?>(null, scene, camera, night, selected, ghost, bw, bh) {
-        if (bw <= 0 || bh <= 0) return@produceState
-        val r = withContext(Dispatchers.Default) {
-            val t0 = System.nanoTime()
-            val f = renderScene(scene, camera, bw, bh, night, selected, ghost)
-            val image = Bitmap.createBitmap(f.pixels, f.w, f.h, Bitmap.Config.ARGB_8888).asImageBitmap()
-            Rendered(f, image, (System.nanoTime() - t0) / 1_000_000)
-        }
+    val produced by produceState<Rendered?>(null, scene, camera, night, selected, ghost, bw, bh) {
+        if (inPreview || bw <= 0 || bh <= 0) return@produceState
+        val r = withContext(Dispatchers.Default) { render(scene, camera, bw, bh, night, selected, ghost) }
         value = r
         state.lastRenderMs = r.ms
     }
-    val live = rememberUpdatedState(Live(scene, rendered, editMode, onTap, canPlace, onPlace))
+    val rendered = previewFrame ?: produced
+    val live = rememberUpdatedState(Live(scene, rendered, editMode && camera.pitch >= EDIT_MIN_PITCH, onTap, canPlace, onPlace))
 
-    Box(modifier.onSizeChanged { viewport = it }.pointerInput(state, base) { gestures(state, live, base) }) {
+    Box(Modifier.fillMaxSize().pointerInput(state, base) { gestures(state, live, base) }) {
         Canvas(Modifier.fillMaxSize()) {
             if (night) drawRect(IsoPalette.Night.copy(alpha = NIGHT_OVERLAY))
             val r = rendered ?: return@Canvas
@@ -164,13 +177,20 @@ fun IsoSceneView(
                 filterQuality = FilterQuality.None,
             )
         }
-        if (rendered == null && viewport != IntSize.Zero) {
+        if (rendered == null && bw > 0 && bh > 0) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = AppColors.Primary)
         }
     }
 }
 
 private class Rendered(val frame: IsoFrame, val image: ImageBitmap, val ms: Long)
+
+private fun render(scene: IsoScene, camera: IsoCamera, bw: Int, bh: Int, night: Boolean, selected: String?, ghost: Ghost?): Rendered {
+    val t0 = System.nanoTime()
+    val f = renderScene(scene, camera, bw, bh, night, selected, ghost)
+    val image = Bitmap.createBitmap(f.pixels, f.w, f.h, Bitmap.Config.ARGB_8888).asImageBitmap()
+    return Rendered(f, image, (System.nanoTime() - t0) / 1_000_000)
+}
 
 private class Live(
     val scene: IsoScene,
@@ -182,6 +202,7 @@ private class Live(
 )
 
 private const val NIGHT_OVERLAY = 0.45f
+private const val EDIT_MIN_PITCH = 30f // OBLIQUE and steeper; flatter views make floor picking too coarse
 
 /** Where the buffer lands on screen: an integer scale keeps every low-res pixel the same size. */
 private class Layout(val left: Int, val top: Int, val px: Int) {
@@ -189,7 +210,7 @@ private class Layout(val left: Int, val top: Int, val px: Int) {
     fun by(y: Float) = (y - top) / px
 }
 
-private fun layout(f: IsoFrame, size: Size, state: IsoViewState, base: Float): Layout {
+private fun layout(f: IsoFrame, size: Size, state: IsoViewState, base: Int): Layout {
     val px = max(1, (base * state.zoom).roundToInt())
     return Layout(
         (size.width / 2f + state.pan.x - f.w * px / 2f).roundToInt(),
@@ -206,7 +227,7 @@ internal fun hitTest(scene: IsoScene, f: IsoFrame, bx: Float, by: Float): IsoHit
 private const val TAP = 1
 private const val MOVE = 2
 
-private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<Live>, base: Float) =
+private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<Live>, base: Int) =
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
         val start = down.position
@@ -215,7 +236,7 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<
         val view = Size(size.width.toFloat(), size.height.toFloat())
         val lay = r?.let { layout(it.frame, view, state, base) }
         val hit = if (r != null && lay != null) hitTest(l.scene, r.frame, lay.bx(start.x), lay.by(start.y)) else null
-        val edit = l.editMode && state.preset.editable
+        val edit = l.editMode
         var dragId = (hit as? IsoHit.Item)?.id?.takeIf { edit && it == state.selectedId }
         val slop = viewConfiguration.touchSlop
         val kind = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {

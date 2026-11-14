@@ -44,7 +44,7 @@ class IsoModelTest {
             "it_sofa" to Triple(16, 8, 7), "it_plant" to Triple(8, 8, 11), "it_picture" to Triple(8, 8, 18),
             "it_rug" to Triple(16, 16, 1), "it_lamp" to Triple(8, 8, 14), "it_shelf" to Triple(16, 8, 18),
             "house" to Triple(24, 24, 24), "farm_empty" to Triple(8, 8, 1), "farm_sprout" to Triple(8, 8, 3),
-            "farm_growing" to Triple(8, 8, 4), "farm_grown" to Triple(8, 8, 5), "tree" to Triple(8, 8, 12),
+            "farm_growing" to Triple(8, 8, 4), "farm_grown" to Triple(8, 8, 7), "tree" to Triple(8, 8, 12),
             "fence" to Triple(8, 8, 6), "path" to Triple(8, 8, 1), "water" to Triple(16, 16, 1),
             "car" to Triple(16, 8, 8), "ch_sprout" to Triple(8, 8, 9), "ch_cat" to Triple(8, 8, 9),
             "ch_mush" to Triple(8, 8, 8), "ch_cloud" to Triple(8, 8, 6), "ch_firefly" to Triple(8, 8, 9),
@@ -59,6 +59,15 @@ class IsoModelTest {
         }
         assertTrue(IsoShapes.rug.flat && IsoShapes.path.flat && !IsoShapes.sofa.flat)
         assertTrue(IsoShapes.picture.wallMounted)
+    }
+
+    @Test
+    fun ripeCropsDifferInFormNotOnlyColor() {
+        val grids = Crop.entries.map { crop ->
+            val m = IsoShapes.plot(PlotStage.GROWN, crop).model
+            (0 until m.faceCount).map { listOf(m.faces[it * 5], m.faces[it * 5 + 1], m.faces[it * 5 + 2], m.faces[it * 5 + 3]) }.toSet()
+        }
+        assertEquals(3, grids.toSet().size)
     }
 
     @Test
