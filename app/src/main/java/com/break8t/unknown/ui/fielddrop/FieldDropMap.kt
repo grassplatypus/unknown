@@ -1,6 +1,7 @@
 package com.break8t.unknown.ui.fielddrop
 
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -34,15 +35,24 @@ private const val STYLE_TIMEOUT_MS = 10_000L
 
 enum class MapStatus { LOADING, READY, OFFLINE }
 
-/** 지도와 그 위에 놓을 표시 사이의 연결. 카메라가 움직일 때마다 [moves]가 바뀌어 표시가 다시 놓인다. */
+/** 지도와 화면 사이의 연결. 표시는 지도가 그리고, 축척 막대만 [moves]를 구독해서 다시 잰다. */
 @Stable
 class MapHandle {
     var map by mutableStateOf<MapLibreMap?>(null)
     var status by mutableStateOf(MapStatus.LOADING)
     var moves by mutableIntStateOf(0)
 
+    /** 표시 레이어를 붙인 지금의 스타일. 스타일을 바꾸는 동안은 null이라 옛 스타일을 건드리지 않는다. */
+    internal var style by mutableStateOf<Style?>(null)
+    internal var images: Map<String, Bitmap> = emptyMap()
+
+    internal fun attach(style: Style) {
+        addMarkerLayers(style, images)
+        this.style = style
+    }
+
     /** 화면 위 위치(px). 지도가 아직 없으면 null. */
-    fun project(p: GeoPoint): Offset? {
+    private fun project(p: GeoPoint): Offset? {
         moves // 카메라가 움직이면 다시 읽도록 구독한다.
         val point = map?.projection?.toScreenLocation(LatLng(p.lat, p.lng)) ?: return null
         return Offset(point.x, point.y)
@@ -81,7 +91,14 @@ fun defaultZoom(at: GeoPoint, viewportHeightDp: Double, maxZoom: Double = MAP_MA
 
 /** MapLibre 지도. 화면을 나누면 Activity가 다시 만들어진다. 사용자가 옮긴 카메라는 이어 가고, 아니면 새 창 높이로 기본 높이를 다시 잡는다. */
 @Composable
-fun LiveMap(handle: MapHandle, start: GeoPoint, viewportHeightDp: Double, onMapTap: () -> Unit, modifier: Modifier = Modifier) {
+fun LiveMap(
+    handle: MapHandle,
+    start: GeoPoint,
+    viewportHeightDp: Double,
+    markers: MapMarkers,
+    onMapTap: (hitIds: List<String?>) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val tap by rememberUpdatedState(onMapTap)
     var lat by rememberSaveable { mutableDoubleStateOf(start.lat) }
@@ -95,13 +112,15 @@ fun LiveMap(handle: MapHandle, start: GeoPoint, viewportHeightDp: Double, onMapT
         } else {
             CameraPosition.Builder().target(LatLng(start.lat, start.lng)).zoom(defaultZoom(start, viewportHeightDp)).build()
         }
-        createMapView(context, handle, camera, { tap() }, { userMoved = true }) {
+        createMapView(context, handle, camera, { tap(it) }, { userMoved = true }) {
             lat = it.target?.latitude ?: lat
             lng = it.target?.longitude ?: lng
             zoom = it.zoom
         }
     }
     MapViewLifecycle(mapView)
+    // 표시는 지도 레이어라서 상태가 바뀔 때만 데이터를 넘긴다. 움직임은 지도가 같은 프레임에 그린다.
+    LaunchedEffect(handle.style, markers) { handle.style?.let { pushMarkers(it, markers) } }
     // 창 크기만 바뀌고 Activity가 남는 경우에도 기본 시점이면 높이를 다시 맞춘다.
     LaunchedEffect(handle.map, viewportHeightDp) {
         val map = handle.map ?: return@LaunchedEffect
@@ -122,12 +141,14 @@ private fun createMapView(
     context: Context,
     handle: MapHandle,
     camera: CameraPosition,
-    onMapTap: () -> Unit,
+    onMapTap: (List<String?>) -> Unit,
     onGesture: () -> Unit,
     onIdle: (CameraPosition) -> Unit,
 ): MapView {
     MapLibre.getInstance(context.applicationContext)
     handle.status = MapStatus.LOADING
+    handle.style = null
+    handle.images = markerImages(context)
     return MapView(context).apply {
         onCreate(null)
         addOnDidFailLoadingMapListener { handle.map?.let { goOffline(it, handle) } }
@@ -145,10 +166,12 @@ private fun createMapView(
             map.addOnCameraMoveListener { handle.moves++ }
             map.addOnCameraMoveStartedListener { if (it == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) onGesture() }
             map.addOnCameraIdleListener { handle.moves++; onIdle(map.cameraPosition) }
-            map.addOnMapClickListener { onMapTap(); false }
+            // 끌기는 탭이 아니라서 여기로 오지 않는다. 버섯 위에서 시작한 끌기도 지도를 옮긴다.
+            map.addOnMapClickListener { at -> onMapTap(mushroomIdsAt(map, context, map.projection.toScreenLocation(at))); true }
             handle.map = map
             map.setStyle(Style.Builder().fromUri(MAP_STYLE_URL)) { style ->
                 recolor(style)
+                handle.attach(style)
                 handle.status = MapStatus.READY
             }
         }
@@ -159,7 +182,8 @@ private fun createMapView(
 private fun goOffline(map: MapLibreMap, handle: MapHandle) {
     if (handle.status != MapStatus.LOADING) return
     handle.status = MapStatus.OFFLINE
-    map.setStyle(Style.Builder().fromJson(OFFLINE_STYLE_JSON))
+    handle.style = null
+    map.setStyle(Style.Builder().fromJson(OFFLINE_STYLE_JSON)) { handle.attach(it) }
 }
 
 /** 화면을 떠날 때(메뉴 이동, Activity 재생성) 한 번만 내려 보낸다. 참고 코드는 여기서 MapView가 샜다. */

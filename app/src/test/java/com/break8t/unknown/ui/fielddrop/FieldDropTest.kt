@@ -177,4 +177,32 @@ class FieldDropTest {
         assertEquals(100, demo.profile.value.coins)
         assertEquals(4, m.state.value.todayCount)
     }
+
+    @Test fun markerPropertiesFollowState() {
+        val car = CarFix(car, 250f)
+        val plain = mapMarkers(car, "car_blue", listOf(far, other), FieldDropState(todayCount = 0), config)
+        assertEquals("fd_car_blue", plain.carIcon)
+        assertEquals(25f, plain.carRotate, 0f)
+        assertEquals(listOf("fd_mush_gold_ad", "fd_mush_blue"), plain.mushrooms.map { it.icon })
+        assertEquals(listOf(far.at, other.at), plain.mushrooms.map { it.at })
+        assertFalse(plain.mushrooms.any { it.dim })
+
+        val picked = mapMarkers(car, "car_red", listOf(far, other), FieldDropState(todayCount = 0, selectedId = "other"), config)
+        assertEquals(listOf("fd_mush_gold_ad", "fd_mush_blue_sel"), picked.mushrooms.map { it.icon }) // S-10-b
+        assertTrue(mapMarkers(car, "car_red", listOf(far), FieldDropState(todayCount = 4), config).mushrooms.all { it.dim })
+        assertEquals("fd_car_red", mapMarkers(car, "unknown", emptyList(), FieldDropState(), config).carIcon)
+    }
+
+    @Test fun everyIconNameIsDistinct() {
+        val names = MushroomKind.entries.flatMap { k -> listOf(false, true).flatMap { ad -> listOf(false, true).map { mushroomIcon(k, ad, it) } } }
+        assertEquals(8, names.toSet().size)
+    }
+
+    @Test fun tapResolvesFirstMushroomHit() {
+        val list = listOf(far, other, near)
+        assertEquals(other, mushroomAt(listOf(null, "other", "far"), list))
+        assertEquals(far, mushroomAt(listOf("gone", "far"), list))
+        assertNull(mushroomAt(emptyList(), list)) // empty map closes the card
+        assertNull(mushroomAt(listOf("gone", null), list))
+    }
 }

@@ -132,6 +132,28 @@ const val SPRITE_FRONT_DEG = 225f
 /** 앞쪽이 heading을 보도록 그림을 돌릴 각도. [0, 360) */
 fun carRotation(headingDeg: Float): Float = ((headingDeg - SPRITE_FRONT_DEG) % 360f + 360f) % 360f
 
+/** 지도가 직접 그리는 버섯 하나. 그림 이름과 흐림을 속성으로 넘겨서 지도와 같은 프레임에 그려진다. */
+data class MushroomFeature(val id: String, val at: GeoPoint, val icon: String, val dim: Boolean)
+
+data class MapMarkers(val car: GeoPoint, val carIcon: String, val carRotate: Float, val mushrooms: List<MushroomFeature>)
+
+fun mushroomIcon(kind: MushroomKind, ad: Boolean, selected: Boolean): String =
+    "fd_mush_" + kind.name.lowercase() + (if (ad) "_ad" else "") + (if (selected) "_sel" else "")
+
+fun carIconName(carId: String): String = if (carId == "car_blue" || carId == "car_yellow") "fd_$carId" else "fd_car_red"
+
+/** 한도에 닿으면 모두 흐리고, 고른 버섯(S-10-b)만 금색 테두리 그림을 쓴다. */
+fun mapMarkers(car: CarFix, carId: String, mushrooms: List<Mushroom>, state: FieldDropState, config: BalanceConfig) = MapMarkers(
+    car.at,
+    carIconName(carId),
+    carRotation(car.headingDeg),
+    mushrooms.map { MushroomFeature(it.id, it.at, mushroomIcon(it.kind, it.ad, state.selectedId == it.id), state.atLimit(config)) },
+)
+
+/** 누른 자리에서 지도가 찾은 표시 id 가운데 첫 버섯. 없으면 빈 곳을 누른 것이다. */
+fun mushroomAt(hitIds: List<String?>, mushrooms: List<Mushroom>): Mushroom? =
+    hitIds.firstNotNullOfOrNull { id -> mushrooms.firstOrNull { it.id == id } }
+
 fun distanceText(meters: Int): String =
     if (meters < 1000) "${meters}m" else String.format(Locale.ROOT, "%.1fkm", meters / 1000.0)
 

@@ -2,6 +2,8 @@ package com.break8t.unknown.ui.fielddrop
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
+import android.graphics.Paint
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,23 +42,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -69,9 +66,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import com.break8t.unknown.R
@@ -95,7 +92,6 @@ private const val SCALE_BAR_MAX_DP = 120.0 // 좁은 창에서 카드 오른쪽 
 private const val TOAST_MS = 2000L
 private val Margin = 35.dp
 private val MarkerSize = 109.dp
-private val CarSize = 114.dp
 private val LocateSize = 114.dp
 private val PillShape = RoundedCornerShape(percent = 50)
 
@@ -161,36 +157,21 @@ internal fun FieldDropContent(
     BoxWithConstraints(Modifier.fillMaxSize().clipToBounds().background(Color(MapPalette.LAND))) {
         val density = LocalDensity.current
         val previewMPerDp = metersPerDp(car.at.lat, defaultZoom(car.at, maxHeight.value.toDouble()))
-        val project: (GeoPoint) -> Offset? = if (preview) {
+        val markers = mapMarkers(car, carId, mushrooms, state, config)
+        if (preview) {
             PreviewMap()
             val center = Offset(constraints.maxWidth / 2f, constraints.maxHeight / 2f)
-            previewProjection(car.at, center, density.density / previewMPerDp)
+            PreviewMarkers(markers, previewProjection(car.at, center, density.density / previewMPerDp))
         } else {
-            LiveMap(handle, car.at, maxHeight.value.toDouble(), onDismissCard, Modifier.fillMaxSize())
-            handle::project
+            // 버섯, 광고 글자, 내 차는 지도 레이어(MapMarkers.kt)라서 지도와 같은 프레임에 움직인다.
+            LiveMap(handle, car.at, maxHeight.value.toDouble(), markers, { ids ->
+                mushroomAt(ids, mushrooms)?.let(onTap) ?: onDismissCard()
+            }, Modifier.fillMaxSize())
         }
         if (!preview && handle.status == MapStatus.LOADING) {
             // Liberty 원래 색이 잠깐 보이지 않도록 다시 칠할 때까지 땅 색으로 덮는다.
             Box(Modifier.fillMaxSize().background(Color(MapPalette.LAND)))
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = AppColors.Primary)
-        }
-
-        // 차를 먼저 그려서 바로 옆 버섯이 차에 가리지 않게 한다. 차는 눌리지 않는다.
-        project(car.at)?.let { p ->
-            val pivotY = with(density) { CarSize.roundToPx() } / 2
-            CarMarker(carId, car.headingDeg, Modifier.anchorAt(p) { IntOffset(it.width / 2, pivotY) })
-        }
-        mushrooms.forEach { m ->
-            project(m.at)?.let { p ->
-                // 핀처럼 아래 끝이 그 자리를 가리킨다.
-                MushroomMarker(
-                    m,
-                    enabled = !atLimit,
-                    selected = state.selectedId == m.id,
-                    onClick = { onTap(m) },
-                    Modifier.anchorAt(p) { IntOffset(it.width / 2, it.height) },
-                )
-            }
         }
 
         TopChips(coins, state.todayCount, config.mushroomDailyLimit, Modifier.fillMaxWidth().padding(Margin))
@@ -257,6 +238,30 @@ private fun PreviewMap() {
     Image(ImageBitmap.imageResource(R.drawable.fielddrop_map_city), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
 }
 
+/** 미리보기 전용. 지도 레이어에 넣는 것과 같은 그림을 같은 기준점에 찍는다. */
+@Composable
+private fun PreviewMarkers(markers: MapMarkers, project: (GeoPoint) -> Offset) {
+    val context = LocalContext.current
+    val images = remember(context) { markerImages(context) }
+    val dim = remember { Paint().apply { alpha = (DIM_ALPHA * 255).roundToInt() } }
+    Canvas(Modifier.fillMaxSize()) {
+        val c = drawContext.canvas.nativeCanvas
+        val at = project(markers.car)
+        val carArt = images.getValue(markers.carIcon)
+        c.save()
+        c.rotate(markers.carRotate, at.x, at.y)
+        c.drawBitmap(carArt, at.x - carArt.width / 2f, at.y - carArt.height / 2f, null)
+        c.restore()
+        val tag = images.getValue(MY_CAR_TAG)
+        c.drawBitmap(tag, at.x - tag.width / 2f, at.y + CAR_TAG_TOP_DP * density, null)
+        markers.mushrooms.forEach { m ->
+            val b = images.getValue(m.icon)
+            val p = project(m.at)
+            c.drawBitmap(b, p.x - b.width / 2f, p.y - b.height, if (m.dim) dim else null)
+        }
+    }
+}
+
 private fun previewProjection(car: GeoPoint, center: Offset, pxPerM: Double): (GeoPoint) -> Offset = { p ->
     val dx = (p.lng - car.lng) * METERS_PER_DEG * cos(Math.toRadians(car.lat))
     val dy = (p.lat - car.lat) * METERS_PER_DEG
@@ -264,15 +269,6 @@ private fun previewProjection(car: GeoPoint, center: Offset, pxPerM: Double): (G
 }
 
 private const val METERS_PER_DEG = 111_320.0
-
-/** 지도 위 한 점에 [pivot]이 오도록 놓는다. 크기는 지도 전체로 잡아야 어디에 놓여도 눌린다. */
-private fun Modifier.anchorAt(p: Offset, pivot: (IntSize) -> IntOffset) = layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
-    val at = pivot(IntSize(placeable.width, placeable.height))
-    layout(constraints.maxWidth, constraints.maxHeight) {
-        placeable.place(p.x.roundToInt() - at.x, p.y.roundToInt() - at.y)
-    }
-}
 
 /** 픽셀 그림은 보간 없이 키우고 줄인다. */
 @Composable
@@ -339,46 +335,6 @@ private fun AdTag(height: Dp, fontSize: TextUnit, padding: Dp) =
 @DrawableRes
 private fun mushIcon(kind: MushroomKind): Int =
     if (kind == MushroomKind.GOLD) R.drawable.fielddrop_mush_gold else R.drawable.fielddrop_mush_blue
-
-@DrawableRes
-private fun carIcon(carId: String): Int = when (carId) {
-    "car_blue" -> R.drawable.fielddrop_car_blue
-    "car_yellow" -> R.drawable.fielddrop_car_yellow
-    else -> R.drawable.fielddrop_car_red
-}
-
-@Composable
-private fun MushroomMarker(m: Mushroom, enabled: Boolean, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
-    val shape = RoundedCornerShape(18.dp)
-    Column(
-        modifier.alpha(if (enabled) 1f else 0.45f),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            Modifier
-                .size(MarkerSize)
-                .clip(shape)
-                .background(AppColors.Card)
-                .border(if (selected) BorderWidth * 2 else BorderWidth, if (selected) AppColors.Selected else AppColors.Line, shape) // S-10-b
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .semantics { contentDescription = m.place },
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(pixelPainter(mushIcon(m.kind)), null, Modifier.size(83.dp))
-        }
-        if (m.ad) AdTag(42.dp, 23.sp, 13.dp)
-    }
-}
-
-@Composable
-private fun CarMarker(carId: String, headingDeg: Float, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(pixelPainter(carIcon(carId)), null, Modifier.size(CarSize).rotate(carRotation(headingDeg)))
-        Spacer(Modifier.height(5.dp))
-        Tag(stringResource(R.string.fielddrop_my_car), AppColors.Card, height = 57.dp, fontSize = 31.sp, padding = 18.dp)
-    }
-}
 
 /** 픽셀 그림처럼 모서리가 각진 축척 막대. 줌을 바꾸면 눈금과 길이를 다시 고른다. */
 @Composable
