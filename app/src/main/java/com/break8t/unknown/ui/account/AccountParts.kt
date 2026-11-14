@@ -60,14 +60,14 @@ internal fun characterRes(id: String): Int = when (id) {
 /** 예전 왼쪽 위 로고 줄이 차지하던 높이. 로고를 오른쪽 아래로 옮겨도 화면 내용은 제자리에 둔다. */
 internal val HeaderSpace = 101.dp
 
-/** 오른쪽 아래 로고(앱 이름 글자 없음). 부모 Box 안에서 [modifier]로 자리를 잡는다. */
+/** 오른쪽 아래 글자 로고. 부모 Box 안에서 [modifier]로 자리를 잡는다. */
 @Composable
 internal fun AppLogo(modifier: Modifier = Modifier) {
-    // 팀 BI 원본에서 배경만 지운 그림(551x875)이다. 비율을 지켜 높이만 정한다.
+    // 팀 글자 로고(정체불명)에서 바깥 배경과 글자 구멍만 지운 그림(961x859)이다. 비율을 지켜 높이만 정한다.
     Image(
         painterResource(R.drawable.account_logo),
         stringResource(R.string.app_name),
-        modifier.padding(end = 40.dp, bottom = 32.dp).height(124.dp).aspectRatio(551f / 875f),
+        modifier.padding(end = 40.dp, bottom = 32.dp).height(132.dp).aspectRatio(961f / 859f),
     )
 }
 
