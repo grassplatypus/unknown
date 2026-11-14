@@ -6,7 +6,6 @@ import com.break8t.unknown.ui.house.SceneCharacter
 import com.break8t.unknown.ui.iso.IsoObject
 import com.break8t.unknown.ui.iso.IsoShapes
 import com.break8t.unknown.ui.photo.CharacterSizes
-import com.break8t.unknown.ui.photo.PhotoState
 import com.break8t.unknown.ui.photo.characterObject
 
 /** 섬과 집 장면의 보관함에 드는 것의 종류. */
@@ -145,8 +144,8 @@ fun stageObjects(stage: SceneStage, bounds: StageBounds): List<IsoObject> = stag
     }
 }
 
-/** 사진 찍기를 열 때 꺼내 둔 캐릭터를 그 자리, 크기, 포즈 그대로 넘긴다. 없으면 캐릭터 없이 시작한다. */
-fun SceneStage.photoStart(characterId: String): PhotoState =
+/** 사진 찍기를 열 때 꺼내 둔 캐릭터를 그 자리, 크기, 포즈 그대로 넘긴다. 꺼내지 않았으면 null. */
+fun SceneStage.photoCharacter(characterId: String): SceneCharacter? =
     piece(characterId)?.takeIf { it.kind == StashKind.CHARACTER }?.let {
-        PhotoState(poseId = it.look, x = it.x, y = it.y, sizeIndex = it.sizeIndex, turns = it.turns)
-    } ?: PhotoState()
+        SceneCharacter(it.look, it.x, it.y, CharacterSizes[it.sizeIndex], it.turns)
+    }

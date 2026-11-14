@@ -54,7 +54,7 @@ data class SceneCamera(val preset: CameraPreset = CameraPreset.OBLIQUE, val rota
 /** 장면 위에 세운 캐릭터. x, y는 장면 너비와 높이에 대한 비율, size는 높이에 대한 비율이다. */
 data class SceneCharacter(val imageId: String, val x: Float, val y: Float, val size: Float, val turns: Int)
 
-/** 장면을 그리는 데 필요한 것 전부. 섬 사진이면 [plots]와 [carId]로 섬을 그린다. */
+/** 장면을 그리는 데 필요한 것 전부. 섬 사진이면 [plots]와 [carId]로 섬을 그린다. [board]가 null이면 내 섬 게시판을 따른다. */
 data class RoomSceneState(
     val place: ScenePlace,
     val layout: List<Placed> = emptyList(),
@@ -65,6 +65,7 @@ data class RoomSceneState(
     val plots: List<PlotView> = emptyList(),
     val carId: String = "car_red",
     val islandSize: Int = IslandMap.SIZE,
+    val board: Boolean? = null,
 )
 
 /**
@@ -210,6 +211,7 @@ fun placeAt(layout: List<Placed>, index: Int, pl: Placement, config: BalanceConf
  * [canPlace]와 [onPlace]는 집의 배치 규칙을 거친다. [overlay]는 장면 위의 버튼 자리다.
  * [frameInsets]는 장면이 그 아래로 계속 그려지는 칩과 카드 자리, [fixedView]는 끌기와 확대를 막는다.
  * @param lockScenery 친구 섬처럼 [extra] 말고는 고르거나 옮길 수 없는 장면이면 true.
+ * @param tappable [lockScenery]여도 누름을 받는 장면 물체 id(친구 섬의 집과 게시판). 옮기지는 못한다.
  */
 @Composable
 fun RoomScene(
@@ -227,17 +229,19 @@ fun RoomScene(
     frameInsets: PaddingValues = PaddingValues(),
     fixedView: Boolean = false,
     lockScenery: Boolean = false,
+    tappable: Set<String> = emptySet(),
     overlay: @Composable IsoOverlayScope.() -> Unit = {},
 ) {
     val camera = state.camera.iso
     val house = state.place == ScenePlace.HOUSE
     val stages = state.plots.map { it.seedId to it.grown }
     // The island photo shows the guestbook board only while it stands on the island.
-    val board = LocalDemoState.current.profile.collectAsState().value.guestbookBoardPlaced
-    val scene = remember(house, state.layout, camera, extra, stages, state.carId, state.islandSize, lockScenery, board) {
+    val myBoard = LocalDemoState.current.profile.collectAsState().value.guestbookBoardPlaced
+    val board = state.board ?: myBoard
+    val scene = remember(house, state.layout, camera, extra, stages, state.carId, state.islandSize, lockScenery, board, tappable) {
         val s = if (house) RoomMap.scene(state.layout, config, camera, extra) else IslandMap.scene(state.plots, state.carId, extra, size = state.islandSize, board = board)
         // A friend's island: only the pieces in extra can be picked or dragged; a tap on anything else lands on the floor.
-        if (!lockScenery) s else s.copy(objects = s.objects.map { o -> if (extra.any { it.id == o.id }) o else o.copy(pickable = false) })
+        if (!lockScenery) s else s.copy(objects = s.objects.map { o -> if (o.id in tappable || extra.any { it.id == o.id }) o else o.copy(pickable = false) })
     }
     SideEffect { view.night = state.night && !house }
     // The engine picks on tap and long press; the screen keeps an index, so follow the engine's choice.

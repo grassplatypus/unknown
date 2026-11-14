@@ -1,10 +1,12 @@
 package com.break8t.unknown.ui.myinfo
 
+import com.break8t.unknown.ui.island.FriendHouseScreen
 import com.break8t.unknown.ui.island.FriendIslandScreen
+import com.break8t.unknown.ui.guestbook.friendBoardShown
 import com.break8t.unknown.ui.island.friendVisit
 import com.break8t.unknown.ui.photo.FriendPhotoScreen
 import com.break8t.unknown.ui.scene.SceneStage
-import com.break8t.unknown.ui.scene.photoStart
+import com.break8t.unknown.ui.scene.photoCharacter
 import androidx.compose.runtime.saveable.listSaver
 import java.time.LocalTime
 import com.break8t.unknown.ui.collection.friendCollections
@@ -79,11 +81,11 @@ import kotlinx.coroutines.flow.update
 
 private const val TICK_MS = 1_000L
 
-internal enum class Page { HOME, LIST, FRIENDS, ADD, FRIEND_ISLAND, FRIEND_COLLECTION, FRIEND_PHOTO }
+internal enum class Page { HOME, LIST, FRIENDS, ADD, FRIEND_ISLAND, FRIEND_COLLECTION, FRIEND_PHOTO, FRIEND_HOUSE }
 
-/** 뒤로 가기. 친구 화면에서 연 곳은 친구로, 친구 섬 사진은 친구 섬으로 돌아간다. */
+/** 뒤로 가기. 친구 화면에서 연 곳은 친구로, 친구 섬 사진과 친구 집은 친구 섬으로 돌아간다. */
 internal fun backFrom(page: Page): Page = when (page) {
-    Page.FRIEND_PHOTO -> Page.FRIEND_ISLAND
+    Page.FRIEND_PHOTO, Page.FRIEND_HOUSE -> Page.FRIEND_ISLAND
     Page.ADD, Page.FRIEND_ISLAND, Page.FRIEND_COLLECTION -> Page.FRIENDS
     else -> Page.HOME
 }
@@ -109,6 +111,8 @@ fun MyInfoScreen(onShare: ShareHandler) {
     var friendKind by rememberSaveable { mutableStateOf(CollectionKind.POSTCARD) }
     // 친구 섬에 꺼내 둔 캐릭터. 사진 찍기에 다녀와도 남고, 다른 친구 섬에 가면 처음부터다.
     var stage by rememberSaveable(stateSaver = StageSaver) { mutableStateOf(SceneStage()) }
+    // 친구 집에 꺼내 둔 캐릭터. 친구 섬의 것과 따로 둔다.
+    var houseStage by rememberSaveable(stateSaver = StageSaver) { mutableStateOf(SceneStage()) }
     val visitNow = remember { System.currentTimeMillis() }
     val visitHour = remember { LocalTime.now().hour }
     val toFriends = { page = Page.FRIENDS }
@@ -131,7 +135,7 @@ fun MyInfoScreen(onShare: ShareHandler) {
                 onTogglePublic = { on -> if (on) askPublic = true else demo.update { it.copy(drivingStatusPublic = false) } },
                 onAdd = { page = Page.ADD },
                 onDelete = { confirmDelete = true },
-                onVisit = { friendId = it.id; stage = SceneStage(); page = Page.FRIEND_ISLAND },
+                onVisit = { friendId = it.id; stage = SceneStage(); houseStage = SceneStage(); page = Page.FRIEND_ISLAND },
                 onCollection = { friendId = it.id; friendKind = CollectionKind.POSTCARD; page = Page.FRIEND_COLLECTION },
             )
             if (confirmDelete && selected != null) {
@@ -153,8 +157,11 @@ fun MyInfoScreen(onShare: ShareHandler) {
             }
         }
         Page.FRIEND_ISLAND -> friends.firstOrNull { it.id == friendId }?.let { f ->
-            val visit = friendVisit(f.carId, f.islandLevel, f.characterId, visitNow, visitHour)
-            FriendIslandScreen(visit, stage, { stage = it }, onPhoto = { page = Page.FRIEND_PHOTO }) {
+            val visit = friendVisit(f.carId, f.islandLevel, f.characterId, visitNow, visitHour, friendBoardShown(f.id))
+            FriendIslandScreen(
+                visit, f.id, f.nickname, stage, { stage = it },
+                onPhoto = { page = Page.FRIEND_PHOTO }, onHouse = { page = Page.FRIEND_HOUSE },
+            ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(35.dp), verticalAlignment = Alignment.CenterVertically) {
                     HeaderChip(stringResource(R.string.myinfo_back_friends), selected = false, onBack = toFriends)
                     ScreenTitle(stringResource(R.string.myinfo_friend_island_title, f.nickname))
@@ -162,8 +169,16 @@ fun MyInfoScreen(onShare: ShareHandler) {
             }
         } ?: LaunchedEffect(Unit) { page = Page.FRIENDS }
         Page.FRIEND_PHOTO -> friends.firstOrNull { it.id == friendId }?.let { f ->
-            val visit = friendVisit(f.carId, f.islandLevel, f.characterId, visitNow, visitHour)
-            FriendPhotoScreen(visit, stage.photoStart(f.characterId), onClose = { page = Page.FRIEND_ISLAND })
+            val visit = friendVisit(f.carId, f.islandLevel, f.characterId, visitNow, visitHour, friendBoardShown(f.id))
+            FriendPhotoScreen(visit.copy(friendCharacter = stage.photoCharacter(f.characterId)), onClose = { page = Page.FRIEND_ISLAND })
+        } ?: LaunchedEffect(Unit) { page = Page.FRIENDS }
+        Page.FRIEND_HOUSE -> friends.firstOrNull { it.id == friendId }?.let { f ->
+            FriendHouseScreen(f.id, f.characterId, houseStage, { houseStage = it }) {
+                Row(horizontalArrangement = Arrangement.spacedBy(35.dp), verticalAlignment = Alignment.CenterVertically) {
+                    HeaderChip(stringResource(R.string.house_to_island), selected = false, onBack = { page = Page.FRIEND_ISLAND })
+                    ScreenTitle(stringResource(R.string.myinfo_friend_house_title, f.nickname))
+                }
+            }
         } ?: LaunchedEffect(Unit) { page = Page.FRIENDS }
         Page.FRIEND_COLLECTION -> friends.firstOrNull { it.id == friendId }?.let { f ->
             val all = friendCollections(f.postcardIds, f.badgeIds)

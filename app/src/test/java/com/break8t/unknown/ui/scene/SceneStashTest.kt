@@ -127,14 +127,13 @@ class SceneStashTest {
     @Test fun photoStartsWithTheCharacterAsItStands() {
         val s = out.pose("ch_cat", "pose_jump").resize("ch_cat", 1, bounds).turn("ch_cat")
         val p = s.piece("ch_cat")!!
-        val photo = s.photoStart("ch_cat")
-        assertEquals("pose_jump", photo.poseId)
+        val photo = s.photoCharacter("ch_cat")!!
+        assertEquals("pose_jump", photo.imageId)
         assertEquals(p.x, photo.x, 0f)
         assertEquals(p.y, photo.y, 0f)
-        assertEquals(p.sizeIndex, photo.sizeIndex)
+        assertEquals(CharacterSizes[p.sizeIndex], photo.size, 0f)
         assertEquals(1, photo.turns)
-        assertFalse(photo.shot)
-        assertNull(out.putAway("ch_cat").photoStart("ch_cat").poseId)
+        assertNull(out.putAway("ch_cat").photoCharacter("ch_cat"))
     }
 
     @Test fun stageSurvivesSaving() {
