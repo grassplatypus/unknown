@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -208,8 +209,16 @@ internal fun PinSide(
         Text(account.nickname, color = AppColors.Text, fontSize = 52.sp, fontWeight = FontWeight.Bold)
         Text(prompt, color = AppColors.Text, fontSize = 44.sp, textAlign = TextAlign.Center)
         PinBoxes(input, length, Modifier.padding(top = 16.dp))
-        // 빈 문자열이어도 한 줄을 차지해서 오류가 뜰 때 칸이 움직이지 않는다.
-        Text(if (input.error) errorText else "", color = AppColors.Error, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+        // 빈 문자열은 한글과 줄 높이가 달라 화면이 밀린다. 같은 문구를 늘 그리고 오류가 없을 때만 투명하게 둔다.
+        Text(
+            errorText,
+            Modifier.alpha(if (input.error) 1f else 0f),
+            color = AppColors.Error,
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }
 

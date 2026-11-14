@@ -28,6 +28,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -153,14 +156,21 @@ internal fun SelectContent(
         Column(Modifier.fillMaxWidth().padding(horizontal = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.height(80.dp))
             Text(stringResource(R.string.account_select_title), color = AppColors.Text, fontSize = 62.sp, fontWeight = FontWeight.Bold)
-            if (countdown != null) {
+            // 카운트다운이 멈춰도 자리는 남긴다. 누르는 순간 카드가 손가락 아래에서 올라가 버리면 눌리지 않는다.
+            var lastCountdown by remember { mutableStateOf(countdown) }
+            if (countdown != null) lastCountdown = countdown
+            lastCountdown?.let { shown ->
                 Spacer(Modifier.height(31.dp))
                 Column(
-                    Modifier.clip(RoundedCornerShape(16.dp)).background(AppColors.Accent).padding(horizontal = 36.dp, vertical = 16.dp),
+                    Modifier
+                        .alpha(if (countdown != null) 1f else 0f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(AppColors.Accent)
+                        .padding(horizontal = 36.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        stringResource(R.string.account_auto_login, countdown.seconds, countdown.nickname),
+                        stringResource(R.string.account_auto_login, shown.seconds, shown.nickname),
                         color = AppColors.Text,
                         fontSize = 36.sp,
                         fontWeight = FontWeight.Bold,
@@ -247,11 +257,12 @@ internal fun PinContent(
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= WideWidth
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(35.dp)) {
+        Column(Modifier.fillMaxSize().then(if (wide) Modifier else Modifier.verticalScroll(rememberScrollState())).padding(35.dp)) {
             BackChip(backLabel, onBack)
             if (wide) {
+                // 가로 창은 높이가 넉넉해서 스크롤 없이 남은 높이의 가운데에 둔다.
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 40.dp),
+                    Modifier.fillMaxWidth().weight(1f),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -468,12 +479,15 @@ internal fun ProfilesContent(
 
 @Composable
 private fun ProfileRow(account: Account, current: Boolean, wide: Boolean, onPinSet: () -> Unit, onPinOff: () -> Unit, onDelete: () -> Unit) {
-    val pinState = stringResource(if (account.pin != null) R.string.account_pin_on else R.string.account_pin_none)
+    val sub = listOfNotNull(
+        stringResource(R.string.account_current).takeIf { current },
+        stringResource(R.string.account_pin_on).takeIf { account.pin != null },
+    ).joinToString(" · ")
     val info = @Composable {
         Avatar(account.characterId, 99.dp, 21.dp)
         Column {
             Text(account.nickname, color = AppColors.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
-            Text(if (current) stringResource(R.string.account_current, pinState) else pinState, color = AppColors.TextSub, fontSize = 31.sp)
+            if (sub.isNotEmpty()) Text(sub, color = AppColors.TextSub, fontSize = 31.sp)
         }
     }
     val buttons = @Composable {

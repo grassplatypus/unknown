@@ -297,12 +297,20 @@ private fun CodeEntry(
             ) { Text(input.getOrNull(i)?.toString().orEmpty(), color = AppColors.Text, fontSize = 62.sp, fontWeight = FontWeight.Bold) }
         }
     }
+    // 문구가 없을 때도 같은 글꼴의 한 줄을 투명하게 그려 둔다. 빈 줄은 한글보다 낮아서 오류가 뜰 때 숫자판이 밀린다.
     val message = when {
         full -> stringResource(R.string.myinfo_code_full, config.maxFriends)
-        wrong -> stringResource(R.string.myinfo_code_wrong)
-        else -> ""
+        else -> stringResource(R.string.myinfo_code_wrong)
     }
-    Text(message, Modifier.fillMaxWidth().heightIn(min = 40.dp), color = AppColors.Error, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+    Text(
+        message,
+        Modifier.fillMaxWidth().alpha(if (full || wrong) 1f else 0f),
+        color = AppColors.Error,
+        fontSize = 29.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        softWrap = false,
+    )
     val keys = listOf("123", "456", "789", " 0<")
     Column(verticalArrangement = Arrangement.spacedBy(21.dp)) {
         keys.forEach { row ->
