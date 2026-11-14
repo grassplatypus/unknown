@@ -5,12 +5,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,14 +40,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
 import com.break8t.unknown.ui.island.islandSize
-import com.break8t.unknown.config.Catalog
 import com.break8t.unknown.data.DemoState
 import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.data.Profile
 import com.break8t.unknown.ui.components.AppCard
 import com.break8t.unknown.ui.components.BorderWidth
 import com.break8t.unknown.ui.components.ControlShape
-import com.break8t.unknown.ui.components.PrimaryButton
 import com.break8t.unknown.ui.house.CameraPreset
 import com.break8t.unknown.ui.house.ChipGap
 import com.break8t.unknown.ui.house.HouseStore
@@ -70,25 +64,24 @@ import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.ui.island.FarmStore
 import com.break8t.unknown.ui.island.IslandMap
 import com.break8t.unknown.ui.island.plotViews
-import com.break8t.unknown.ui.house.SceneCharacter
+import com.break8t.unknown.ui.island.PlotView
+import com.break8t.unknown.ui.scene.CharacterCard
+import com.break8t.unknown.ui.scene.allPoseOptions
 import com.break8t.unknown.ui.iso.IsoHit
-import com.break8t.unknown.ui.iso.IsoThumbnail
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import com.break8t.unknown.ui.theme.AppColors
 import java.time.LocalTime
 
 private val PanelWidth = 243.dp
 private val PanelGap = 26.dp
 private const val CHARACTER_ID = "character"
-private const val ISLAND_CHARACTER_SCALE = 1.6f // the island is framed smaller than the room; S-16-f shows a larger figure
+internal const val ISLAND_CHARACTER_SCALE = 1.6f // the island is framed smaller than the room; S-16-f shows a larger figure
 
 // Where a new character first stands: open ground in front of the house (S-16-f) or the room (S-16-g).
-private val ISLAND_SPAWN = 0.27f to 0.36f
+internal val ISLAND_SPAWN = 0.27f to 0.36f
 private val HOUSE_SPAWN = 0.5f to 0.7f
 
 private val PhotoStateSaver = listSaver<PhotoState, Any>({ it.toList() }, { PhotoState.fromList(it) })
@@ -97,27 +90,43 @@ private val PhotoStateSaver = listSaver<PhotoState, Any>({ it.toList() }, { Phot
 @Composable
 fun PhotoScreen(inHouse: Boolean, onClose: () -> Unit) = PhotoScreenImpl(inHouse, onClose)
 
+/** 친구 섬에서 찍을 때의 섬과 캐릭터. 섬은 친구의 차와 크기로, 캐릭터는 친구 캐릭터(모든 포즈)로 그린다. */
+data class PhotoVisit(val carId: String, val islandSize: Int, val characterId: String, val plots: List<PlotView>, val night: Boolean)
+
+/** 친구 섬 사진 찍기. [start]는 친구 섬에 꺼내 둔 캐릭터 그대로다. 열 때마다 찍기 화면부터 보인다. */
 @Composable
-internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: PhotoState = PhotoState(), night: Boolean? = null) {
+fun FriendPhotoScreen(visit: PhotoVisit, start: PhotoState, onClose: () -> Unit) =
+    PhotoScreenImpl(false, onClose, start.copy(editing = false, shot = false), visit.night, visit)
+
+@Composable
+internal fun PhotoScreenImpl(
+    inHouse: Boolean,
+    onClose: () -> Unit,
+    start: PhotoState = PhotoState(),
+    night: Boolean? = null,
+    visit: PhotoVisit? = null,
+) {
     val profile by LocalDemoState.current.profile.collectAsState()
     val layout by HouseStore.layout.collectAsState()
     val plots by FarmStore.plots.collectAsState()
     var s by rememberSaveable(stateSaver = PhotoStateSaver) { mutableStateOf(start) }
     val isNight = night ?: remember { isNight(profile.islandRealTime, profile.islandNight, LocalTime.now().hour) }
+    val islandGrid = visit?.islandSize ?: islandSize(profile.islandLevel, BalanceConfig.DEFAULT)
+    val characterId = visit?.characterId ?: profile.selectedCharacterId
     val scene = RoomSceneState(
         place = if (inHouse) ScenePlace.HOUSE else ScenePlace.ISLAND,
         layout = if (inHouse) trimToOwned(layout, profile.items) else emptyList(),
         camera = s.camera,
         night = isNight,
         character = s.character,
-        plots = plotViews(plots, remember { System.currentTimeMillis() }),
-        carId = profile.selectedCarId,
-        islandSize = islandSize(profile.islandLevel, BalanceConfig.DEFAULT),
+        plots = visit?.plots ?: plotViews(plots, remember { System.currentTimeMillis() }),
+        carId = visit?.carId ?: profile.selectedCarId,
+        islandSize = islandGrid,
     )
     // The house photo shows the room at the size the player bought; the island photo at the size the island was grown to.
     val config = BalanceConfig.DEFAULT.copy(houseGridSize = profile.houseGridSize)
-    val grid = if (inHouse) config.houseGridSize else islandSize(profile.islandLevel, BalanceConfig.DEFAULT)
-    val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, s.editing, profile.selectedCharacterId) })
+    val grid = if (inHouse) config.houseGridSize else islandGrid
+    val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, s.editing, characterId) })
     val view = rememberIsoViewState()
     // Inside the house the view stays where it is framed: dragging the screen does nothing (11/15 feedback).
     LaunchedEffect(view, inHouse) { if (inHouse) view.resetView() }
@@ -142,11 +151,12 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
                 config = config,
                 extra = extra,
                 fixedView = inHouse,
+                lockScenery = visit != null,
             )
         }
         return
     }
-    val options = poseOptions(profile.selectedCharacterId, profile.owned)
+    val options = if (visit != null) allPoseOptions(visit.characterId) else poseOptions(profile.selectedCharacterId, profile.owned)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // While editing, a tap on the ground moves the character there and dragging it carries it along.
         // The character's cell stays (0, 0) with its spot in ox/oy, so a dropped placement is the move in cells.
@@ -161,6 +171,7 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
             canPlace = { it.id == CHARACTER_ID },
             onPlace = { p -> if (p.id == CHARACTER_ID) s = s.moved(p.x / grid.toFloat(), p.y / grid.toFloat()) },
             onTapCell = { hit -> if (s.editing && hit is IsoHit.Cell) s = s.placedAt(hit.x, hit.y, grid) },
+            lockScenery = visit != null,
         )
         // 찍히는 범위(Figma S-16의 흰 테두리). 오른쪽 각도 카드와 겹치지 않게 그 왼쪽에 둔다.
         val panelLeft = maxWidth - ScreenPad - PanelWidth
@@ -173,7 +184,11 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
         if (!s.editing) PresetCard(s, { s = it }, Modifier.align(Alignment.TopEnd).padding(top = 195.dp, end = ScreenPad))
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(ScreenPad)) {
             if (s.editing) {
-                CharacterCard(s, options, { s = it })
+                CharacterCard(
+                    characterId, s.poseId ?: characterId, options,
+                    onPose = { s = s.copy(poseId = it) }, onResize = { s = s.resized(it) }, onTurn = { s = s.turned() },
+                    onDone = { s = s.copy(editing = false) },
+                )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TopChip(stringResource(R.string.photo_character), { s = s.startCharacter(options, if (inHouse) HOUSE_SPAWN else ISLAND_SPAWN) })
@@ -219,57 +234,6 @@ private fun PresetCard(s: PhotoState, onChange: (PhotoState) -> Unit, modifier: 
                 iconSize = 57.dp,
             )
         }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CharacterCard(s: PhotoState, options: List<String>, onChange: (PhotoState) -> Unit) {
-    AppCard(Modifier.fillMaxWidth()) {
-        FlowRow(
-            Modifier.padding(23.dp),
-            horizontalArrangement = Arrangement.spacedBy(31.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            itemVerticalAlignment = Alignment.Bottom,
-        ) {
-            Labeled(stringResource(R.string.photo_pose)) {
-                Row(Modifier.widthIn(max = 620.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    for (id in options) {
-                        val on = s.poseId == id
-                        // options.first() is the chosen character itself (see poseOptions).
-                        val model = characterObject(SceneCharacter(id, 0f, 0f, CharacterSizes[1], 0), 1, characterId = options.first())
-                        IsoThumbnail(
-                            model.shape,
-                            Modifier
-                                .size(109.dp)
-                                .clip(ControlShape)
-                                .background(AppColors.Accent)
-                                .border(if (on) 6.5.dp else BorderWidth, if (on) AppColors.Selected else AppColors.Line, ControlShape)
-                                .clickable(role = Role.RadioButton) { onChange(s.copy(poseId = id)) }
-                                .semantics { contentDescription = Catalog.item(id)?.name.orEmpty() }
-                                .padding(8.dp),
-                            rotation = model.rotation,
-                        )
-                    }
-                }
-            }
-            Labeled(stringResource(R.string.photo_size)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    SquareIconButton(R.drawable.photo_ic_minus, stringResource(R.string.photo_smaller), { onChange(s.resized(-1)) })
-                    SquareIconButton(R.drawable.photo_ic_plus, stringResource(R.string.photo_bigger), { onChange(s.resized(+1)) })
-                }
-            }
-            SquareIconButton(R.drawable.photo_ic_rotate, stringResource(R.string.photo_rotate), { onChange(s.turned()) })
-            PrimaryButton(stringResource(R.string.photo_done), { onChange(s.copy(editing = false)) })
-        }
-    }
-}
-
-@Composable
-private fun Labeled(label: String, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(label, color = AppColors.TextSub, fontSize = 29.sp)
-        content()
     }
 }
 

@@ -1,6 +1,12 @@
 package com.break8t.unknown.ui.myinfo
 
 import com.break8t.unknown.ui.island.FriendIslandScreen
+import com.break8t.unknown.ui.island.friendVisit
+import com.break8t.unknown.ui.photo.FriendPhotoScreen
+import com.break8t.unknown.ui.scene.SceneStage
+import com.break8t.unknown.ui.scene.photoStart
+import androidx.compose.runtime.saveable.listSaver
+import java.time.LocalTime
 import com.break8t.unknown.ui.collection.friendCollections
 import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
@@ -73,7 +79,16 @@ import kotlinx.coroutines.flow.update
 
 private const val TICK_MS = 1_000L
 
-private enum class Page { HOME, LIST, FRIENDS, ADD, FRIEND_ISLAND, FRIEND_COLLECTION }
+internal enum class Page { HOME, LIST, FRIENDS, ADD, FRIEND_ISLAND, FRIEND_COLLECTION, FRIEND_PHOTO }
+
+/** 뒤로 가기. 친구 화면에서 연 곳은 친구로, 친구 섬 사진은 친구 섬으로 돌아간다. */
+internal fun backFrom(page: Page): Page = when (page) {
+    Page.FRIEND_PHOTO -> Page.FRIEND_ISLAND
+    Page.ADD, Page.FRIEND_ISLAND, Page.FRIEND_COLLECTION -> Page.FRIENDS
+    else -> Page.HOME
+}
+
+private val StageSaver = listSaver<SceneStage, Any>({ it.toList() }, { SceneStage.fromList(it) })
 
 /** 내 정보 진입점(Figma S-20 ~ S-23). 공유는 콜백으로만 알린다. */
 @Composable
@@ -92,10 +107,12 @@ fun MyInfoScreen(onShare: ShareHandler) {
     var showWrong by rememberSaveable { mutableStateOf(false) }
 
     var friendKind by rememberSaveable { mutableStateOf(CollectionKind.POSTCARD) }
+    // 친구 섬에 꺼내 둔 캐릭터. 사진 찍기에 다녀와도 남고, 다른 친구 섬에 가면 처음부터다.
+    var stage by rememberSaveable(stateSaver = StageSaver) { mutableStateOf(SceneStage()) }
+    val visitNow = remember { System.currentTimeMillis() }
+    val visitHour = remember { LocalTime.now().hour }
     val toFriends = { page = Page.FRIENDS }
-    BackHandler(enabled = page != Page.HOME) {
-        page = if (page == Page.ADD || page == Page.FRIEND_ISLAND || page == Page.FRIEND_COLLECTION) Page.FRIENDS else Page.HOME
-    }
+    BackHandler(enabled = page != Page.HOME) { page = backFrom(page) }
 
     when (page) {
         Page.HOME -> MyInfoHome(profile, friends.size, collections(profile), { page = Page.FRIENDS }) {
@@ -114,7 +131,7 @@ fun MyInfoScreen(onShare: ShareHandler) {
                 onTogglePublic = { on -> if (on) askPublic = true else demo.update { it.copy(drivingStatusPublic = false) } },
                 onAdd = { page = Page.ADD },
                 onDelete = { confirmDelete = true },
-                onVisit = { friendId = it.id; page = Page.FRIEND_ISLAND },
+                onVisit = { friendId = it.id; stage = SceneStage(); page = Page.FRIEND_ISLAND },
                 onCollection = { friendId = it.id; friendKind = CollectionKind.POSTCARD; page = Page.FRIEND_COLLECTION },
             )
             if (confirmDelete && selected != null) {
@@ -136,12 +153,17 @@ fun MyInfoScreen(onShare: ShareHandler) {
             }
         }
         Page.FRIEND_ISLAND -> friends.firstOrNull { it.id == friendId }?.let { f ->
-            FriendIslandScreen(f.carId, f.islandLevel) {
+            val visit = friendVisit(f.carId, f.islandLevel, f.characterId, visitNow, visitHour)
+            FriendIslandScreen(visit, stage, { stage = it }, onPhoto = { page = Page.FRIEND_PHOTO }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(35.dp), verticalAlignment = Alignment.CenterVertically) {
                     HeaderChip(stringResource(R.string.myinfo_back_friends), selected = false, onBack = toFriends)
                     ScreenTitle(stringResource(R.string.myinfo_friend_island_title, f.nickname))
                 }
             }
+        } ?: LaunchedEffect(Unit) { page = Page.FRIENDS }
+        Page.FRIEND_PHOTO -> friends.firstOrNull { it.id == friendId }?.let { f ->
+            val visit = friendVisit(f.carId, f.islandLevel, f.characterId, visitNow, visitHour)
+            FriendPhotoScreen(visit, stage.photoStart(f.characterId), onClose = { page = Page.FRIEND_ISLAND })
         } ?: LaunchedEffect(Unit) { page = Page.FRIENDS }
         Page.FRIEND_COLLECTION -> friends.firstOrNull { it.id == friendId }?.let { f ->
             val all = friendCollections(f.postcardIds, f.badgeIds)

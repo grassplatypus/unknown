@@ -207,6 +207,7 @@ fun placeAt(layout: List<Placed>, index: Int, pl: Placement, config: BalanceConf
  * 집과 섬 장면을 그리는 한 자리. 방은 [editMode]일 때 엔진의 편집(고르기, 끌기, 놓을 수 있는지 색)을 쓴다.
  * [canPlace]와 [onPlace]는 집의 배치 규칙을 거친다. [overlay]는 장면 위의 버튼 자리다.
  * [frameInsets]는 장면이 그 아래로 계속 그려지는 칩과 카드 자리, [fixedView]는 끌기와 확대를 막는다.
+ * @param lockScenery 친구 섬처럼 [extra] 말고는 고르거나 옮길 수 없는 장면이면 true.
  */
 @Composable
 fun RoomScene(
@@ -223,13 +224,16 @@ fun RoomScene(
     onTapCell: (com.break8t.unknown.ui.iso.IsoHit) -> Unit = {},
     frameInsets: PaddingValues = PaddingValues(),
     fixedView: Boolean = false,
+    lockScenery: Boolean = false,
     overlay: @Composable IsoOverlayScope.() -> Unit = {},
 ) {
     val camera = state.camera.iso
     val house = state.place == ScenePlace.HOUSE
     val stages = state.plots.map { it.seedId to it.grown }
-    val scene = remember(house, state.layout, camera, extra, stages, state.carId, state.islandSize) {
-        if (house) RoomMap.scene(state.layout, config, camera, extra) else IslandMap.scene(state.plots, state.carId, extra, size = state.islandSize)
+    val scene = remember(house, state.layout, camera, extra, stages, state.carId, state.islandSize, lockScenery) {
+        val s = if (house) RoomMap.scene(state.layout, config, camera, extra) else IslandMap.scene(state.plots, state.carId, extra, size = state.islandSize)
+        // A friend's island: only the pieces in extra can be picked or dragged; a tap on anything else lands on the floor.
+        if (!lockScenery) s else s.copy(objects = s.objects.map { o -> if (extra.any { it.id == o.id }) o else o.copy(pickable = false) })
     }
     SideEffect { view.night = state.night && !house }
     // The engine picks on tap and long press; the screen keeps an index, so follow the engine's choice.
