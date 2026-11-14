@@ -14,6 +14,7 @@
 | `RewardCalculator.calculate` | `reward/Reward.kt` | `(DriveSession, BalanceConfig) -> RewardResult`. 부수 효과 없음 |
 | `SideRail(current, onSelect, modifier)` | `ui/components/SideRail.kt` | 시그니처를 바꾸지 않는다 |
 | `DrivingCover(hint, modifier)` | `ui/components/DrivingCover.kt` | 아래 화면의 터치를 막는다 |
+| `LocalUxLimits` | `drive/UxRestrictions.kt` | 플랫폼 주행 규제. `blocks(flag)`, `noSetup`, `noKeyboard`, `noDialpad`. 모르면 전부 막음 |
 
 ## 창 크기
 

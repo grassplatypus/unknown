@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import com.break8t.unknown.R
 import com.break8t.unknown.drive.DriveMode
+import com.break8t.unknown.drive.LocalUxLimits
 import com.break8t.unknown.ui.components.DrivingCover
 import com.break8t.unknown.ui.components.SideRail
 import com.break8t.unknown.ui.components.drivingBlur
@@ -31,13 +32,13 @@ fun AppShell(mode: DriveMode) {
     Row(Modifier.fillMaxSize().background(AppColors.Background)) {
         SideRail(current = route, onSelect = { route = it })
         Box(Modifier.weight(1f).fillMaxHeight()) {
-            val hint = route.parkHint
-            val covered = !route.allowedWhileDriving && !mode.isParked && hint != null
+            val limits = LocalUxLimits.current
+            val covered = (!route.allowedWhileDriving && !mode.isParked) || limits.blocks(route.blockedBy)
             val focus = LocalFocusManager.current
             // 덮이는 순간 본문 안에 있던 포커스를 빼서 로터리 입력이 가려진 화면에 닿지 않게 한다.
             LaunchedEffect(covered) { if (covered) focus.clearFocus(force = true) }
             Box(Modifier.fillMaxSize().drivingBlur(covered)) { ScreenFor(route, mode) { route = it } }
-            if (covered && hint != null) DrivingCover(stringResource(hint))
+            if (covered) DrivingCover(stringResource(route.parkHint))
         }
     }
 }

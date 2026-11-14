@@ -13,6 +13,8 @@
     <string name="park_hint_encyclopedia">주차(P)하면 도감을 볼 수 있어요</string>
     <string name="park_hint_field_drop">주차(P)하면 필드 드랍을 볼 수 있어요</string>
     <string name="park_hint_my_info">주차(P)하면 내 정보를 볼 수 있어요</string>
+    <string name="park_hint_settings">주차(P)하면 설정을 바꿀 수 있어요</string>
+    <string name="park_hint_home">주차(P)하면 쓸 수 있어요</string>
 
     <string name="screen_coming">준비 중인 화면이에요</string>
 </resources>
