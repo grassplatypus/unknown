@@ -48,6 +48,10 @@ class Projection(
     val toCamY = cosY * cosP
     val toCamZ = sinP
 
+    /** World direction of screen right; picks which side face reads as the left (lit) one. */
+    val rightX = cosY
+    val rightY = -sinY
+
     fun screenX(x: Float, y: Float, @Suppress("UNUSED_PARAMETER") z: Float): Float =
         originX + unit * ((x - cx) * cosY - (y - cy) * sinY)
 
@@ -90,7 +94,7 @@ class Projection(
             var minU = Float.MAX_VALUE; var maxU = -Float.MAX_VALUE
             var minV = Float.MAX_VALUE; var maxV = -Float.MAX_VALUE
             for (x in floatArrayOf(0f, scene.width.toFloat())) for (y in floatArrayOf(0f, scene.depth.toFloat()))
-                for (z in floatArrayOf(FLOOR_BASE, top)) {
+                for (z in floatArrayOf(-scene.floorDepth, top)) {
                     val u = p.screenX(x, y, z); val v = p.screenY(x, y, z)
                     minU = min(minU, u); maxU = maxOf(maxU, u); minV = min(minV, v); maxV = maxOf(maxV, v)
                 }
@@ -104,9 +108,6 @@ class Projection(
         }
 
         private const val FIT_MARGIN = 0.92f
-        private const val HEADROOM = 2.5f // tallest island object, so roofs are not cut at zoom 1
+        private const val HEADROOM = 3f // tallest island object, so roofs are not cut at zoom 1
     }
 }
-
-/** Bottom of the floor slab; the floor top is at the cell height (0 by default). */
-internal const val FLOOR_BASE = -0.3f

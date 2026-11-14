@@ -1,38 +1,52 @@
 package com.break8t.unknown.ui.iso
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import com.break8t.unknown.ui.theme.AppColors
-import kotlin.math.abs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.roundToInt
+
+/** Size of one low-resolution pixel on screen at zoom 1, in dp. Larger reads chunkier. */
+const val PIXEL_DP = 3f
 
 /** What a tap landed on. */
 sealed interface IsoHit {
@@ -53,6 +67,10 @@ class IsoViewState(preset: ViewPreset = ViewPreset.OBLIQUE, step: Int = 0, night
     var pan by mutableStateOf(Offset.Zero)
     var selectedId by mutableStateOf<String?>(null)
     var ghost by mutableStateOf<Ghost?>(null)
+        internal set
+
+    /** Wall time of the last render, for checking smoothness on the device. */
+    var lastRenderMs by mutableLongStateOf(0L)
         internal set
 
     val camera: IsoCamera get() = IsoCamera.of(preset, step)
@@ -96,9 +114,9 @@ fun rememberIsoViewState(preset: ViewPreset = ViewPreset.OBLIQUE, night: Boolean
     rememberSaveable(saver = IsoViewState.Saver) { IsoViewState(preset, 0, night) }
 
 /**
- * Draws [scene] in one Canvas. Drag pans, pinch zooms, tap reports [onTap]. With [editMode] in an
- * [ViewPreset.editable] view, tap or long press selects; dragging the selection moves a ghost that
- * [canPlace] judges, and release calls [onPlace] only when it is valid.
+ * Renders [scene] off the main thread into a low-resolution buffer and shows it with nearest-neighbour
+ * scaling. Drag pans, pinch zooms, tap reports [onTap]. In [editMode] (oblique and top views) tap or
+ * long press selects, and dragging the selection moves a ghost that [canPlace] judges before [onPlace].
  */
 @Composable
 fun IsoSceneView(
@@ -110,145 +128,93 @@ fun IsoSceneView(
     canPlace: (Placement) -> Boolean = scene::isFree,
     onPlace: (Placement) -> Unit = {},
 ) {
+    val base = PIXEL_DP * LocalDensity.current.density
+    var viewport by remember { mutableStateOf(IntSize.Zero) }
+    val bw = (viewport.width / base).toInt()
+    val bh = (viewport.height / base).toInt()
     val camera = state.camera
-    val drawList = remember(scene, camera) { buildDrawList(scene, camera) }
+    val night = state.night
+    val selected = state.selectedId
     val ghost = state.ghost
-    val ghostBoxes = remember(ghost, scene, camera) {
-        ghost?.let { g -> scene.find(g.placement.id)?.moved(g.placement) }
-            ?.let { paintOrder(it.worldBoxes(scene.baseZ(it)), camera) }
-            .orEmpty()
+    // Re-renders only when what is drawn changes; pan and zoom just move and scale the last image.
+    val rendered by produceState<Rendered?>(null, scene, camera, night, selected, ghost, bw, bh) {
+        if (bw <= 0 || bh <= 0) return@produceState
+        val r = withContext(Dispatchers.Default) {
+            val t0 = System.nanoTime()
+            val f = renderScene(scene, camera, bw, bh, night, selected, ghost)
+            val image = Bitmap.createBitmap(f.pixels, f.w, f.h, Bitmap.Config.ARGB_8888).asImageBitmap()
+            Rendered(f, image, (System.nanoTime() - t0) / 1_000_000)
+        }
+        value = r
+        state.lastRenderMs = r.ms
     }
-    val path = remember { Path() }
-    val paint = remember { Paint().apply { isAntiAlias = false } }
-    val size = remember { floatArrayOf(0f, 0f) }
-    val live = rememberUpdatedState(Live(scene, drawList, editMode, onTap, canPlace, onPlace))
+    val live = rememberUpdatedState(Live(scene, rendered, editMode, onTap, canPlace, onPlace))
 
-    Canvas(modifier.pointerInput(state) { gestures(state, size, live) }) {
-        size[0] = this.size.width; size[1] = this.size.height
-        val p = Projection.framing(scene, camera, size[0], size[1], state.zoom, state.pan)
-        val night = state.night
-        if (night) drawRect(IsoPalette.NightOverlay)
-        val boxes = drawList.boxes
-        for (i in 0 until drawList.firstObject) drawBox(boxes[i], p, night, path, paint)
-        for (i in drawList.firstObject until boxes.size) drawBox(boxes[i], p, night, path, paint)
-        // Drawn over the objects: a sofa covers its whole footprint, so an outline under it would not show.
-        state.selectedId?.let { id -> scene.find(id)?.let { footprint(it, scene, p, path, AppColors.Selected, fill = false) } }
-        if (ghost != null) {
-            val tint = if (ghost.valid) AppColors.Success else AppColors.Error
-            scene.find(ghost.placement.id)?.moved(ghost.placement)?.let { footprint(it, scene, p, path, tint, fill = true) }
-            for (b in ghostBoxes) drawBox(b, p, night, path, paint, tint = if (ghost.valid) null else AppColors.Error, alpha = GHOST_ALPHA)
+    Box(modifier.onSizeChanged { viewport = it }.pointerInput(state, base) { gestures(state, live, base) }) {
+        Canvas(Modifier.fillMaxSize()) {
+            if (night) drawRect(IsoPalette.Night.copy(alpha = NIGHT_OVERLAY))
+            val r = rendered ?: return@Canvas
+            val l = layout(r.frame, size, state, base)
+            drawImage(
+                r.image,
+                srcOffset = IntOffset.Zero,
+                srcSize = IntSize(r.frame.w, r.frame.h),
+                dstOffset = IntOffset(l.left, l.top),
+                dstSize = IntSize(r.frame.w * l.px, r.frame.h * l.px),
+                filterQuality = FilterQuality.None,
+            )
+        }
+        if (rendered == null && viewport != IntSize.Zero) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center), color = AppColors.Primary)
         }
     }
 }
 
+private class Rendered(val frame: IsoFrame, val image: ImageBitmap, val ms: Long)
+
 private class Live(
     val scene: IsoScene,
-    val drawList: DrawList,
+    val rendered: Rendered?,
     val editMode: Boolean,
     val onTap: (IsoHit) -> Unit,
     val canPlace: (Placement) -> Boolean,
     val onPlace: (Placement) -> Unit,
 )
 
-private const val GHOST_ALPHA = 0.75f
-private const val E = 1e-4f
+private const val NIGHT_OVERLAY = 0.45f
 
-/** Front-facing faces only, so a box's faces never overlap each other. */
-private fun DrawScope.drawBox(
-    b: WorldBox, p: Projection, night: Boolean, path: Path, paint: Paint,
-    tint: Color? = null, alpha: Float = 1f,
-) {
-    val lit = night && b.emissive != null
-    val own = when {
-        lit -> b.emissive!!
-        night -> IsoPalette.night(b.color)
-        else -> b.color
-    }
-    val tinted = if (tint != null) lerp(own, tint, 0.6f) else own
-    val base = if (alpha < 1f) tinted.copy(alpha = alpha) else tinted
-    fun shade(f: Float) = if (lit) base else IsoPalette.faceShade(base, f)
-    if (p.toCamZ > E) quad(p, path, paint, shade(IsoPalette.TOP),
-        b.x0, b.y0, b.z1, b.x1, b.y0, b.z1, b.x1, b.y1, b.z1, b.x0, b.y1, b.z1)
-    if (p.toCamX > E) quad(p, path, paint, shade(IsoPalette.X_POS),
-        b.x1, b.y0, b.z0, b.x1, b.y1, b.z0, b.x1, b.y1, b.z1, b.x1, b.y0, b.z1)
-    if (p.toCamX < -E) quad(p, path, paint, shade(IsoPalette.X_NEG),
-        b.x0, b.y0, b.z0, b.x0, b.y1, b.z0, b.x0, b.y1, b.z1, b.x0, b.y0, b.z1)
-    if (p.toCamY > E) quad(p, path, paint, shade(IsoPalette.Y_POS),
-        b.x0, b.y1, b.z0, b.x1, b.y1, b.z0, b.x1, b.y1, b.z1, b.x0, b.y1, b.z1)
-    if (p.toCamY < -E) quad(p, path, paint, shade(IsoPalette.Y_NEG),
-        b.x0, b.y0, b.z0, b.x1, b.y0, b.z0, b.x1, b.y0, b.z1, b.x0, b.y0, b.z1)
+/** Where the buffer lands on screen: an integer scale keeps every low-res pixel the same size. */
+private class Layout(val left: Int, val top: Int, val px: Int) {
+    fun bx(x: Float) = (x - left) / px
+    fun by(y: Float) = (y - top) / px
 }
 
-private fun DrawScope.quad(
-    p: Projection, path: Path, paint: Paint, color: Color,
-    ax: Float, ay: Float, az: Float, bx: Float, by: Float, bz: Float,
-    cx: Float, cy: Float, cz: Float, dx: Float, dy: Float, dz: Float,
-) {
-    path.reset()
-    path.moveTo(p.screenX(ax, ay, az), p.screenY(ax, ay, az))
-    path.lineTo(p.screenX(bx, by, bz), p.screenY(bx, by, bz))
-    path.lineTo(p.screenX(cx, cy, cz), p.screenY(cx, cy, cz))
-    path.lineTo(p.screenX(dx, dy, dz), p.screenY(dx, dy, dz))
-    path.close()
-    paint.color = color
-    drawIntoCanvas { it.drawPath(path, paint) }
+private fun layout(f: IsoFrame, size: Size, state: IsoViewState, base: Float): Layout {
+    val px = max(1, (base * state.zoom).roundToInt())
+    return Layout(
+        (size.width / 2f + state.pan.x - f.w * px / 2f).roundToInt(),
+        (size.height / 2f + state.pan.y - f.h * px / 2f).roundToInt(),
+        px,
+    )
 }
 
-private fun DrawScope.footprint(o: IsoObject, scene: IsoScene, p: Projection, path: Path, color: Color, fill: Boolean) {
-    val z = scene.baseZ(o) + 0.01f
-    val x0 = o.x.toFloat(); val y0 = o.y.toFloat(); val x1 = x0 + o.footW; val y1 = y0 + o.footD
-    path.reset()
-    path.moveTo(p.screenX(x0, y0, z), p.screenY(x0, y0, z))
-    path.lineTo(p.screenX(x1, y0, z), p.screenY(x1, y0, z))
-    path.lineTo(p.screenX(x1, y1, z), p.screenY(x1, y1, z))
-    path.lineTo(p.screenX(x0, y1, z), p.screenY(x0, y1, z))
-    path.close()
-    if (fill) drawPath(path, color.copy(alpha = 0.35f)) else drawPath(path, color, style = Stroke(width = 3f * density))
-}
-
-/** The topmost object under a screen point; boxes are tested front to back by their visible faces. */
-internal fun hitObject(list: DrawList, p: Projection, sx: Float, sy: Float): String? {
-    for (i in list.boxes.lastIndex downTo list.firstObject) {
-        val b = list.boxes[i]
-        if (p.toCamZ > E && inQuad(p, sx, sy, b.x0, b.y0, b.z1, b.x1, b.y0, b.z1, b.x1, b.y1, b.z1, b.x0, b.y1, b.z1)) return b.ownerId
-        val fx = if (p.toCamX > 0) b.x1 else b.x0
-        if (abs(p.toCamX) > E && inQuad(p, sx, sy, fx, b.y0, b.z0, fx, b.y1, b.z0, fx, b.y1, b.z1, fx, b.y0, b.z1)) return b.ownerId
-        val fy = if (p.toCamY > 0) b.y1 else b.y0
-        if (abs(p.toCamY) > E && inQuad(p, sx, sy, b.x0, fy, b.z0, b.x1, fy, b.z0, b.x1, fy, b.z1, b.x0, fy, b.z1)) return b.ownerId
-    }
-    return null
-}
-
-/** Hit result for a screen point: an object first, then a floor cell. */
-internal fun hitTest(scene: IsoScene, list: DrawList, p: Projection, sx: Float, sy: Float): IsoHit? =
-    hitObject(list, p, sx, sy)?.let { IsoHit.Item(it) } ?: p.cellAt(sx, sy, scene)?.let { (x, y) -> IsoHit.Cell(x, y) }
-
-private fun inQuad(
-    p: Projection, sx: Float, sy: Float,
-    ax: Float, ay: Float, az: Float, bx: Float, by: Float, bz: Float,
-    cx: Float, cy: Float, cz: Float, dx: Float, dy: Float, dz: Float,
-): Boolean {
-    val x1 = p.screenX(ax, ay, az); val y1 = p.screenY(ax, ay, az)
-    val x2 = p.screenX(bx, by, bz); val y2 = p.screenY(bx, by, bz)
-    val x3 = p.screenX(cx, cy, cz); val y3 = p.screenY(cx, cy, cz)
-    val x4 = p.screenX(dx, dy, dz); val y4 = p.screenY(dx, dy, dz)
-    val c1 = (x2 - x1) * (sy - y1) - (y2 - y1) * (sx - x1)
-    val c2 = (x3 - x2) * (sy - y2) - (y3 - y2) * (sx - x2)
-    val c3 = (x4 - x3) * (sy - y3) - (y4 - y3) * (sx - x3)
-    val c4 = (x1 - x4) * (sy - y4) - (y1 - y4) * (sx - x4)
-    return (c1 >= 0 && c2 >= 0 && c3 >= 0 && c4 >= 0) || (c1 <= 0 && c2 <= 0 && c3 <= 0 && c4 <= 0)
-}
+/** Hit result for buffer point ([bx], [by]): the object under it from the id buffer, else the floor cell. */
+internal fun hitTest(scene: IsoScene, f: IsoFrame, bx: Float, by: Float): IsoHit? =
+    f.objectAt(floor(bx).toInt(), floor(by).toInt())?.let { IsoHit.Item(it) }
+        ?: f.projection.cellAt(bx, by, scene)?.let { (x, y) -> IsoHit.Cell(x, y) }
 
 private const val TAP = 1
 private const val MOVE = 2
 
-private suspend fun PointerInputScope.gestures(state: IsoViewState, size: FloatArray, live: State<Live>) =
+private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<Live>, base: Float) =
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
         val start = down.position
         val l = live.value
-        fun projection() = Projection.framing(l.scene, state.camera, size[0], size[1], state.zoom, state.pan)
-        val hit = hitTest(l.scene, l.drawList, projection(), start.x, start.y)
+        val r = l.rendered
+        val view = Size(size.width.toFloat(), size.height.toFloat())
+        val lay = r?.let { layout(it.frame, view, state, base) }
+        val hit = if (r != null && lay != null) hitTest(l.scene, r.frame, lay.bx(start.x), lay.by(start.y)) else null
         val edit = l.editMode && state.preset.editable
         var dragId = (hit as? IsoHit.Item)?.id?.takeIf { edit && it == state.selectedId }
         val slop = viewConfiguration.touchSlop
@@ -276,7 +242,10 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, size: FloatA
             dragId = hit.id
         }
         val dragged = dragId?.let(l.scene::find)
-        val grab = dragged?.let { o -> projection().floorCell(start.x, start.y)?.let { (gx, gy) -> (gx - o.x) to (gy - o.y) } }
+        val proj = r?.frame?.projection
+        val grab = if (dragged != null && proj != null && lay != null) {
+            proj.floorCell(lay.bx(start.x), lay.by(start.y))?.let { (gx, gy) -> (gx - dragged.x) to (gy - dragged.y) }
+        } else null
         while (true) {
             val e = awaitPointerEvent()
             val pressed = e.changes.count { it.pressed }
@@ -286,18 +255,18 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, size: FloatA
                 dragId = null
                 val centroid = e.calculateCentroid()
                 val k = (state.zoom * e.calculateZoom()).coerceIn(IsoViewState.MIN_ZOOM, IsoViewState.MAX_ZOOM) / state.zoom
-                val c = Offset(size[0] / 2f, size[1] / 2f)
+                val c = Offset(view.width / 2f, view.height / 2f)
                 state.zoom *= k
-                state.pan = clampPan(centroid - c - (centroid - c - state.pan) * k + e.calculatePan(), state.zoom)
-            } else if (dragged != null && grab != null && dragId != null) {
+                state.pan = clampPan(centroid - c - (centroid - c - state.pan) * k + e.calculatePan(), state.zoom, view)
+            } else if (dragged != null && grab != null && dragId != null && proj != null && lay != null) {
                 val pos = e.changes.first { it.pressed }.position
-                projection().floorCell(pos.x, pos.y)?.let { (cx, cy) ->
+                proj.floorCell(lay.bx(pos.x), lay.by(pos.y))?.let { (cx, cy) ->
                     val p = l.scene.snap(dragged, cx, cy, grab.first, grab.second)
                     if (state.ghost?.placement != p) state.ghost = Ghost(p, live.value.canPlace(p))
                 }
             } else {
                 val c = e.changes.first { it.pressed }
-                state.pan = clampPan(state.pan + c.positionChange(), state.zoom)
+                state.pan = clampPan(state.pan + c.positionChange(), state.zoom, view)
             }
             e.changes.forEach { it.consume() }
         }
@@ -307,7 +276,8 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, size: FloatA
         }
     }
 
-private fun PointerInputScope.clampPan(pan: Offset, zoom: Float): Offset {
-    val lim = Size(size.width * zoom / 2f, size.height * zoom / 2f)
-    return Offset(pan.x.coerceIn(-lim.width, lim.width), pan.y.coerceIn(-lim.height, lim.height))
+private fun clampPan(pan: Offset, zoom: Float, view: Size): Offset {
+    val lx = view.width * zoom / 2f
+    val ly = view.height * zoom / 2f
+    return Offset(pan.x.coerceIn(-lx, lx), pan.y.coerceIn(-ly, ly))
 }

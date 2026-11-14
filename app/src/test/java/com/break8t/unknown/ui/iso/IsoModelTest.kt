@@ -9,28 +9,23 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IsoModelTest {
-    private val part = Cuboid(0.2f, 0.1f, 0f, 0.5f, 0.3f, 1f, Color.Red)
+    private val part = Cuboid(2, 1, 0, 5, 3, 4, Color.Red)
 
     @Test
     fun quarterTurnsComposeAndStayInsideTheTurnedFootprint() {
-        val w = 2; val d = 1
+        val w = 16; val d = 8
         var c = part
         for (r in 1..4) {
-            val turnedW = if (r % 2 == 0) w else d
-            val turnedD = if (r % 2 == 0) d else w
             val prevW = if (r % 2 == 1) w else d
             val prevD = if (r % 2 == 1) d else w
             c = c.rotated(prevW, prevD, 1)
-            assertNear(part.rotated(w, d, r), c)
-            assertTrue(c.x >= 0f && c.y >= 0f && c.x + c.w <= turnedW + 1e-5f && c.y + c.d <= turnedD + 1e-5f)
+            assertEquals(part.rotated(w, d, r), c)
+            val tw = if (r % 2 == 0) w else d
+            val td = if (r % 2 == 0) d else w
+            assertTrue(c.x >= 0 && c.y >= 0 && c.x + c.w <= tw && c.y + c.d <= td)
         }
-        assertNear(part, c)
-        assertNear(Cuboid(0.6f, 0.2f, 0f, 0.3f, 0.5f, 1f, Color.Red), part.rotated(w, d, 1))
-    }
-
-    private fun assertNear(a: Cuboid, b: Cuboid) {
-        val av = floatArrayOf(a.x, a.y, a.z, a.w, a.d, a.h); val bv = floatArrayOf(b.x, b.y, b.z, b.w, b.d, b.h)
-        for (i in av.indices) assertEquals("$a vs $b", av[i], bv[i], 1e-5f)
+        assertEquals(part, c)
+        assertEquals(Cuboid(4, 2, 0, 3, 5, 4, Color.Red), part.rotated(w, d, 1))
     }
 
     @Test
@@ -42,15 +37,40 @@ class IsoModelTest {
         assertEquals(3, IsoObject("p", IsoShapes.picture, 0, 1, rotation = 0, wall = WallSide.WEST).rot)
     }
 
+    /** Voxel sizes the report quotes; a shape that outgrows its footprint fails here. */
     @Test
-    fun rotatedObjectBoxesStayInsideTheFootprint() {
-        for (r in 0..3) {
-            val o = IsoObject("sh", IsoShapes.shelf, 1, 2, rotation = r)
-            for (b in o.worldBoxes(0f)) {
-                assertTrue("rot $r", b.x0 >= 1f - 1e-5f && b.x1 <= 1f + o.footW + 1e-5f)
-                assertTrue("rot $r", b.y0 >= 2f - 1e-5f && b.y1 <= 2f + o.footD + 1e-5f)
-            }
+    fun voxelModelsHaveTheirFootprintAndExpectedHeight() {
+        val expected = mapOf(
+            "it_sofa" to Triple(16, 8, 7), "it_plant" to Triple(8, 8, 11), "it_picture" to Triple(8, 8, 18),
+            "it_rug" to Triple(16, 16, 1), "it_lamp" to Triple(8, 8, 14), "it_shelf" to Triple(16, 8, 18),
+            "house" to Triple(24, 24, 24), "farm_empty" to Triple(8, 8, 1), "farm_sprout" to Triple(8, 8, 3),
+            "farm_growing" to Triple(8, 8, 4), "farm_grown" to Triple(8, 8, 5), "tree" to Triple(8, 8, 12),
+            "fence" to Triple(8, 8, 6), "path" to Triple(8, 8, 1), "water" to Triple(16, 16, 1),
+            "car" to Triple(16, 8, 8), "ch_sprout" to Triple(8, 8, 9), "ch_cat" to Triple(8, 8, 9),
+            "ch_mush" to Triple(8, 8, 8), "ch_cloud" to Triple(8, 8, 6), "ch_firefly" to Triple(8, 8, 9),
+        )
+        for ((id, size) in expected) {
+            val s = IsoShapes.of(id) ?: error("no shape for $id")
+            val m = s.model
+            assertEquals(id, size, Triple(m.sx, m.sy, m.sz))
+            assertEquals(id, s.w * VPC to s.d * VPC, m.sx to m.sy)
+            for (c in s.parts) assertTrue(id, c.x >= 0 && c.y >= 0 && c.x + c.w <= m.sx && c.y + c.d <= m.sy)
+            assertTrue("$id has visible faces", m.faceCount > 0)
         }
+        assertTrue(IsoShapes.rug.flat && IsoShapes.path.flat && !IsoShapes.sofa.flat)
+        assertTrue(IsoShapes.picture.wallMounted)
+    }
+
+    @Test
+    fun hiddenVoxelFacesAreCulledAndCarvingRemovesVoxels() {
+        val cube = IsoShape(1, 1, listOf(Cuboid(0, 0, 0, 2, 2, 2, Color.Red)))
+        assertEquals(4 * 4 + 4, cube.model.faceCount) // 2 x 2 per side, 4 on top, no bottom, none inside
+        val carved = IsoShape(1, 1, listOf(Cuboid(0, 0, 0, 2, 2, 2, Color.Red), Cuboid(1, 1, 1, 1, 1, 1, Color.Transparent)))
+        val f = carved.model.faces
+        val faces = (0 until carved.model.faceCount).map { listOf(f[it * 5], f[it * 5 + 1], f[it * 5 + 2], f[it * 5 + 3]) }
+        assertTrue(listOf(1, 1, 0, 4) in faces) // the notch floor is now exposed
+        assertFalse(faces.any { it[0] == 1 && it[1] == 1 && it[2] == 1 }) // the carved voxel is gone
+        assertTrue(IsoShapes.lamp.model.glow.any { it != 0 })
     }
 
     @Test
@@ -69,8 +89,7 @@ class IsoModelTest {
         val room = IsoSamples.room()
         val p = Projection.framing(room, IsoCamera.of(ViewPreset.OBLIQUE, 1), 800f, 600f, 1f, Offset.Zero)
         val plant = room.find("plant")!!
-        val sx = p.screenX(1.9f, 3.1f, 0f); val sy = p.screenY(1.9f, 3.1f, 0f)
-        val (cx, cy) = p.floorCell(sx, sy)!!
+        val (cx, cy) = p.floorCell(p.screenX(1.9f, 3.1f, 0f), p.screenY(1.9f, 3.1f, 0f))!!
         assertEquals(Placement("plant", 1, 3, 0), room.snap(plant, cx, cy, 0, 0))
     }
 
@@ -79,7 +98,8 @@ class IsoModelTest {
         val room = IsoSamples.room()
         assertFalse(room.isFree(Placement("plant", 0, 0, 0))) // on the sofa
         assertFalse(room.isFree(Placement("plant", 5, 4, 0))) // off the grid
-        assertTrue(room.isFree(Placement("plant", 2, 3, 0))) // on the rug
+        assertTrue(room.isFree(Placement("plant", 1, 2, 0))) // on the rug
+        assertFalse(room.isFree(Placement("plant", 2, 3, 0))) // on the cat
         assertFalse(room.isFree(Placement("rug", 4, 3, 0))) // 2x2 rug sticks out
         assertFalse(room.isFree(Placement("sofa", 4, 3, 1))) // turned sofa is 1x2 and hits the plant
         assertTrue(room.isFree(Placement("sofa", 4, 1, 1)))
@@ -89,23 +109,9 @@ class IsoModelTest {
     }
 
     @Test
-    fun islandValidatorRejectsWater() {
+    fun islandValidatorRejectsOccupiedCells() {
         val island = IsoSamples.island()
-        assertFalse(island.isFree(Placement("tree1", 0, 0, 0)))
-        assertTrue(island.isFree(Placement("tree1", 12, 6, 0)))
-    }
-
-    @Test
-    fun everyKnownIdHasAShapeWithPartsInsideItsFootprint() {
-        val ids = listOf(
-            "it_sofa", "it_plant", "it_picture", "it_rug", "it_lamp", "it_shelf", "house",
-            "farm_empty", "farm_sprout", "farm_growing", "farm_grown", "tree", "fence", "path", "water", "car",
-        )
-        for (id in ids) {
-            val s = IsoShapes.of(id) ?: error("no shape for $id")
-            for (c in s.parts) assertTrue(id, c.x >= 0f && c.y >= 0f && c.x + c.w <= s.w + 1e-5f && c.y + c.d <= s.d + 1e-5f)
-        }
-        assertTrue(IsoShapes.rug.flat && IsoShapes.path.flat && !IsoShapes.sofa.flat)
-        assertTrue(IsoShapes.picture.wallMounted)
+        assertFalse(island.isFree(Placement("tree1", 5, 1, 0))) // the house
+        assertTrue(island.isFree(Placement("tree1", 9, 8, 0)))
     }
 }

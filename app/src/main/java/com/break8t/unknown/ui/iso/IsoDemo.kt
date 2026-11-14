@@ -37,35 +37,38 @@ object IsoSamples {
             IsoObject("plant", IsoShapes.plant, 4, 4),
             IsoObject("picture", IsoShapes.picture, 0, 2, wall = WallSide.WEST),
             IsoObject("picture2", IsoShapes.picture, 1, 0, wall = WallSide.NORTH),
+            IsoObject("cat", IsoShapes.cat, 2, 3),
         ),
     )
 
+    /** A floating island laid out like Figma S-12-a: house, road, 3 x 3 farm, pond, trees, characters. */
     fun island(): IsoScene {
-        val w = 14; val d = 11
+        val w = 10; val d = 9
+        val road = setOf(6 to 4) + (0..6).map { it to 5 }
         val cells = List(w * d) { i ->
-            val x = i % w; val y = i / w
-            val edge = minOf(x, y, w - 1 - x, d - 1 - y)
-            when (edge) {
-                0 -> Cell(FloorType.WATER, -0.2f)
-                1 -> Cell(FloorType.SAND)
-                else -> Cell(FloorType.GRASS)
-            }
+            if ((i % w to i / w) in road) Cell(FloorType.ROAD) else Cell(FloorType.GRASS)
         }
-        val stages = PlotStage.entries
-        val farm = (0 until 9).map { k -> IsoObject("plot$k", IsoShapes.plot(stages[k % stages.size]), 7 + k % 3, 2 + k / 3) }
+        val fruits = listOf(IsoPalette.Carrot, Color(0xFF7A3E8E), IsoPalette.Yellow)
+        val farm = (0 until 9).map { k ->
+            val stage = PlotStage.entries[(k + k / 3) % PlotStage.entries.size]
+            IsoObject("plot$k", IsoShapes.plot(stage, fruits[k % 3]), 1 + k % 3, 1 + k / 3)
+        }
         return IsoScene(
-            w, d, cells,
+            w, d, cells, floorDepth = 1.75f,
             objects = listOf(
-                IsoObject("house", IsoShapes.house, 2, 2),
-                IsoObject("path1", IsoShapes.path, 3, 5),
-                IsoObject("path2", IsoShapes.path, 3, 6),
-                IsoObject("car", IsoShapes.car(Color(0xFFD9483B)), 4, 7),
-                IsoObject("pond", IsoShapes.water, 8, 6),
-                IsoObject("tree1", IsoShapes.tree, 11, 2),
-                IsoObject("tree2", IsoShapes.tree, 11, 4),
-                IsoObject("tree3", IsoShapes.tree, 2, 8),
-                IsoObject("tree4", IsoShapes.tree, 11, 8),
-            ) + farm + (7..9).map { IsoObject("fence$it", IsoShapes.fence, it, 5) },
+                IsoObject("house", IsoShapes.house, 5, 1),
+                IsoObject("car", IsoShapes.of("car_red")!!, 3, 5),
+                IsoObject("pond", IsoShapes.water, 1, 6),
+                IsoObject("tree1", IsoShapes.tree, 0, 0),
+                IsoObject("tree2", IsoShapes.tree, 9, 0),
+                IsoObject("tree3", IsoShapes.tree, 9, 4),
+                IsoObject("tree4", IsoShapes.tree, 8, 7),
+                IsoObject("tree5", IsoShapes.tree, 4, 7),
+                IsoObject("sprout", IsoShapes.sprout, 8, 5),
+                IsoObject("mush", IsoShapes.mush, 6, 7),
+                IsoObject("cloud", IsoShapes.cloud, 0, 3),
+                IsoObject("firefly", IsoShapes.firefly, 4, 1),
+            ) + farm + (1..3).map { IsoObject("fence$it", IsoShapes.fence, it, 0) },
         )
     }
 }
@@ -101,7 +104,7 @@ fun IsoDemo(
             AppChip("편집", edit, { edit = !edit; state.selectedId = null })
             SecondaryButton("물건 돌리기", { state.rotateSelected(scene, scene::isFree, commit) })
             SecondaryButton("처음 크기", { state.resetView() })
-            Text(lastTap?.toString().orEmpty(), color = AppColors.TextSub)
+            Text("${state.lastRenderMs} ms  ${lastTap ?: ""}", color = AppColors.TextSub)
         }
         Box(Modifier.weight(1f).fillMaxWidth().background(if (state.night) IsoPalette.Night else AppColors.Sky)) {
             IsoSceneView(
