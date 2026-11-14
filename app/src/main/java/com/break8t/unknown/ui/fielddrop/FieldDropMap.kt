@@ -23,6 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.delay
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
@@ -71,7 +72,8 @@ class MapHandle {
         val east = GeoPoint(at.latitude, at.longitude + PROBE_M / (METERS_PER_DEG_LAT * cos(Math.toRadians(at.latitude))))
         val a = project(GeoPoint(at.latitude, at.longitude)) ?: return null
         val b = project(east) ?: return null
-        return PROBE_M / ((b.x - a.x) / density)
+        // 지도가 진행 방향으로 돌아가 있으면 동쪽이 화면 오른쪽이 아니다. 가로만 재면 축척이 터무니없이 커진다.
+        return PROBE_M / (hypot(b.x - a.x, b.y - a.y) / density)
     }
 
     internal var onRecenter: () -> Unit = {}
