@@ -1,0 +1,15 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.kotlin/
+captures/
+
+# .claude: ignore everything, re-include what the team shares
+.claude/*
+!.claude/settings.json
+!.claude/rules/
+!.claude/hooks/
+!.claude/skills/
+!.claude/agents/

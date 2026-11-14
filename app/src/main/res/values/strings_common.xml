@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">정체불명</string>
+
+    <string name="route_home">홈</string>
+    <string name="route_island">섬</string>
+    <string name="route_encyclopedia">도감</string>
+    <string name="route_field_drop">필드 드랍</string>
+    <string name="route_my_info">내 정보</string>
+    <string name="route_settings">설정</string>
+
+    <string name="park_hint_island">주차(P)하면 섬에 들어갈 수 있어요</string>
+    <string name="park_hint_encyclopedia">주차(P)하면 도감을 볼 수 있어요</string>
+    <string name="park_hint_field_drop">주차(P)하면 필드 드랍을 볼 수 있어요</string>
+    <string name="park_hint_my_info">주차(P)하면 내 정보를 볼 수 있어요</string>
+
+    <string name="screen_coming">준비 중인 화면이에요</string>
+</resources>
