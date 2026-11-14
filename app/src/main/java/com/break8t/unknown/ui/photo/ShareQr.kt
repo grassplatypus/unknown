@@ -69,11 +69,13 @@ fun ShareQrScreen(kind: ShareKind, title: String, subtitle: String, onClose: () 
 /** 왼쪽 카드에 그림(엽서, 정체 카드)을 함께 보일 때. */
 @Composable
 fun ShareQrScreen(kind: ShareKind, title: String, subtitle: String, @DrawableRes image: Int?, onClose: () -> Unit) =
-    ShareQrLayout(kind, onClose, onRetake = null) {
+    ShareQrLayout(kind, onClose, onRetake = null) { wide ->
         val shape = RoundedCornerShape(10.dp)
         val postcard = kind == ShareKind.POSTCARD && image != null
-        val pictureModifier = if (postcard) Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT)
-        else Modifier.fillMaxWidth().aspectRatio(660f / 420f).clip(shape)
+        // 가로 창의 카드는 높이가 정해져 있어서, 그림은 남는 높이만 쓰고 제목과 부제목 자리를 남긴다.
+        val fit = if (wide) Modifier.weight(1f, fill = false).align(Alignment.CenterHorizontally) else Modifier
+        val pictureModifier = if (postcard) fit.fillMaxWidth().aspectRatio(POSTCARD_ASPECT)
+        else fit.fillMaxWidth().aspectRatio(660f / 420f).clip(shape)
         if (image != null) {
             Image(painterResource(image), null, pictureModifier, contentScale = if (postcard) ContentScale.Fit else ContentScale.Crop)
         } else {
@@ -83,13 +85,13 @@ fun ShareQrScreen(kind: ShareKind, title: String, subtitle: String, @DrawableRes
         Text(subtitle, color = AppColors.TextSub, fontSize = 34.sp)
     }
 
-/** 공유 화면의 틀. onRetake가 있으면 QR 아래에 다시 찍기 버튼을 둔다(사진일 때). */
+/** 공유 화면의 틀. onRetake가 있으면 QR 아래에 다시 찍기 버튼을 둔다(사진일 때). [preview]는 높이가 정해진 가로 배치인지 받는다. */
 @Composable
 internal fun ShareQrLayout(
     kind: ShareKind,
     onClose: () -> Unit,
     onRetake: (() -> Unit)?,
-    preview: @Composable ColumnScope.() -> Unit,
+    preview: @Composable ColumnScope.(wide: Boolean) -> Unit,
 ) {
     val chip = when (kind) {
         ShareKind.PHOTO -> R.string.photo_share_photo
@@ -107,13 +109,13 @@ internal fun ShareQrLayout(
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
             if (maxWidth >= 1000.dp) {
                 Row(Modifier.fillMaxWidth().height(728.dp), horizontalArrangement = Arrangement.spacedBy(ScreenPad)) {
-                    AppCard(Modifier.weight(700f).fillMaxHeight()) { Column(Modifier.padding(23.dp), content = preview) }
+                    AppCard(Modifier.weight(700f).fillMaxHeight()) { Column(Modifier.padding(23.dp)) { preview(true) } }
                     AppCard(Modifier.weight(363f).fillMaxHeight()) { QrPanel(kind, onRetake) }
                 }
             } else {
                 // 화면을 나누면 두 카드가 나란히 들어가지 않아서 위아래로 쌓는다.
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(ScreenPad)) {
-                    AppCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(23.dp), content = preview) }
+                    AppCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(23.dp)) { preview(false) } }
                     AppCard(Modifier.fillMaxWidth()) { QrPanel(kind, onRetake) }
                 }
             }
@@ -182,6 +184,12 @@ private fun QrPattern(seed: Int, modifier: Modifier = Modifier) {
 @Composable
 private fun PostcardSharePreview() = PreviewFrame {
     ShareQrScreen(ShareKind.POSTCARD, "경주 첨성대", "2026.10.12 방문") {}
+}
+
+@WindowPreviews
+@Composable
+private fun PostcardImageSharePreview() = PreviewFrame {
+    ShareQrScreen(ShareKind.POSTCARD, "경주 첨성대", "크리스마스 엽서 · 2025.12.25 방문", R.drawable.myinfo_post_cheomseongdae) {}
 }
 
 @WindowPreviews
