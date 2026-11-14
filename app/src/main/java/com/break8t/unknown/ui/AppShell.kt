@@ -22,13 +22,19 @@ import com.break8t.unknown.drive.LocalUxLimits
 import com.break8t.unknown.ui.components.DrivingCover
 import com.break8t.unknown.ui.components.SideRail
 import com.break8t.unknown.ui.components.drivingBlur
+import com.break8t.unknown.data.LocalDemoState
 import com.break8t.unknown.ui.home.HomeScreen
+import com.break8t.unknown.ui.home.HomeStore
+import com.break8t.unknown.ui.settings.SettingsScreen
 import com.break8t.unknown.ui.theme.AppColors
 
 /** 사이드 메뉴와 본문. 주행 중이면 허용되지 않은 화면 위에 DrivingCover를 덮는다. */
 @Composable
 fun AppShell(mode: DriveMode) {
     var route by rememberSaveable { mutableStateOf(Route.HOME) }
+    val demo = LocalDemoState.current
+    // 어느 메뉴에 있든 기어 변화를 홈 상태에 알려서, P로 바꾼 순간 보상이 들어가게 한다.
+    LaunchedEffect(mode) { HomeStore.controller.onMode(mode, demo) }
     Row(Modifier.fillMaxSize().background(AppColors.Background)) {
         SideRail(current = route, onSelect = { route = it })
         Box(Modifier.weight(1f).fillMaxHeight()) {
@@ -47,6 +53,8 @@ fun AppShell(mode: DriveMode) {
 private fun ScreenFor(route: Route, mode: DriveMode, onNavigate: (Route) -> Unit) {
     when (route) {
         Route.HOME -> HomeScreen(mode, onNavigate)
+        // 계정 화면과 상점은 아직 합치지 않았다. 합치면 콜백을 연결한다.
+        Route.SETTINGS -> SettingsScreen(onSwitchAccount = {}, onLogout = {}, onOpenShop = {})
         else -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             Text(stringResource(R.string.screen_coming), color = AppColors.TextSub)
         }
