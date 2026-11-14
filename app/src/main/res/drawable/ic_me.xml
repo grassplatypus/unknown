@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma icon/me. Stroke is white so callers tint it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
+    <path
+        android:pathData="M29.3333,14.6667C29.3333,18.7168 26.0501,22 22,22C17.9499,22 14.6667,18.7168 14.6667,14.6667C14.6667,10.6166 17.9499,7.33333 22,7.33333C26.0501,7.33333 29.3333,10.6166 29.3333,14.6667Z"
+        android:strokeWidth="3.66667"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M7.33333,38.5C7.33333,30.4333 13.9333,25.6667 22,25.6667C30.0667,25.6667 36.6667,30.4333 36.6667,38.5"
+        android:strokeWidth="3.66667"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
