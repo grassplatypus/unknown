@@ -188,7 +188,7 @@ fun rotatedSidePx(sidePx: Int, deg: Float): Int {
 fun distanceText(meters: Int): String =
     if (meters < 1000) "${meters}m" else String.format(Locale.ROOT, "%.1fkm", meters / 1000.0)
 
-/** 경유지 등록. 지금은 가짜이고, 나중에 NaviHelper 호출로 바꾼다. */
+/** 안내하기로 고른 버섯을 내비에 넣고 뺀다. 앱은 [NaviWaypoints](NaviRoute 경유)를, 테스트는 [FakeWaypointSink]를 쓴다. */
 interface WaypointSink {
     fun add(mushroom: Mushroom)
     fun remove(mushroom: Mushroom)
@@ -223,6 +223,7 @@ object NaviWaypoints : WaypointSink {
     }
 }
 
+/** 내비 없이 넣고 뺀 버섯 id만 기억한다. 화면 상태 전이를 단위 테스트에서 확인할 때 쓴다. */
 class FakeWaypointSink : WaypointSink {
     val waypoints = mutableListOf<String>()
     override fun add(mushroom: Mushroom) { waypoints += mushroom.id }
