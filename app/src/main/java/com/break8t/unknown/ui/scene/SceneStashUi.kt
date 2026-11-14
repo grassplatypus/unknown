@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.scene
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import kotlinx.coroutines.launch
@@ -131,7 +132,8 @@ fun CharacterCard(
                 val scope = rememberCoroutineScope()
                 val step = with(LocalDensity.current) { (109 + 16).dp.toPx() }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (scroll.canScrollBackward) PoseArrow(left = true) { scope.launch { scroll.scrollBy(-step) } }
+                // 화살표 자리는 늘 비워 둔다. 나타날 때마다 줄이 밀리면 그림이 제자리를 벗어나 보인다.
+                Box(Modifier.size(48.dp)) { if (scroll.canScrollBackward) PoseArrow(left = true) { scope.launch { scroll.scrollBy(-step) } } }
                 Row(Modifier.widthIn(max = 560.dp).horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (id in options) {
                         val on = look == id
@@ -150,9 +152,9 @@ fun CharacterCard(
                         )
                     }
                 }
-                if (scroll.canScrollForward) PoseArrow(left = false) { scope.launch { scroll.scrollBy(step) } }
+                Box(Modifier.size(48.dp)) { if (scroll.canScrollForward) PoseArrow(left = false) { scope.launch { scroll.scrollBy(step) } } }
                 }
-                PixelScrollBar(scroll, Modifier.widthIn(max = 560.dp).fillMaxWidth())
+                PixelScrollBar(scroll, Modifier.padding(start = 56.dp).widthIn(max = 560.dp).fillMaxWidth())
             }
             Labeled(stringResource(R.string.photo_size)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
