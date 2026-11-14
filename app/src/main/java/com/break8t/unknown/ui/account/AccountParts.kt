@@ -1,6 +1,7 @@
 package com.break8t.unknown.ui.account
 
-import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -56,20 +57,18 @@ internal fun characterRes(id: String): Int = when (id) {
     else -> R.drawable.account_ch_sprout
 }
 
-/** 로고와 앱 이름. */
+/** 예전 왼쪽 위 로고 줄이 차지하던 높이. 로고를 오른쪽 아래로 옮겨도 화면 내용은 제자리에 둔다. */
+internal val HeaderSpace = 101.dp
+
+/** 오른쪽 아래 로고(앱 이름 글자 없음). 부모 Box 안에서 [modifier]로 자리를 잡는다. */
 @Composable
-internal fun AppHeader(modifier: Modifier = Modifier) {
-    Row(
-        modifier.padding(start = 44.dp, top = 39.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // 런처 아이콘 앞면은 둘레에 투명 여백이 커서, 그림 부분이 62dp 높이를 채우도록 크게 그리고 가운데만 보인다.
-        Box(Modifier.size(62.dp), contentAlignment = Alignment.Center) {
-            Image(painterResource(R.mipmap.ic_launcher_foreground), contentDescription = null, Modifier.requiredSize(112.dp))
-        }
-        Text(stringResource(R.string.app_name), color = AppColors.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
-    }
+internal fun AppLogo(modifier: Modifier = Modifier) {
+    // 팀 BI 원본에서 배경만 지운 그림(551x875)이다. 비율을 지켜 높이만 정한다.
+    Image(
+        painterResource(R.drawable.account_logo),
+        stringResource(R.string.app_name),
+        modifier.padding(end = 40.dp, bottom = 32.dp).height(124.dp).aspectRatio(551f / 875f),
+    )
 }
 
 /** 왼쪽 위 "< 계정 선택" 같은 돌아가기 칩. */

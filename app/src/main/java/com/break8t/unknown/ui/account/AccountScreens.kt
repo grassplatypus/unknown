@@ -69,7 +69,7 @@ internal fun SplashContent(progress: Float) = BoxWithConstraints(Modifier.fillMa
     Column(
         Modifier.fillMaxSize().background(AppColors.Splash).verticalScroll(rememberScrollState()),
     ) {
-        AppHeader()
+        Spacer(Modifier.height(HeaderSpace))
         val shape = RoundedCornerShape(21.dp)
         Column(
             Modifier
@@ -136,6 +136,7 @@ internal fun SplashContent(progress: Float) = BoxWithConstraints(Modifier.fillMa
             }
         }
     }
+    AppLogo(Modifier.align(Alignment.BottomEnd))
 }
 
 /** 자동 로그인 카운트다운에 보일 값. */
@@ -151,44 +152,47 @@ internal fun SelectContent(
     onProfiles: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        AppHeader()
-        Column(Modifier.fillMaxWidth().padding(horizontal = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.height(80.dp))
-            Text(stringResource(R.string.account_select_title), color = AppColors.Text, fontSize = 62.sp, fontWeight = FontWeight.Bold)
-            // 카운트다운이 멈춰도 자리는 남긴다. 누르는 순간 카드가 손가락 아래에서 올라가 버리면 눌리지 않는다.
-            var lastCountdown by remember { mutableStateOf(countdown) }
-            if (countdown != null) lastCountdown = countdown
-            lastCountdown?.let { shown ->
-                Spacer(Modifier.height(31.dp))
-                Column(
-                    Modifier
-                        .alpha(if (countdown != null) 1f else 0f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(AppColors.Accent)
-                        .padding(horizontal = 36.dp, vertical = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        stringResource(R.string.account_auto_login, shown.seconds, shown.nickname),
-                        color = AppColors.Text,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
-                    Text(stringResource(R.string.account_auto_login_hint), color = AppColors.TextSub, fontSize = 31.sp)
+    Box(modifier.fillMaxSize()) {
+        AppLogo(Modifier.align(Alignment.BottomEnd))
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Spacer(Modifier.height(HeaderSpace))
+            Column(Modifier.fillMaxWidth().padding(horizontal = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(80.dp))
+                Text(stringResource(R.string.account_select_title), color = AppColors.Text, fontSize = 62.sp, fontWeight = FontWeight.Bold)
+                // 카운트다운이 멈춰도 자리는 남긴다. 누르는 순간 카드가 손가락 아래에서 올라가 버리면 눌리지 않는다.
+                var lastCountdown by remember { mutableStateOf(countdown) }
+                if (countdown != null) lastCountdown = countdown
+                lastCountdown?.let { shown ->
+                    Spacer(Modifier.height(31.dp))
+                    Column(
+                        Modifier
+                            .alpha(if (countdown != null) 1f else 0f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(AppColors.Accent)
+                            .padding(horizontal = 36.dp, vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            stringResource(R.string.account_auto_login, shown.seconds, shown.nickname),
+                            color = AppColors.Text,
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(stringResource(R.string.account_auto_login_hint), color = AppColors.TextSub, fontSize = 31.sp)
+                    }
                 }
+                Spacer(Modifier.height(52.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(35.dp, Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(35.dp),
+                ) {
+                    accounts.forEach { AccountCard(it, highlighted = it.id == lastUsedId) { onPick(it) } }
+                }
+                Spacer(Modifier.height(91.dp))
+                SecondaryButton(stringResource(R.string.account_profiles), onProfiles, Modifier.width(468.dp))
+                Spacer(Modifier.height(40.dp))
             }
-            Spacer(Modifier.height(52.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(35.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(35.dp),
-            ) {
-                accounts.forEach { AccountCard(it, highlighted = it.id == lastUsedId) { onPick(it) } }
-            }
-            Spacer(Modifier.height(91.dp))
-            SecondaryButton(stringResource(R.string.account_profiles), onProfiles, Modifier.width(468.dp))
-            Spacer(Modifier.height(40.dp))
         }
     }
 }
@@ -400,7 +404,7 @@ private fun QrSide(expired: Boolean, remainingSec: Int, ttlSec: Int, canLeave: B
 @Composable
 internal fun QrCancelledContent(canLeave: Boolean, onLeave: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        if (canLeave) BackChip(stringResource(R.string.account_back_select), onLeave, Modifier.padding(35.dp)) else AppHeader()
+        if (canLeave) BackChip(stringResource(R.string.account_back_select), onLeave, Modifier.padding(35.dp)) else Spacer(Modifier.height(HeaderSpace))
         Column(
             Modifier.fillMaxWidth().padding(start = 40.dp, end = 40.dp, top = 220.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
