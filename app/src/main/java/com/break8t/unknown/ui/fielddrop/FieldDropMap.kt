@@ -62,7 +62,7 @@ class MapHandle {
     /** 내 차를 가운데에 두고 기본 높이로 돌아간다. 화면 높이(dp)에 따라 줌이 달라진다. */
     fun recenter(p: GeoPoint, viewportHeightDp: Double) {
         val m = map ?: return
-        val zoom = defaultZoom(p, viewportHeightDp, m.maxZoomLevel, m.cameraPosition.fov)
+        val zoom = defaultZoom(p, viewportHeightDp, m.maxZoomLevel)
         m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(p.lat, p.lng), zoom))
     }
 }
@@ -73,8 +73,8 @@ private const val METERS_PER_DEG_LAT = 111_320.0
 // MapLibre 기본 최대 줌. 지도가 뜨기 전 첫 카메라에만 쓰고, 뜬 뒤에는 maxZoomLevel을 읽는다.
 private const val MAP_MAX_ZOOM = 25.5
 
-fun defaultZoom(at: GeoPoint, viewportHeightDp: Double, maxZoom: Double = MAP_MAX_ZOOM, fovDeg: Double = MAP_DEFAULT_FOV_DEG): Double =
-    zoomForAltitude(at.lat, FIELD_DROP_ALTITUDE_M, viewportHeightDp, maxZoom, fovDeg)
+fun defaultZoom(at: GeoPoint, viewportHeightDp: Double, maxZoom: Double = MAP_MAX_ZOOM): Double =
+    zoomForAltitude(at.lat, FIELD_DROP_ALTITUDE_M, viewportHeightDp, maxZoom)
 
 /** MapLibre 지도. 화면을 나누면 Activity가 다시 만들어지므로 카메라는 rememberSaveable에 둔다. */
 @Composable
@@ -135,8 +135,9 @@ private fun createMapView(
     }
 }
 
+/** 다시 칠한 지도가 이미 떠 있으면 바꾸지 않는다. 나중의 실패로 멀쩡한 지도를 지우지 않으려는 것이다. */
 private fun goOffline(map: MapLibreMap, handle: MapHandle) {
-    if (handle.status == MapStatus.OFFLINE) return
+    if (handle.status != MapStatus.LOADING) return
     handle.status = MapStatus.OFFLINE
     map.setStyle(Style.Builder().fromJson(OFFLINE_STYLE_JSON))
 }

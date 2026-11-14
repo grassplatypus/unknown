@@ -80,7 +80,7 @@ fun minutesFor(meters: Int): Int = (meters / CITY_M_PER_MIN).roundToInt()
 /** 처음 열 때와 현재 위치 버튼을 누를 때의 카메라 높이(m). 합칠 때 BalanceConfig.fieldDropAltitudeM으로 바꾼다. */
 const val FIELD_DROP_ALTITUDE_M = 50.0
 
-/** MapLibre 기본 세로 시야각(0.6435 rad). 지도가 뜨면 CameraPosition.fov 값을 쓴다. */
+/** MapLibre 기본 세로 시야각(0.6435 rad). 첫 화면과 현재 위치 버튼이 같은 값을 쓴다. */
 const val MAP_DEFAULT_FOV_DEG = 36.8699
 
 // MapLibre는 512dp 타일을 쓴다. 적도에서 줌 0일 때 1dp가 덮는 거리(m)다.

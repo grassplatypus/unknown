@@ -91,7 +91,7 @@ import com.break8t.unknown.ui.theme.AppTheme
 import kotlinx.coroutines.delay
 
 // Figma "3. 필드 드랍". Sizes are Figma px x 1.3, see SideRail.kt.
-private const val SCALE_BAR_MAX_DP = 200.0
+private const val SCALE_BAR_MAX_DP = 120.0 // 좁은 창에서 카드 오른쪽 끝(오른쪽에서 173dp)에 닿지 않는다.
 private const val TOAST_MS = 2000L
 private val Margin = 35.dp
 private val MarkerSize = 109.dp
@@ -224,7 +224,7 @@ internal fun FieldDropContent(
         }
         val metersPerDp = if (preview) previewMPerDp else handle.metersPerDp(density.density)
         metersPerDp?.let {
-            // 현재 위치 버튼 바로 위. 카드는 왼쪽 아래라 좁은 창에서도 겹치지 않는다.
+            // 현재 위치 버튼 바로 위. 막대는 SCALE_BAR_MAX_DP보다 길지 않아서 카드와 겹치지 않는다.
             ScaleBar(it, Modifier.align(Alignment.BottomEnd).padding(end = 44.dp, bottom = 44.dp + LocateSize + 20.dp))
         }
         LocateButton(onClick = { handle.recenter(car.at, maxHeight.value.toDouble()) }, Modifier.align(Alignment.BottomEnd).padding(44.dp))
