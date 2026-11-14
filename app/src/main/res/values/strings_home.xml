@@ -16,7 +16,6 @@
     <!-- 견본 정체 (Figma 견본과 같은 값) -->
     <string name="home_demo_jam_name">성산대교 구간</string>
     <string name="home_demo_road">서부간선도로</string>
-    <string name="home_demo_segment">성산대교 → 목동교</string>
     <string name="home_demo_jam_time">오늘 오전 8:12</string>
     <string name="home_demo_postcard">벚꽃길</string>
 
@@ -33,6 +32,12 @@
     <string name="home_today_driving">오늘 %1$dkm를 %2$d분째 달리고 있어요.</string>
     <string name="home_remaining_km">%1$.1fkm 남음</string>
     <string name="home_usual_minutes">보통 %1$d분쯤 걸려요</string>
+    <string name="home_jam_now">지금 지나는 정체</string>
+    <string name="home_jam_unnamed">이름 없는 도로</string>
+    <string name="home_segment_both">%1$s → %2$s</string>
+    <string name="home_segment_from">%1$s부터</string>
+    <string name="home_segment_to">%1$s까지</string>
+    <string name="home_jam_ahead">%1$.1fkm 앞에 %2$s 정체가 있어요.</string>
     <string name="home_raid_solo">혼자 지나는 중</string>
     <string name="home_raid_group">함께 지나는 중 %1$d명</string>
     <string name="home_raid_nobody">함께 지나는 사람이 아직 없어요.</string>
@@ -41,6 +46,7 @@
     <string name="home_passenger_qr">동승자 QR</string>
     <string name="home_end">종료</string>
     <string name="home_passed_title">%1$d번째 정체를 지났어요</string>
+    <string name="home_passed_plain">정체를 지났어요</string>
     <string name="home_took_time">걸린 시간</string>
     <string name="home_coins_to_get">받을 코인</string>
     <string name="home_passed_with">함께 통과한 %1$d명</string>

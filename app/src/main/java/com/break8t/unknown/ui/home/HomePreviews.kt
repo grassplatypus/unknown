@@ -36,14 +36,35 @@ private fun S09aNoRaid() = Frame { DrivingHome(RaidState.None, onEnd = {}) }
 
 @HomeSizes
 @Composable
-private fun S09bSolo() = Frame { DrivingHome(RaidState.Solo, onEnd = {}) }
+private fun S09bSolo() = Frame { DrivingHome(RaidState.Solo(HomeDemo.JAM), onEnd = {}) }
 
 @HomeSizes
 @Composable
-private fun S09cGroup() = Frame { DrivingHome(RaidState.Group(HomeDemo.PARTICIPANTS), onEnd = {}) }
+private fun S09cGroup() = Frame { DrivingHome(RaidState.Group(HomeDemo.JAM, HomeDemo.PARTICIPANTS), onEnd = {}) }
 
 @HomeSizes
 @Composable
 private fun S09dPassed() = Frame {
-    DrivingHome(RaidState.Passed(HomeDemo.RAID_JAM_SEC, coins = 10, HomeDemo.PARTICIPANTS), onEnd = {})
+    DrivingHome(RaidState.Passed(HomeDemo.RAID_JAM_SEC, coins = 10, HomeDemo.PARTICIPANTS, HomeDemo.JAM), onEnd = {})
+}
+
+/** 내비에서 온 정체. 지난 기록이 없고 교차로 이름이 하나만 왔다. */
+private val LIVE_JAM = JamView("경부고속도로", "양재IC", "", remainingM = 3200.0, progress = 0.27f)
+
+@HomeSizes
+@Composable
+private fun S09bLiveOneCross() = Frame { DrivingHome(RaidState.Solo(LIVE_JAM), onEnd = {}) }
+
+@HomeSizes
+@Composable
+private fun S09bLiveNoCross() = Frame { DrivingHome(RaidState.Solo(LIVE_JAM.copy(startCross = "")), onEnd = {}) }
+
+@HomeSizes
+@Composable
+private fun S09aApproaching() = Frame { DrivingHome(RaidState.Approaching(LIVE_JAM, aheadM = 1200.0), onEnd = {}) }
+
+@HomeSizes
+@Composable
+private fun S09dLivePassed() = Frame {
+    DrivingHome(RaidState.Passed(312, coins = 5, emptyList(), LIVE_JAM.copy(remainingM = 0.0, progress = 1f)), onEnd = {})
 }
