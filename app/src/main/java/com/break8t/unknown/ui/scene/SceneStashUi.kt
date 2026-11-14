@@ -1,5 +1,14 @@
 package com.break8t.unknown.ui.scene
 
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -117,7 +126,13 @@ fun CharacterCard(
             itemVerticalAlignment = Alignment.Bottom,
         ) {
             Labeled(stringResource(R.string.photo_pose)) {
-                Row(Modifier.widthIn(max = 620.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                // 칸이 많으면 좌우로 민다. 끝 칸이 반쯤 걸리게 폭을 잡고, 더 있는 쪽에 화살표를 두어 더 있다는 것을 보인다.
+                val scroll = rememberScrollState()
+                val scope = rememberCoroutineScope()
+                val step = with(LocalDensity.current) { (109 + 16).dp.toPx() }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (scroll.canScrollBackward) PoseArrow(left = true) { scope.launch { scroll.scrollBy(-step) } }
+                Row(Modifier.widthIn(max = 560.dp).horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (id in options) {
                         val on = look == id
                         val model = characterObject(SceneCharacter(id, 0f, 0f, CharacterSizes[DEFAULT_SIZE], 0), 1, characterId = characterId)
@@ -135,6 +150,9 @@ fun CharacterCard(
                         )
                     }
                 }
+                if (scroll.canScrollForward) PoseArrow(left = false) { scope.launch { scroll.scrollBy(step) } }
+                }
+                PixelScrollBar(scroll, Modifier.widthIn(max = 560.dp).fillMaxWidth())
             }
             Labeled(stringResource(R.string.photo_size)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -158,3 +176,32 @@ private fun Labeled(label: String, content: @Composable () -> Unit) {
 }
 
 private const val DISABLED_ALPHA = 0.4f
+
+/** 포즈 줄 양끝의 화살표. 누르면 한 칸씩 민다(애니메이션 없이). */
+@Composable
+private fun PoseArrow(left: Boolean, onClick: () -> Unit) = Icon(
+    painterResource(R.drawable.myinfo_ic_next),
+    stringResource(if (left) R.string.scene_pose_prev else R.string.scene_pose_next),
+    Modifier
+        .size(48.dp)
+        .clip(ControlShape)
+        .clickable(role = Role.Button, onClick = onClick)
+        .padding(6.dp)
+        .graphicsLayer { if (left) rotationZ = 180f },
+    tint = AppColors.Text,
+)
+
+/** 가로 스크롤 위치를 보이는 픽셀 막대. 다 보이면 그리지 않는다. 손잡이 길이는 보이는 비율이다. */
+@Composable
+private fun PixelScrollBar(scroll: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier) {
+    if (scroll.maxValue <= 0 || scroll.maxValue == Int.MAX_VALUE) return
+    val view = scroll.viewportSize.toFloat().coerceAtLeast(1f)
+    val shown = view / (view + scroll.maxValue)
+    val at = scroll.value.toFloat() / scroll.maxValue
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.height(10.dp).background(AppColors.Muted)) {
+        val thumb = maxWidth * shown
+        androidx.compose.foundation.layout.Box(
+            Modifier.offset(x = (maxWidth - thumb) * at).width(thumb).height(10.dp).background(AppColors.Line),
+        )
+    }
+}
