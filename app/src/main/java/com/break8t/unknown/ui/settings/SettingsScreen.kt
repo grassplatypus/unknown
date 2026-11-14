@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -176,6 +177,8 @@ private fun SettingsContent(
                 toSave = { statusMessageToSave(it, cfg.statusMessageMax) },
                 onSave = { v ->
                     demo.update { it.copy(statusMessage = v) }
+                    page = Page.MAIN
+                    tab = Tab.ACCOUNT
                     toast = statusSaved
                 },
                 onBack = back,
@@ -189,6 +192,8 @@ private fun SettingsContent(
                 toSave = { nicknameToSave(it, cfg.nicknameMax) },
                 onSave = { v ->
                     demo.update { it.copy(nickname = v) }
+                    page = Page.MAIN
+                    tab = Tab.ACCOUNT
                     toast = nicknameSaved
                 },
                 onBack = back,
@@ -381,6 +386,7 @@ private fun EditPage(
     val state = rememberTextFieldState(initial)
     val noKeyboard = LocalUxLimits.current.noKeyboard
     val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     // 주행 규제가 걸리는 순간 열려 있던 키보드를 닫는다.
     LaunchedEffect(noKeyboard) { if (noKeyboard) focus.clearFocus(force = true) }
     val draft = state.text.toString()
@@ -431,7 +437,9 @@ private fun EditPage(
         val save = toSave(draft)
         if (save != null) {
             PrimaryButton(stringResource(R.string.settings_save), {
-                state.setTextAndPlaceCursorAtEnd(save)
+                // 저장하면 키보드를 내리고 게임·계정 탭으로 돌아가 토스트를 보인다(팀 피드백).
+                keyboard?.hide()
+                focus.clearFocus(force = true)
                 onSave(save)
             }, Modifier.weight(1f))
         } else {
@@ -661,7 +669,7 @@ private fun StatusEdit() = Frame(Profile(statusMessage = "주말엔 강릉 가�
 
 @SizePreviews @Composable
 private fun StatusSaved() = Frame(Profile(statusMessage = "주말엔 강릉 가요")) {
-    Screen(page = Page.STATUS, toast = stringResource(R.string.settings_status_saved))
+    Screen(Tab.ACCOUNT, toast = stringResource(R.string.settings_status_saved))
 }
 
 @SizePreviews @Composable
@@ -673,7 +681,7 @@ private fun StatusNoKeyboard() = Frame(limits = UxLimits(true, UxLimits.NO_KEYBO
 private fun NicknameBlank() = Frame(Profile(nickname = " ")) { Screen(page = Page.NICKNAME) }
 
 @SizePreviews @Composable
-private fun NicknameSaved() = Frame { Screen(page = Page.NICKNAME, toast = stringResource(R.string.settings_nickname_saved)) }
+private fun NicknameSaved() = Frame { Screen(Tab.ACCOUNT, toast = stringResource(R.string.settings_nickname_saved)) }
 
 private val previewOwned = Profile().owned + "voice_sprout"
 
