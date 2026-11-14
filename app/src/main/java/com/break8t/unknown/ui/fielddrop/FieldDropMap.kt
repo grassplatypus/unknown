@@ -120,6 +120,9 @@ fun LiveMap(
     }
     MapViewLifecycle(mapView)
     // 표시는 지도 레이어라서 상태가 바뀔 때만 데이터를 넘긴다. 움직임은 지도가 같은 프레임에 그린다.
+    LaunchedEffect(handle.style, markers.carIcon, markers.carRotate) {
+        handle.style?.let { pushCar(it, handle.images, markers.carIcon, markers.carRotate) }
+    }
     LaunchedEffect(handle.style, markers) { handle.style?.let { pushMarkers(it, markers) } }
     // 창 크기만 바뀌고 Activity가 남는 경우에도 기본 시점이면 높이를 다시 맞춘다.
     LaunchedEffect(handle.map, viewportHeightDp) {

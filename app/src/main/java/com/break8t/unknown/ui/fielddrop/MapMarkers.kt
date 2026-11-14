@@ -26,8 +26,6 @@ import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
 import org.maplibre.android.style.layers.PropertyFactory.iconOffset
 import org.maplibre.android.style.layers.PropertyFactory.iconOpacity
-import org.maplibre.android.style.layers.PropertyFactory.iconRotate
-import org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
@@ -50,9 +48,8 @@ internal const val DIM_ALPHA = 0.45f
 internal const val MY_CAR_TAG = "fd_tag_my_car"
 private const val ID = "id"
 private const val ICON = "icon"
-private const val ROTATE = "rotate"
 private const val DIM = "dim"
-// 차는 돌려 그려서 늘 선형 보간을 쓴다. 지도 엔진이 소스마다 그림 묶음을 따로 두니 버섯과 소스를 나눈다.
+private const val CAR_IMAGE = "fd_car"
 private const val CAR_SOURCE = "fd-car"
 private const val TAG_SOURCE = "fd-car-tag"
 private const val MUSH_SOURCE = "fd-mush"
@@ -125,14 +122,12 @@ fun addMarkerLayers(style: Style, images: Map<String, Bitmap>) {
     listOf(CAR_SOURCE, TAG_SOURCE, MUSH_SOURCE).forEach { style.addSource(GeoJsonSource(it)) }
     style.addLayer(
         SymbolLayer(CAR_SOURCE, CAR_SOURCE).withProperties(
-            iconImage(get(ICON)),
-            iconRotate(get(ROTATE)),
-            iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+            iconImage(CAR_IMAGE),
             iconAllowOverlap(true),
             iconIgnorePlacement(true),
         ),
     )
-    // 아래 두 레이어에는 크기와 회전을 두지 않는다. 멈춘 지도에서 보간 없이 찍히는 조건이다.
+    // 세 레이어 모두 크기와 회전을 두지 않는다. 멈춘 지도에서 보간 없이 찍히는 조건이다(차는 pushCar가 미리 돌린다).
     style.addLayer(
         SymbolLayer(TAG_SOURCE, TAG_SOURCE).withProperties(
             iconImage(MY_CAR_TAG),
@@ -153,11 +148,29 @@ fun addMarkerLayers(style: Style, images: Map<String, Bitmap>) {
     )
 }
 
+/** 지도 회전을 꺼 두어서 화면 기준으로 미리 돌린 그림이 지도 기준 회전과 같다. 지도가 돌리면 선형 보간이 걸린다. */
+fun pushCar(style: Style, images: Map<String, Bitmap>, carIcon: String, rotate: Float) {
+    if (style.isFullyLoaded) images[carIcon]?.let { style.addImage(CAR_IMAGE, rotatedCar(it, rotate)) }
+}
+
+/** 보간 없이(가장 가까운 픽셀) 돌린다. Compose의 FilterQuality.None + rotate와 같은 결과다. */
+fun rotatedCar(base: Bitmap, deg: Float): Bitmap {
+    val side = rotatedSidePx(base.width, deg)
+    val out = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
+    val nearest = Paint().apply { isFilterBitmap = false; isAntiAlias = false }
+    Canvas(out).apply {
+        rotate(deg, side / 2f, side / 2f)
+        drawBitmap(base, (side - base.width) / 2f, (side - base.height) / 2f, nearest)
+    }
+    out.density = base.density
+    return out
+}
+
 fun pushMarkers(style: Style, m: MapMarkers) {
     if (!style.isFullyLoaded) return
     val car = Point.fromLngLat(m.car.lng, m.car.lat)
     style.getSourceAs<GeoJsonSource>(CAR_SOURCE)?.setGeoJson(
-        Feature.fromGeometry(car).apply { addStringProperty(ICON, m.carIcon); addNumberProperty(ROTATE, m.carRotate) },
+        Feature.fromGeometry(car),
     )
     style.getSourceAs<GeoJsonSource>(TAG_SOURCE)?.setGeoJson(Feature.fromGeometry(car))
     style.getSourceAs<GeoJsonSource>(MUSH_SOURCE)?.setGeoJson(
