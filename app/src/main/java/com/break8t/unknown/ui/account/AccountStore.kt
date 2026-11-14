@@ -50,6 +50,11 @@ object AccountStore {
         accounts = accounts.map { if (it.id == id) it.copy(nickname = nickname) else it }
     }
 
+    /** 설정에서 프로필 테두리를 바꾸면 계정 선택 카드에도 같은 테두리가 보인다. */
+    fun setFrame(id: String, frame: String) {
+        accounts = accounts.map { if (it.id == id) it.copy(frame = frame) else it }
+    }
+
     fun setPin(id: String, pin: String?) {
         accounts = accounts.map { if (it.id == id) it.copy(pin = pin) else it }
     }

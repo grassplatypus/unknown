@@ -42,6 +42,8 @@ data class Profile(
     val guestbookBoardPlaced: Boolean = true,
     // 내 섬에 마지막으로 들어온 시각(ms). null이면 견본의 지난 방문 시각을 쓴다
     val guestbookLastVisitMs: Long? = null,
+    // 고른 프로필 테두리(AvatarFrame 이름). null이면 레벨이 연 것 중 가장 화려한 것을 쓴다
+    val avatarFrame: String? = null,
 )
 
 class DemoState(initial: Profile = Profile()) {

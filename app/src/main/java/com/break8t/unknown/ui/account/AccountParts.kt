@@ -1,5 +1,7 @@
 package com.break8t.unknown.ui.account
 
+import com.break8t.unknown.ui.home.FramedAvatar
+import com.break8t.unknown.ui.home.profileFrame
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.annotation.DrawableRes
@@ -197,6 +199,11 @@ private fun KeyBox(modifier: Modifier, onClick: () -> Unit, content: @Composable
 }
 
 /** 이름과 안내 한 줄, 그 아래 PIN 칸과 오류 문구. PIN 화면 셋이 함께 쓴다. */
+/** 계정 카드의 캐릭터 그림. 그 계정의 프로필 테두리를 두른다. */
+@Composable
+internal fun AccountAvatar(account: Account, size: Dp) =
+    FramedAvatar(account.characterId, profileFrame(account.frame, account.level), Modifier.size(size))
+
 @Composable
 internal fun PinSide(
     account: Account,
@@ -208,7 +215,7 @@ internal fun PinSide(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        if (showAvatar) Avatar(account.characterId, 156.dp, 31.dp)
+        if (showAvatar) AccountAvatar(account, 156.dp)
         Text(account.nickname, color = AppColors.Text, fontSize = 52.sp, fontWeight = FontWeight.Bold)
         Text(prompt, color = AppColors.Text, fontSize = 44.sp, textAlign = TextAlign.Center)
         PinBoxes(input, length, Modifier.padding(top = 16.dp))

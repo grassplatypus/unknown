@@ -1,5 +1,7 @@
 package com.break8t.unknown.ui.myinfo
 
+import com.break8t.unknown.ui.home.FramedAvatar
+import com.break8t.unknown.ui.home.profileFrame
 import com.break8t.unknown.ui.island.FriendHouseScreen
 import com.break8t.unknown.ui.island.FriendIslandScreen
 import com.break8t.unknown.ui.guestbook.friendBoardShown
@@ -282,7 +284,7 @@ private fun ProfileCard(profile: Profile) = BoxWithConstraints(
 ) {
     val art = if (maxWidth >= 900.dp) 325.dp else 180.dp
     Row(horizontalArrangement = Arrangement.spacedBy(52.dp), verticalAlignment = Alignment.CenterVertically) {
-        Art(artFor(profile.selectedCharacterId), profile.nickname, Modifier.size(art))
+        FramedAvatar(profile.selectedCharacterId, profileFrame(profile.avatarFrame, profile.level), Modifier.size(art))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(profile.nickname, Modifier.weight(1f), color = AppColors.Text, fontSize = 62.sp, fontWeight = FontWeight.Bold, maxLines = 1)

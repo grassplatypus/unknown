@@ -24,6 +24,18 @@ enum class AvatarFrame { BASIC, SILVER, GOLD, JEWEL }
 fun avatarFrame(level: Int, config: BalanceConfig = BalanceConfig.DEFAULT): AvatarFrame =
     AvatarFrame.entries[config.avatarFrameLevels.count { level >= it }.coerceAtMost(AvatarFrame.entries.size - 1)]
 
+/** 이 레벨에서 고를 수 있는 테두리. 레벨이 오를 때마다 하나씩 열린다. */
+fun unlockedFrames(level: Int, config: BalanceConfig = BalanceConfig.DEFAULT): List<AvatarFrame> =
+    AvatarFrame.entries.take(avatarFrame(level, config).ordinal + 1)
+
+/** 그 테두리가 열리는 레벨. 기본 테두리는 처음부터 열려 있다. */
+fun frameUnlockLevel(frame: AvatarFrame, config: BalanceConfig = BalanceConfig.DEFAULT): Int =
+    if (frame.ordinal == 0) 1 else config.avatarFrameLevels[frame.ordinal - 1]
+
+/** 내 프로필의 테두리. 고른 것이 없거나 아직 열리지 않은 것이면 열린 것 중 가장 화려한 것이다. */
+fun profileFrame(choice: String?, level: Int, config: BalanceConfig = BalanceConfig.DEFAULT): AvatarFrame =
+    AvatarFrame.entries.firstOrNull { it.name == choice }?.takeIf { it in unlockedFrames(level, config) } ?: avatarFrame(level, config)
+
 /**
  * 화면에 보일 정체 하나. 교차로 이름은 내비가 비워 보내는 일이 많다(27개 중 시작 15개, 끝 21개).
  * [meetCount]와 [usualMin]은 지난 기록이 있어야 아는 값이라 내비에서 온 정체는 null이다.

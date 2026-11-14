@@ -1,5 +1,13 @@
 package com.break8t.unknown.ui.settings
 
+import com.break8t.unknown.ui.home.AvatarFrame
+import com.break8t.unknown.ui.home.FramedAvatar
+import com.break8t.unknown.ui.home.profileFrame
+import com.break8t.unknown.ui.home.unlockedFrames
+import com.break8t.unknown.ui.home.frameUnlockLevel
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
@@ -109,7 +117,7 @@ private enum class Tab(@StringRes val label: Int) {
     ACCOUNT(R.string.settings_tab_account),
 }
 
-private enum class Page { MAIN, STATUS, NICKNAME, VOICE }
+private enum class Page { MAIN, STATUS, NICKNAME, VOICE, FRAME }
 
 private enum class Ask { NONE, LOGOUT, DRIVING_PUBLIC }
 
@@ -154,6 +162,7 @@ private fun SettingsContent(
     val statusSaved = stringResource(R.string.settings_status_saved)
     val nicknameSaved = stringResource(R.string.settings_nickname_saved)
     val voiceChanged = stringResource(R.string.settings_voice_changed)
+    val frameChanged = stringResource(R.string.settings_frame_changed)
 
     // imePadding here, not per page, so the save toast also stays above the keyboard.
     Box(Modifier.fillMaxSize().imePadding()) {
@@ -210,6 +219,17 @@ private fun SettingsContent(
                     }
                 },
                 onOpenShop = onOpenShop,
+                onBack = back,
+            )
+            Page.FRAME -> FramePage(
+                p,
+                onSelect = { f ->
+                    if (f != profileFrame(p.avatarFrame, p.level)) {
+                        demo.update { it.copy(avatarFrame = f.name) }
+                        AccountStore.lastUsedId?.let { AccountStore.setFrame(it, f.name) }
+                        toast = frameChanged
+                    }
+                },
                 onBack = back,
             )
         }
@@ -304,9 +324,12 @@ private fun MainPage(
             SettingRow(
                 p.nickname,
                 stringResource(R.string.settings_no_pin),
-                lead = { Art(p.selectedCharacterId, 99.dp, bordered = true) },
+                lead = { FramedAvatar(p.selectedCharacterId, profileFrame(p.avatarFrame, p.level), Modifier.size(99.dp)) },
             ) {
                 button(stringResource(R.string.settings_switch_account), onSwitchAccount)
+            }
+            SettingRow(stringResource(R.string.settings_frame), stringResource(frameName(profileFrame(p.avatarFrame, p.level)))) {
+                button(change) { onOpen(Page.FRAME) }
             }
             SettingRow(stringResource(R.string.settings_nickname), p.nickname) {
                 button(change) { onOpen(Page.NICKNAME) }
@@ -529,6 +552,52 @@ private fun VoicePackRow(pack: CatalogItem, selected: Boolean, onSelect: () -> U
     }
 }
 
+/** 프로필 테두리 고르기. 레벨이 아직 닿지 않은 테두리는 흐리게 두고 열리는 레벨을 적는다. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FramePage(p: Profile, onSelect: (AvatarFrame) -> Unit, onBack: () -> Unit) = PageColumn {
+    SubHeader(R.string.settings_frame, onBack)
+    Spacer(Modifier.height(40.dp))
+    val current = profileFrame(p.avatarFrame, p.level)
+    val open = unlockedFrames(p.level)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(26.dp), verticalArrangement = Arrangement.spacedBy(26.dp)) {
+        AvatarFrame.entries.forEach { f ->
+            val unlocked = f in open
+            val selected = f == current
+            Column(
+                Modifier
+                    .width(286.dp)
+                    .clip(RowShape)
+                    .background(AppColors.Card)
+                    .border(if (selected) 7.dp else BorderWidth, if (selected) AppColors.Selected else AppColors.Line, RowShape)
+                    .selectable(selected, enabled = unlocked, role = Role.RadioButton) { onSelect(f) }
+                    .alpha(if (unlocked) 1f else 0.45f)
+                    .padding(23.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(13.dp),
+            ) {
+                FramedAvatar(p.selectedCharacterId, f, Modifier.size(200.dp))
+                Text(stringResource(frameName(f)), color = AppColors.Text, fontSize = 42.sp, fontWeight = FontWeight.Bold)
+                // Every tile keeps the same third line so the row stays one height.
+                val (note, color) = when {
+                    selected -> stringResource(R.string.settings_in_use) to AppColors.Success
+                    !unlocked -> stringResource(R.string.settings_frame_unlock, frameUnlockLevel(f)) to AppColors.TextSub
+                    else -> " " to AppColors.TextSub
+                }
+                Text(note, color = color, fontSize = 31.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            }
+        }
+    }
+}
+
+@StringRes
+private fun frameName(f: AvatarFrame): Int = when (f) {
+    AvatarFrame.BASIC -> R.string.settings_frame_basic
+    AvatarFrame.SILVER -> R.string.settings_frame_silver
+    AvatarFrame.GOLD -> R.string.settings_frame_gold
+    AvatarFrame.JEWEL -> R.string.settings_frame_jewel
+}
+
 @Composable
 private fun SubHeader(@StringRes title: Int, onBack: () -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(35.dp), verticalArrangement = Arrangement.spacedBy(21.dp)) {
@@ -687,6 +756,9 @@ private fun NicknameBlank() = Frame(Profile(nickname = " ")) { Screen(page = Pag
 private fun NicknameSaved() = Frame { Screen(Tab.ACCOUNT, toast = stringResource(R.string.settings_nickname_saved)) }
 
 // 가진 캐릭터(새싹이, 냥이)의 목소리가 함께 보이고, 상점에서 반딧이를 사면 반딧이 목소리가 더해진다.
+@SizePreviews @Composable private fun FramePicker() = Frame { Screen(page = Page.FRAME) }
+@SizePreviews @Composable private fun FramePickerAllOpen() = Frame(Profile(level = 20, avatarFrame = "GOLD")) { Screen(page = Page.FRAME) }
+
 @SizePreviews @Composable private fun VoicePacks() = Frame { Screen(page = Page.VOICE) }
 
 @SizePreviews @Composable

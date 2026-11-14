@@ -115,6 +115,13 @@ internal fun Avatar(
     }
 }
 
+/** 픽셀 테두리를 두른 캐릭터 그림. 레이드 아바타와 내 프로필, 계정 선택이 같은 테두리를 쓴다. */
+@Composable
+fun FramedAvatar(characterId: String, frame: AvatarFrame, modifier: Modifier = Modifier, fill: Color = AppColors.Accent) =
+    Box(modifier.drawBehind { drawPixelFrame(frame, fill) }, contentAlignment = Alignment.Center) {
+        artFor(characterId)?.let { Image(ImageBitmap.imageResource(it), null, Modifier.fillMaxSize(0.68f), filterQuality = FilterQuality.None) }
+    }
+
 // 칸 크기를 정수 픽셀로 내려야 칸 사이에 틈이 생기지 않는다. 모서리는 FRAME_CUT 칸만큼 계단으로 깎는다.
 private const val FRAME_CELLS = 16
 private const val FRAME_CUT = 2

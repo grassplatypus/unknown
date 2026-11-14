@@ -213,7 +213,7 @@ private fun AccountCard(account: Account, highlighted: Boolean, onClick: () -> U
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         ) {
-            Avatar(account.characterId, 156.dp, 31.dp)
+            AccountAvatar(account, 156.dp)
             Text(
                 account.nickname,
                 color = AppColors.Text,
@@ -484,7 +484,7 @@ private fun ProfileRow(account: Account, current: Boolean, wide: Boolean, onPinS
         stringResource(R.string.account_pin_on).takeIf { account.pin != null },
     ).joinToString(" · ")
     val info = @Composable {
-        Avatar(account.characterId, 99.dp, 21.dp)
+        AccountAvatar(account, 99.dp)
         Column {
             Text(account.nickname, color = AppColors.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
             if (sub.isNotEmpty()) Text(sub, color = AppColors.TextSub, fontSize = 31.sp)

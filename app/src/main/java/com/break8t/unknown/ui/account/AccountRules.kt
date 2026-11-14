@@ -5,18 +5,21 @@ import com.break8t.unknown.drive.DriveMode
 import com.break8t.unknown.drive.UxLimits
 
 /** 이 차에 저장된 계정. 백엔드가 없으므로 PIN도 앱 메모리에만 있다(시연용). */
-data class Account(val id: String, val nickname: String, val characterId: String, val pin: String? = null)
+/** [level]과 [frame]은 계정 카드의 프로필 테두리를 정한다. 지금 쓰는 계정은 설정에서 고른 테두리가 들어온다. */
+data class Account(
+    val id: String, val nickname: String, val characterId: String, val pin: String? = null, val level: Int = 1, val frame: String? = null,
+)
 
 /** 시연 계정. 앞의 넷이 처음부터 저장돼 있고, 나머지는 QR 로그인으로 추가된다. 이름은 실존 인물과 겹치지 않는 별명이다. */
 internal val DemoAccounts = listOf(
-    Account("acc_farmer", "구름농부", "ch_sprout"),
-    Account("acc_cat", "새벽고양이", "ch_cat", pin = "1234"),
-    Account("acc_mush", "느긋한버섯", "ch_mush"),
-    Account("acc_firefly", "반짝반딧불", "ch_firefly", pin = "1234"),
-    Account("acc_cloud", "뭉게구름", "ch_cloud"),
-    Account("acc_sun", "아침햇살", "ch_sprout"),
-    Account("acc_sunset", "노을드라이버", "ch_cat"),
-    Account("acc_trip", "주말나들이", "ch_mush"),
+    Account("acc_farmer", "구름농부", "ch_sprout", level = 7),
+    Account("acc_cat", "새벽고양이", "ch_cat", pin = "1234", level = 23),
+    Account("acc_mush", "느긋한버섯", "ch_mush", level = 12),
+    Account("acc_firefly", "반짝반딧불", "ch_firefly", pin = "1234", level = 3),
+    Account("acc_cloud", "뭉게구름", "ch_cloud", level = 15),
+    Account("acc_sun", "아침햇살", "ch_sprout", level = 8),
+    Account("acc_sunset", "노을드라이버", "ch_cat", level = 2),
+    Account("acc_trip", "주말나들이", "ch_mush", level = 5),
 )
 internal const val DemoSeedCount = 4
 
