@@ -86,6 +86,22 @@ class HouseFeedbackTest {
         assertEquals(cfg.houseGridSize - 1, dragTarget(north, Offset(9f, 0f), pic, cfg).x)
     }
 
+    /** Whichever height of the wall the finger is on, the piece lands on the cell under it, through the real projection. */
+    @Test fun wallDragFollowsTheFingerAtAnyHeight() {
+        val cam = IsoCamera.of(ViewPreset.OBLIQUE, 0)
+        val proj = Projection.framing(RoomMap.scene(DefaultLayout, cfg, cam), cam, 400f, 300f, 1f, Offset.Zero)
+        val pic = Placed("it_picture", Surface.RIGHT_WALL, 0, 2)
+        val mid = 2 * RoomMap.rowHeight(cfg) + 0.5f
+        val start = Placement("p0", 0, 0, WallSide.NORTH.ordinal, WallSide.NORTH)
+        for (cell in 0 until cfg.houseGridSize) for (z in listOf(0.2f, 1f, 1.9f, 2.8f)) for (side in WallSide.entries.filter { it == WallSide.NORTH || it == WallSide.WEST }) {
+            val (x, y) = if (side == WallSide.NORTH) cell + 0.5f to 0f else 0f to cell + 0.5f
+            val at = proj.floorPoint(proj.screenX(x, y, z), proj.screenY(x, y, z), mid)!!
+            val p = dragTarget(start, at, pic, cfg)
+            assertEquals("$side cell $cell at z $z", side, p.wall)
+            assertEquals("$side cell $cell at z $z", cell, if (side == WallSide.NORTH) p.x else p.y)
+        }
+    }
+
     @Test fun wallSwitchKeepsTheRowAndPassesTheRoomRules() {
         val layout = DefaultLayout // picture on the right wall, row 2
         val i = layout.indexOfFirst { it.itemId == "it_picture" }

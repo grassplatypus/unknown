@@ -167,8 +167,8 @@ fun rotateInRoom(layout: List<Placed>, index: Int, config: BalanceConfig): List<
     rotate(layout + RoomMap.Fixed, index, config)?.take(layout.size)
 
 /**
- * Where a dragged piece may go. Floor pieces stay inside the room. A wall piece goes to the wall the finger
- * is nearer to, at the finger's spot along it; [at] is the world point under the finger at the piece's height.
+ * Where a dragged piece may go. Floor pieces stay inside the room; a wall piece goes to the wall under the finger.
+ * In the house's oblique view (yaw 45) a wall point keeps x - y at any height, so that picks the wall and the cell.
  */
 fun dragTarget(pl: Placement, at: Offset, current: Placed, config: BalanceConfig): Placement {
     val n = config.houseGridSize
@@ -177,8 +177,8 @@ fun dragTarget(pl: Placement, at: Offset, current: Placed, config: BalanceConfig
         return pl.copy(x = pl.x.coerceIn(0, maxOf(0, n - w)), y = pl.y.coerceIn(0, maxOf(0, n - h)))
     }
     val w = specOf(current.itemId).w
-    val north = at.y <= at.x
-    val along = floor(if (north) at.x else at.y).toInt().coerceIn(0, maxOf(0, n - w))
+    val north = at.x >= at.y
+    val along = floor(if (north) at.x - at.y else at.y - at.x).toInt().coerceIn(0, maxOf(0, n - w))
     val wall = if (north) WallSide.NORTH else WallSide.WEST
     return pl.copy(x = if (north) along else 0, y = if (north) 0 else along, rotation = wall.ordinal, wall = wall)
 }

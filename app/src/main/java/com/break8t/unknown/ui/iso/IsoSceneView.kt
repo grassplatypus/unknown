@@ -142,8 +142,9 @@ fun rememberIsoViewState(preset: ViewPreset = ViewPreset.OBLIQUE, night: Boolean
  * Renders [scene] off the main thread into a low-resolution buffer and shows it with nearest-neighbour
  * scaling. Drag pans, pinch zooms, tap reports [onTap]. In [editMode] (oblique and top views) tap or
  * long press selects, and dragging the selection moves a ghost that [canPlace] judges before [onPlace].
- * [frameInsets] frames the scene inside the view minus those edges while it still draws to the view edges.
- * [fixedView] turns off pan and pinch. [adjustDrag] gets each drag placement and the finger's world point.
+ * @param frameInsets edges the scene is framed clear of; it still draws out to the view edges.
+ * @param fixedView turns off pan and pinch.
+ * @param adjustDrag gets each drag placement and the world point under the finger at the piece's mid height.
  */
 @Composable
 fun IsoSceneView(
@@ -458,7 +459,7 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<
                     }
                     val centroid = e.calculateCentroid()
                     val k = (state.zoom * e.calculateZoom()).coerceIn(IsoViewState.MIN_ZOOM, IsoViewState.MAX_ZOOM) / state.zoom
-                    val c = Offset(view.width / 2f, view.height / 2f)
+                    val c = Offset(view.width / 2f, view.height / 2f) + l.shift
                     state.zoom *= k
                     state.pan = clampPan(centroid - c - (centroid - c - state.pan) * k + e.calculatePan(), state.zoom, view)
                 } else if (dragged != null && grab != null && dragId != null && proj != null && lay != null) {

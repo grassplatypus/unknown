@@ -136,6 +136,7 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
                 scene, Modifier.aspectRatio(1144f / 901f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(10.dp)),
                 config = config,
                 extra = extra,
+                fixedView = inHouse,
             )
         }
         return
