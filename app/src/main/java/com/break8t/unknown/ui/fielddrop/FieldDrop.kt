@@ -46,9 +46,30 @@ object FieldDropSamples {
         Mushroom("shop_bossam", MushroomKind.GOLD, "항아리 보쌈", true, GeoPoint(37.52878, 126.87671), 30, "seed_carrot"),
         Mushroom("park_sinjeong", MushroomKind.BLUE, "신정 공영주차장", false, GeoPoint(37.51614, 126.86724), 10, null),
         Mushroom("shop_bunsik", MushroomKind.GOLD, "새싹 분식", true, GeoPoint(37.53233, 126.87758), 30, "seed_carrot"),
-        // 시연용: 내 차 바로 옆이라 누르면 D-08이 열린다. 받아도 남아 있어서 오늘 한도까지 시연할 수 있다.
+        // 시연용: 내 차 바로 옆이라 누르면 D-08이 열린다. 받으면 지도에서 사라진다.
         Mushroom("shop_cafe", MushroomKind.GOLD, "골목 카페", true, GeoPoint(37.51806, 126.87605), 30, "seed_carrot"),
-    )
+    ) + around()
+
+    /** 지도가 비어 보이지 않게 차 둘레 1.5km 안에 흩어 둔 버섯. 모두 받을 수 있는 반경 밖이라 카드와 길 안내만 된다. */
+    private fun around(): List<Mushroom> = listOf(
+        Triple("park_mokdong", "목동 공영주차장", 0.0062 to -0.0035),
+        Triple("park_sinwol", "신월 공영주차장", -0.0048 to -0.0081),
+        Triple("park_omokgyo", "오목교 공영주차장", 0.0021 to 0.0105),
+        Triple("park_gucheong", "양천구청 주차장", -0.0072 to 0.0046),
+        Triple("park_sinjeongsa", "신정네거리 주차장", 0.0089 to 0.0052),
+        Triple("park_dunchi", "안양천 둔치 주차장", -0.0015 to -0.0128),
+        Triple("shop_tteok", "달빛 떡볶이", 0.0045 to -0.0102),
+        Triple("shop_bakery", "모퉁이 빵집", -0.0091 to -0.0022),
+        Triple("shop_flower", "초록 꽃집", 0.0102 to -0.0068),
+        Triple("shop_gukbap", "온기 국밥", -0.0034 to 0.0118),
+        Triple("shop_books", "바람 서점", 0.0068 to 0.0123),
+        Triple("shop_gimbap", "한입 김밥", -0.0110 to 0.0089),
+    ).map { (id, place, d) ->
+        val shop = id.startsWith("shop_")
+        val at = GeoPoint(CAR.at.lat + d.first, CAR.at.lng + d.second)
+        if (shop) Mushroom(id, MushroomKind.GOLD, place, true, at, 30, "seed_carrot")
+        else Mushroom(id, MushroomKind.BLUE, place, false, at, 10, null)
+    }
 }
 
 /** 내 차 위치를 주는 곳. FusedLocation 의존성과 권한이 들어오면 그 구현으로 바꾼다. */
@@ -144,12 +165,12 @@ fun mushroomIcon(kind: MushroomKind, ad: Boolean, selected: Boolean): String =
 
 fun carIconName(carId: String): String = if (carId == "car_blue" || carId == "car_yellow") "fd_$carId" else "fd_car_red"
 
-/** 한도에 닿으면 모두 흐리고, 고른 버섯(S-10-b)만 금색 테두리 그림을 쓴다. */
+/** 한도에 닿으면 모두 흐리고, 고른 버섯(S-10-b)만 금색 테두리 그림을 쓴다. 보상을 받은 버섯은 그리지 않는다. */
 fun mapMarkers(car: CarFix, carId: String, mushrooms: List<Mushroom>, state: FieldDropState, config: BalanceConfig) = MapMarkers(
     car.at,
     carIconName(carId),
     carRotation(car.headingDeg),
-    mushrooms.map { MushroomFeature(it.id, it.at, mushroomIcon(it.kind, it.ad, state.selectedId == it.id), state.atLimit(config)) },
+    mushrooms.filter { it.id !in state.claimed }.map { MushroomFeature(it.id, it.at, mushroomIcon(it.kind, it.ad, state.selectedId == it.id), state.atLimit(config)) },
 )
 
 /** 누른 자리에서 지도가 찾은 표시 id 가운데 첫 버섯. 없으면 빈 곳을 누른 것이다. */
@@ -183,6 +204,7 @@ data class FieldDropState(
     val selectedId: String? = null,
     val openId: String? = null,
     val guidingId: String? = null,
+    val claimed: Set<String> = emptySet(), // 오늘 보상을 받은 버섯. 지도에서 사라진다
 ) {
     fun atLimit(config: BalanceConfig) = todayCount >= config.mushroomDailyLimit
 }
@@ -198,6 +220,7 @@ class FieldDrop(
     fun mushroom(id: String?): Mushroom? = mushrooms.firstOrNull { it.id == id }
 
     fun tap(m: Mushroom, car: GeoPoint, config: BalanceConfig) = mutable.update { s ->
+        if (m.id in s.claimed) return@update s
         when (markerTap(m, car, s, config)) {
             MarkerTap.NONE -> s
             MarkerTap.REWARD -> s.copy(openId = m.id, selectedId = null)
@@ -224,7 +247,9 @@ class FieldDrop(
         var granted: Mushroom? = null
         mutable.update { s ->
             granted = mushroom(s.openId)?.takeIf { !s.atLimit(config) }
-            if (granted == null) s.copy(openId = null) else s.copy(openId = null, todayCount = s.todayCount + 1)
+            val m = granted
+            if (m == null) s.copy(openId = null)
+            else s.copy(openId = null, todayCount = s.todayCount + 1, claimed = s.claimed + m.id, guidingId = s.guidingId.takeIf { it != m.id })
         }
         val m = granted ?: return false
         demo.update { it.copy(coins = it.coins + m.rewardCoins) }

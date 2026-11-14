@@ -36,7 +36,8 @@ class FieldDropTest {
     }
 
     @Test fun demoSamplesKeepFigmaDistances() {
-        val labels = FieldDropSamples.mushrooms.associate { it.id to distanceText(distanceRoundedM(FieldDropSamples.CAR.at, it)) }
+        val figma = setOf("park_sisa", "shop_bossam", "park_sinjeong", "shop_bunsik", "shop_cafe")
+        val labels = FieldDropSamples.mushrooms.filter { it.id in figma }.associate { it.id to distanceText(distanceRoundedM(FieldDropSamples.CAR.at, it)) }
         assertEquals(
             mapOf("park_sisa" to "1.2km", "shop_bossam" to "1.2km", "park_sinjeong" to "800m", "shop_bunsik" to "1.6km", "shop_cafe" to "8m"),
             labels,
@@ -152,6 +153,21 @@ class FieldDropTest {
         assertEquals(1, demo.profile.value.items["seed_carrot"])
         assertEquals(2, m.state.value.todayCount)
         assertNull(m.state.value.openId)
+        // 받은 버섯은 지도에서 사라지고 다시 눌리지 않는다.
+        assertEquals(setOf("near"), m.state.value.claimed)
+        assertTrue(mapMarkers(CarFix(car, 0f), "car_red", listOf(near, far), m.state.value, config).mushrooms.none { it.id == "near" })
+        m.tap(near, car, config)
+        assertNull(m.state.value.openId)
+    }
+
+    @Test fun surroundingSamplesAreOutOfReachButNearby() {
+        val extra = FieldDropSamples.mushrooms.drop(5)
+        assertEquals(12, extra.size)
+        assertEquals(FieldDropSamples.mushrooms.size, FieldDropSamples.mushrooms.map { it.id }.toSet().size)
+        extra.forEach {
+            val d = distanceM(FieldDropSamples.CAR.at, it.at)
+            assertTrue("${it.id} $d", d > BalanceConfig.DEFAULT.mushroomRadiusM && d < 1_500)
+        }
     }
 
     @Test fun limitStopsTapsAndRewards() {
