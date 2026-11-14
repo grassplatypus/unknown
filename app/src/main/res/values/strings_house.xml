@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="house_to_island">섬으로</string>
+    <string name="house_title">집</string>
+    <string name="house_take_photo">사진 찍기</string>
+    <string name="house_storage">보관함</string>
+    <string name="house_decorate">꾸미기</string>
+    <string name="house_exit">나가기</string>
+    <string name="house_reset">초기화</string>
+    <string name="house_save">저장</string>
+
+    <string name="house_tab_all">전체</string>
+    <string name="house_tab_floor">바닥 가구</string>
+    <string name="house_tab_wall">벽 장식</string>
+    <string name="house_count">%d개</string>
+    <string name="house_storage_empty">보관함에 남은 가구가 없어요.</string>
+
+    <string name="house_turn">돌리기</string>
+    <string name="house_put_away">보관함에 넣기</string>
+    <string name="house_no_space">놓을 자리가 없어요</string>
+    <string name="house_no_turn">돌릴 자리가 없어요</string>
+    <string name="house_reset_done">배치를 초기화했어요</string>
+
+    <string name="house_exit_title">바꾼 배치를 저장할까요?</string>
+    <string name="house_exit_body">저장하지 않으면 꾸미기 전으로 돌아가요.</string>
+    <string name="house_exit_discard">저장 안 함</string>
+    <string name="house_reset_title">배치를 초기화할까요?</string>
+    <string name="house_reset_body">방에 놓은 가구가 모두 보관함으로 돌아가요.</string>
+</resources>
