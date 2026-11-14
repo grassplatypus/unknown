@@ -434,7 +434,7 @@ private fun duration(seconds: Int): String {
 private fun VisitHistory(visits: List<Visit>) = Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
     Text(stringResource(R.string.collection_history), color = AppColors.Text, fontSize = 38.sp, fontWeight = FontWeight.Bold)
     Column(
-        Modifier.fillMaxWidth().heightIn(max = 320.dp).clip(ArtShape).background(AppColors.Background)
+        Modifier.fillMaxWidth().heightIn(max = 240.dp).clip(ArtShape).background(AppColors.Background)
             .verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 6.dp),
     ) {
         visits.forEachIndexed { i, visit ->
