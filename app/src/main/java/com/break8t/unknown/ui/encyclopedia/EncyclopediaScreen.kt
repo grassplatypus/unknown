@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.encyclopedia
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,7 +12,6 @@ import com.break8t.unknown.ui.photo.ShareHandler
 import com.break8t.unknown.R
 import com.break8t.unknown.ui.collection.CollectionKind
 import com.break8t.unknown.ui.collection.CollectionScreen
-import com.break8t.unknown.ui.collection.HeaderChip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -34,6 +34,6 @@ fun EncyclopediaScreen(
         }
     }
     CollectionScreen(kind, { kind = it }, loaded, showLocked = true, onShare, onOpenFieldDrop) {
-        HeaderChip(stringResource(R.string.encyclopedia_title))
+        ScreenTitle(stringResource(R.string.encyclopedia_title))
     }
 }

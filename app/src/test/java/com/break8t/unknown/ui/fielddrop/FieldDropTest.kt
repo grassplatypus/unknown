@@ -20,11 +20,9 @@ class FieldDropTest {
     private fun model(count: Int = 0) = FieldDrop(listOf(far, other, near), sink, FieldDropState(todayCount = count))
 
     @Test fun rotationFacesHeading() {
-        assertEquals(0f, carRotation(225f), 0f)
-        assertEquals(25f, carRotation(250f), 0f) // S-10-a
-        assertEquals(135f, carRotation(0f), 0f) // north
-        assertEquals(315f, carRotation(180f), 0f) // wraps below zero
-        assertEquals(134f, carRotation(359f), 0.001f)
+        assertEquals(0f, carRotation(0f), 0f) // north: the top-view sprite already faces up
+        assertEquals(250f, carRotation(250f), 0f) // S-10-a
+        assertEquals(359f, carRotation(359f), 0.001f)
         assertEquals(carRotation(10f), carRotation(370f), 0.001f)
     }
 
@@ -182,7 +180,7 @@ class FieldDropTest {
         val car = CarFix(car, 250f)
         val plain = mapMarkers(car, "car_blue", listOf(far, other), FieldDropState(todayCount = 0), config)
         assertEquals("fd_car_blue", plain.carIcon)
-        assertEquals(25f, plain.carRotate, 0f)
+        assertEquals(250f, plain.carRotate, 0f) // heading 250, top-view sprite faces north
         assertEquals(listOf("fd_mush_gold_ad", "fd_mush_blue"), plain.mushrooms.map { it.icon })
         assertEquals(listOf(far.at, other.at), plain.mushrooms.map { it.at })
         assertFalse(plain.mushrooms.any { it.dim })
@@ -211,7 +209,7 @@ class FieldDropTest {
         assertEquals(114, rotatedSidePx(114, 90f))
         assertEquals(114, rotatedSidePx(114, 180f))
         assertEquals(162, rotatedSidePx(114, 45f)) // 114 x 1.4142 = 161.2, rounded up to the same parity
-        assertEquals(152, rotatedSidePx(114, carRotation(250f))) // S-10-a, 25 degrees: 151.5
+        assertEquals(152, rotatedSidePx(114, 25f)) // 25 degrees: 151.5
         assertEquals(161, rotatedSidePx(113, 45f)) // odd side stays odd
         for (deg in 0 until 360 step 5) {
             val side = rotatedSidePx(114, deg.toFloat())

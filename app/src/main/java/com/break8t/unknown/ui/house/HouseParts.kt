@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.house
 
+import com.break8t.unknown.ui.theme.PixelIndicationOnDark
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -99,7 +100,7 @@ internal fun PrimaryIconButton(text: String, @DrawableRes icon: Int, onClick: ()
             .heightIn(min = 100.dp)
             .clip(ControlShape)
             .background(AppColors.Primary)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(null, PixelIndicationOnDark, role = Role.Button, onClick = onClick)
             .padding(horizontal = 31.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(13.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,

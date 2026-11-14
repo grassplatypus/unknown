@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.island
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -162,7 +163,7 @@ internal fun FarmContent(
     Column(Modifier.fillMaxSize().background(sceneSky(night))) {
         IslandTopBar(profile.coins, start = {
             IslandChip(stringResource(R.string.island_back), icon = R.drawable.island_ic_back, onClick = onBack)
-            IslandChip(stringResource(R.string.island_farm), selected = true)
+            ScreenTitle(stringResource(R.string.island_farm))
         })
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             if (maxWidth >= WideLayout) {

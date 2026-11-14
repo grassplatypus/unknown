@@ -23,10 +23,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.delay
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -41,6 +43,9 @@ class MapHandle {
     var map by mutableStateOf<MapLibreMap?>(null)
     var status by mutableStateOf(MapStatus.LOADING)
     var moves by mutableIntStateOf(0)
+
+    /** 지도가 돌아간 각도(북 0도, 시계 방향). 화면에 미리 돌려 찍는 차 그림이 이만큼 덜 돈다. */
+    var bearing by mutableDoubleStateOf(0.0)
 
     /** 표시 레이어를 붙인 지금의 스타일. 스타일을 바꾸는 동안은 null이라 옛 스타일을 건드리지 않는다. */
     internal var style by mutableStateOf<Style?>(null)
@@ -71,16 +76,22 @@ class MapHandle {
 
     internal var onRecenter: () -> Unit = {}
 
-    /** 내 차를 가운데에 두고 기본 높이로 돌아간다. 화면 높이(dp)에 따라 줌이 달라진다. */
-    fun recenter(p: GeoPoint, viewportHeightDp: Double) {
+    /** 내 차를 따라가는 시점으로 돌아간다. 따라가는 동안은 [followCamera]대로 차가 가운데, 진행 방향이 위다. */
+    fun recenter(car: CarFix, viewportHeightDp: Double) {
         val m = map ?: return
         onRecenter()
-        val zoom = defaultZoom(p, viewportHeightDp, m.maxZoomLevel)
-        m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(p.lat, p.lng), zoom))
+        m.animateCamera(CameraUpdateFactory.newCameraPosition(followCamera(car, viewportHeightDp, m.maxZoomLevel)))
     }
 }
 
 private const val PROBE_M = 1_000.0
+private const val PAN_LIMIT_M = 1_500.0
+
+private fun boundsAround(p: GeoPoint, m: Double): LatLngBounds {
+    val dLat = m / METERS_PER_DEG_LAT
+    val dLng = m / (METERS_PER_DEG_LAT * cos(Math.toRadians(p.lat)))
+    return LatLngBounds.Builder().include(LatLng(p.lat + dLat, p.lng + dLng)).include(LatLng(p.lat - dLat, p.lng - dLng)).build()
+}
 private const val METERS_PER_DEG_LAT = 111_320.0
 
 // MapLibre 기본 최대 줌. 지도가 뜨기 전 첫 카메라에만 쓰고, 뜬 뒤에는 maxZoomLevel을 읽는다.
@@ -89,11 +100,19 @@ private const val MAP_MAX_ZOOM = 25.5
 fun defaultZoom(at: GeoPoint, viewportHeightDp: Double, maxZoom: Double = MAP_MAX_ZOOM): Double =
     zoomForAltitude(at.lat, FIELD_DROP_ALTITUDE_M, viewportHeightDp, maxZoom)
 
-/** MapLibre 지도. 화면을 나누면 Activity가 다시 만들어진다. 사용자가 옮긴 카메라는 이어 가고, 아니면 새 창 높이로 기본 높이를 다시 잡는다. */
+/** 차를 가운데 두고 기본 높이에서, 차의 진행 방향이 화면 위로 오게 돌린 시점. */
+private fun followCamera(car: CarFix, viewportHeightDp: Double, maxZoom: Double = MAP_MAX_ZOOM): CameraPosition =
+    CameraPosition.Builder().target(LatLng(car.at.lat, car.at.lng)).zoom(defaultZoom(car.at, viewportHeightDp, maxZoom))
+        .bearing(car.headingDeg.toDouble()).build()
+
+/**
+ * MapLibre 지도. 사용자가 끌거나 돌리기 전에는 차를 따라가며 진행 방향을 위로 둔다. 현재 위치 버튼이 다시 따라가게 한다.
+ * 화면을 나누면 Activity가 다시 만들어진다. 사용자가 옮긴 카메라는 이어 가고, 아니면 새 창 높이로 따라가는 시점을 다시 잡는다.
+ */
 @Composable
 fun LiveMap(
     handle: MapHandle,
-    start: GeoPoint,
+    car: CarFix,
     viewportHeightDp: Double,
     markers: MapMarkers,
     onMapTap: (hitIds: List<String?>) -> Unit,
@@ -101,36 +120,39 @@ fun LiveMap(
 ) {
     val context = LocalContext.current
     val tap by rememberUpdatedState(onMapTap)
-    var lat by rememberSaveable { mutableDoubleStateOf(start.lat) }
-    var lng by rememberSaveable { mutableDoubleStateOf(start.lng) }
-    var zoom by rememberSaveable { mutableDoubleStateOf(defaultZoom(start, viewportHeightDp)) }
+    var lat by rememberSaveable { mutableDoubleStateOf(car.at.lat) }
+    var lng by rememberSaveable { mutableDoubleStateOf(car.at.lng) }
+    var zoom by rememberSaveable { mutableDoubleStateOf(defaultZoom(car.at, viewportHeightDp)) }
+    var bearing by rememberSaveable { mutableDoubleStateOf(car.headingDeg.toDouble()) }
     var userMoved by rememberSaveable { mutableStateOf(false) }
     handle.onRecenter = { userMoved = false }
     val mapView = remember(context) {
         val camera = if (userMoved) {
-            CameraPosition.Builder().target(LatLng(lat, lng)).zoom(zoom).build()
+            CameraPosition.Builder().target(LatLng(lat, lng)).zoom(zoom).bearing(bearing).build()
         } else {
-            CameraPosition.Builder().target(LatLng(start.lat, start.lng)).zoom(defaultZoom(start, viewportHeightDp)).build()
+            followCamera(car, viewportHeightDp)
         }
         createMapView(context, handle, camera, { tap(it) }, { userMoved = true }) {
             lat = it.target?.latitude ?: lat
             lng = it.target?.longitude ?: lng
             zoom = it.zoom
+            bearing = it.bearing
         }
     }
     MapViewLifecycle(mapView)
     // 표시는 지도 레이어라서 상태가 바뀔 때만 데이터를 넘긴다. 움직임은 지도가 같은 프레임에 그린다.
-    LaunchedEffect(handle.style, markers.carIcon, markers.carRotate) {
-        handle.style?.let { pushCar(it, handle.images, markers.carIcon, markers.carRotate) }
+    // 지도를 돌리는 동안에도 차 앞쪽이 진행 방향을 보도록 1도마다 다시 돌려 찍는다.
+    val carDeg = (markers.carRotate - handle.bearing.roundToInt()).mod(360f)
+    LaunchedEffect(handle.style, markers.carIcon, carDeg) {
+        handle.style?.let { pushCar(it, handle.images, markers.carIcon, carDeg) }
     }
     LaunchedEffect(handle.style, markers) { handle.style?.let { pushMarkers(it, markers) } }
-    // 창 크기만 바뀌고 Activity가 남는 경우에도 기본 시점이면 높이를 다시 맞춘다.
-    LaunchedEffect(handle.map, viewportHeightDp) {
+    // 따라가는 중이면 새 위치와 방향, 바뀐 창 높이마다 시점을 다시 잡는다.
+    // 끌어도 지도 가운데가 내 차에서 PAN_LIMIT_M 밖으로 나가지 않는다. 차가 움직이면 범위도 따라간다.
+    LaunchedEffect(handle.map, viewportHeightDp, car) {
         val map = handle.map ?: return@LaunchedEffect
-        if (!userMoved) {
-            val z = defaultZoom(start, viewportHeightDp, map.maxZoomLevel)
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(start.lat, start.lng), z))
-        }
+        map.setLatLngBoundsForCameraTarget(boundsAround(car.at, PAN_LIMIT_M))
+        if (!userMoved) map.moveCamera(CameraUpdateFactory.newCameraPosition(followCamera(car, viewportHeightDp, map.maxZoomLevel)))
     }
     // 실패 알림이 오지 않는 경우(응답 없는 연결)도 있어서 시간이 지나면 땅 색만 있는 스타일로 바꾼다.
     LaunchedEffect(mapView) {
@@ -157,8 +179,12 @@ private fun createMapView(
         addOnDidFailLoadingMapListener { handle.map?.let { goOffline(it, handle) } }
         getMapAsync { map ->
             map.uiSettings.apply {
-                // 북쪽을 위로 고정해야 자동차 그림의 회전이 진행 방향과 맞는다.
-                isRotateGesturesEnabled = false
+                // 두 손가락 돌리기와 벌리기를 섞지 않는다. 먼저 시작한 쪽만 따르고, 손을 떼면 회전이 관성으로 더 돌지 않는다.
+                isRotateGesturesEnabled = true
+                isDisableRotateWhenScaling = true
+                isIncreaseRotateThresholdWhenScaling = true
+                isIncreaseScaleThresholdWhenRotating = true
+                isRotateVelocityAnimationEnabled = false
                 isTiltGesturesEnabled = false
                 isCompassEnabled = false
                 isLogoEnabled = false
@@ -166,9 +192,9 @@ private fun createMapView(
                 isAttributionEnabled = false
             }
             map.cameraPosition = camera
-            map.addOnCameraMoveListener { handle.moves++ }
+            map.addOnCameraMoveListener { handle.moves++; handle.bearing = map.cameraPosition.bearing }
             map.addOnCameraMoveStartedListener { if (it == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) onGesture() }
-            map.addOnCameraIdleListener { handle.moves++; onIdle(map.cameraPosition) }
+            map.addOnCameraIdleListener { handle.moves++; handle.bearing = map.cameraPosition.bearing; onIdle(map.cameraPosition) }
             // 끌기는 탭이 아니라서 여기로 오지 않는다. 버섯 위에서 시작한 끌기도 지도를 옮긴다.
             map.addOnMapClickListener { at -> onMapTap(mushroomIdsAt(map, context, map.projection.toScreenLocation(at))); true }
             handle.map = map

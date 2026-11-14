@@ -9,6 +9,10 @@ import com.break8t.unknown.data.Profile
 import java.time.LocalDate
 
 /** 내 정보(S-21)와 도감(S-24)이 함께 보이는 다섯 묶음. 탭 순서와 같다. */
+
+/** 엽서 그림의 비율. 그림에 직각 액자가 그려져 있어서 이 비율 그대로, 모서리를 깎지 않고 보인다. */
+const val POSTCARD_ASPECT = 960f / 645f
+
 enum class CollectionKind { CARD, POSTCARD, CHARACTER, CAR, BADGE }
 
 /**

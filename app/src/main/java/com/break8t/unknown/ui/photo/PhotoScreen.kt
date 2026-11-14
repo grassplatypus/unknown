@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.photo
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -108,10 +110,14 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
         carId = profile.selectedCarId,
     )
     val grid = if (inHouse) BalanceConfig.DEFAULT.houseGridSize else IslandMap.SIZE
-    val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE) })
+    val extra = listOfNotNull(s.character?.let { characterObject(it, grid, if (inHouse) 1f else ISLAND_CHARACTER_SCALE, pickable = s.editing) })
     val view = rememberIsoViewState()
     // While the character is being set up it carries the scene's selection frame, as S-16-f shows.
-    LaunchedEffect(s.editing) { view.selectedId = if (s.editing) CHARACTER_ID else null }
+    // Edit mode lets a tap select furniture or nothing, so the frame is put back on the character.
+    LaunchedEffect(s.editing) {
+        if (!s.editing) view.selectedId = null
+        else snapshotFlow { view.selectedId }.collect { if (it != CHARACTER_ID) view.selectedId = CHARACTER_ID }
+    }
     BackHandler {
         when {
             s.shot -> s = s.copy(shot = false)
@@ -131,12 +137,16 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
     }
     val options = poseOptions(profile.selectedCharacterId, profile.owned)
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // The scene takes drags for panning, so while editing a tap on the ground moves the character there.
+        // While editing, a tap on the ground moves the character there and dragging it carries it along.
+        // The character's cell stays (0, 0) with its spot in ox/oy, so a dropped placement is the move in cells.
         RoomScene(
             scene,
             Modifier.fillMaxSize(),
             view = view,
+            editMode = s.editing,
             extra = extra,
+            canPlace = { it.id == CHARACTER_ID },
+            onPlace = { p -> if (p.id == CHARACTER_ID) s = s.moved(p.x / grid.toFloat(), p.y / grid.toFloat()) },
             onTapCell = { hit -> if (s.editing && hit is IsoHit.Cell) s = s.placedAt(hit.x, hit.y, grid) },
         )
         // 찍히는 범위(Figma S-16의 흰 테두리). 오른쪽 각도 카드와 겹치지 않게 그 왼쪽에 둔다.
@@ -145,7 +155,7 @@ internal fun PhotoScreenImpl(inHouse: Boolean, onClose: () -> Unit, start: Photo
         Box(Modifier.offset(f.left.dp, f.top.dp).size(f.width.dp, f.height.dp).border(5.dp, Color.White))
         Row(Modifier.padding(ScreenPad), horizontalArrangement = Arrangement.spacedBy(ChipGap)) {
             TopChip(stringResource(R.string.photo_cancel), onClose, icon = R.drawable.house_ic_back)
-            TopChip(stringResource(R.string.photo_title), null)
+            ScreenTitle(stringResource(R.string.photo_title))
         }
         if (!s.editing) PresetCard(s, { s = it }, Modifier.align(Alignment.TopEnd).padding(top = 195.dp, end = ScreenPad))
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(ScreenPad)) {
@@ -213,7 +223,7 @@ private fun CharacterCard(s: PhotoState, options: List<String>, onChange: (Photo
                 Row(Modifier.widthIn(max = 620.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (id in options) {
                         val on = s.poseId == id
-                        val model = characterObject(SceneCharacter(id, 0f, 0f, CharacterSizes[1], false), 1)
+                        val model = characterObject(SceneCharacter(id, 0f, 0f, CharacterSizes[1], 0), 1)
                         IsoThumbnail(
                             model.shape,
                             Modifier
@@ -235,7 +245,7 @@ private fun CharacterCard(s: PhotoState, options: List<String>, onChange: (Photo
                     SquareIconButton(R.drawable.photo_ic_plus, stringResource(R.string.photo_bigger), { onChange(s.resized(+1)) })
                 }
             }
-            SquareIconButton(R.drawable.photo_ic_flip, stringResource(R.string.photo_flip), { onChange(s.copy(flipped = !s.flipped)) })
+            SquareIconButton(R.drawable.photo_ic_rotate, stringResource(R.string.photo_rotate), { onChange(s.turned()) })
             PrimaryButton(stringResource(R.string.photo_done), { onChange(s.copy(editing = false)) })
         }
     }

@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.account
 
+import androidx.compose.foundation.layout.requiredSize
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -63,7 +64,10 @@ internal fun AppHeader(modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(62.dp).clip(RoundedCornerShape(13.dp)).background(AppColors.Success))
+        // 런처 아이콘 앞면은 둘레에 투명 여백이 커서, 그림 부분이 62dp 높이를 채우도록 크게 그리고 가운데만 보인다.
+        Box(Modifier.size(62.dp), contentAlignment = Alignment.Center) {
+            Image(painterResource(R.mipmap.ic_launcher_foreground), contentDescription = null, Modifier.requiredSize(112.dp))
+        }
         Text(stringResource(R.string.app_name), color = AppColors.Text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
     }
 }

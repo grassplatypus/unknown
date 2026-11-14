@@ -2,7 +2,6 @@
 <resources>
     <string name="fielddrop_today">오늘 %1$d / %2$d</string>
     <string name="fielddrop_ad">광고</string>
-    <string name="fielddrop_my_car">내 차</string>
     <string name="fielddrop_locate">내 위치로 돌아가기</string>
     <string name="fielddrop_distance">%1$s · %2$d분</string>
     <string name="fielddrop_guide">안내하기</string>

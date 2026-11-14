@@ -41,15 +41,18 @@ private enum class Step { SPLASH, SELECT, PIN_SIGN_IN, QR, PROFILES, PIN_SET, PI
 private const val TickMs = 250L
 private const val ToastMillis = 2500L
 
-/** 시작과 계정 화면 묶음(Figma "1. 시작과 계정")의 진입점. 사이드 메뉴 없는 전체 화면이고, 로그인하면 onSignedIn을 한 번 부른다. */
+/**
+ * 시작과 계정 화면 묶음(Figma "1. 시작과 계정")의 진입점. 사이드 메뉴 없는 전체 화면이고, 로그인하면 onSignedIn을 한 번 부른다.
+ * [skipSplash]면 스플래시 없이 계정 고르기부터 보인다(이미 로그인했다가 돌아온 경우).
+ */
 @Composable
-fun AccountFlow(mode: DriveMode, onSignedIn: () -> Unit) {
+fun AccountFlow(mode: DriveMode, onSignedIn: () -> Unit, skipSplash: Boolean = false) {
     val config = BalanceConfig.DEFAULT
     val demo = LocalDemoState.current
     val limits = LocalUxLimits.current
     val res = LocalContext.current.resources
     val store = AccountStore
-    var step by rememberSaveable { mutableStateOf(Step.SPLASH) }
+    var step by rememberSaveable { mutableStateOf(if (skipSplash) Step.SELECT else Step.SPLASH) }
     var targetId by rememberSaveable { mutableStateOf<String?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     var toast by rememberSaveable { mutableStateOf<String?>(null) }

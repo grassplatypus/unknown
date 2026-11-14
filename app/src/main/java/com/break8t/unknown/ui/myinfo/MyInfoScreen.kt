@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.myinfo
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -170,7 +171,7 @@ private fun MyInfoHome(
         verticalArrangement = Arrangement.spacedBy(35.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            HeaderChip(stringResource(R.string.myinfo_title))
+            ScreenTitle(stringResource(R.string.myinfo_title))
             Spacer(Modifier.weight(1f))
             SecondaryButton(stringResource(R.string.myinfo_friends_button, friendCount), onFriends)
         }

@@ -23,7 +23,7 @@ fun HomeScreen(mode: DriveMode, onNavigate: (Route) -> Unit) {
 
     if (!mode.isParked) {
         val raid by home.raid.state.collectAsStateWithLifecycle()
-        DrivingHome(raid, onEnd = home.raid::end)
+        DrivingHome(raid, onEnd = home.raid::end, voiceOn = profile.voiceGuideOn, onVoiceChange = { on -> demo.update { it.copy(voiceGuideOn = on) } })
         return
     }
     ParkedHome(profile, onVoiceChange = { on -> demo.update { it.copy(voiceGuideOn = on) } })
@@ -40,6 +40,7 @@ fun HomeScreen(mode: DriveMode, onNavigate: (Route) -> Unit) {
             onClose = home::dismiss,
             onShare = home::dismiss,
             onOpenEncyclopedia = openEncyclopedia,
+            postcard = true,
         )
         HomePopup.JAM_CARD -> NewItemDialog(
             R.drawable.home_card_seongsan,

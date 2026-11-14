@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.myinfo
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -226,7 +227,7 @@ internal fun FriendAddPane(
             verticalArrangement = Arrangement.spacedBy(21.dp),
         ) {
             HeaderChip(stringResource(R.string.myinfo_close), selected = false, onBack = onClose)
-            HeaderChip(stringResource(R.string.myinfo_add_friend))
+            ScreenTitle(stringResource(R.string.myinfo_add_friend))
             HeaderChip(stringResource(R.string.myinfo_friend_limit, friendCount, config.maxFriends), selected = false)
         }
         BoxWithConstraints {

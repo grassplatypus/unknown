@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.fielddrop
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import android.graphics.Paint
@@ -164,7 +165,7 @@ internal fun FieldDropContent(
             PreviewMarkers(markers, previewProjection(car.at, center, density.density / previewMPerDp))
         } else {
             // 버섯, 광고 글자, 내 차는 지도 레이어(MapMarkers.kt)라서 지도와 같은 프레임에 움직인다.
-            LiveMap(handle, car.at, maxHeight.value.toDouble(), markers, { ids ->
+            LiveMap(handle, car, maxHeight.value.toDouble(), markers, { ids ->
                 mushroomAt(ids, mushrooms)?.let(onTap) ?: onDismissCard()
             }, Modifier.fillMaxSize())
         }
@@ -208,7 +209,7 @@ internal fun FieldDropContent(
             // 현재 위치 버튼 바로 위. 막대는 SCALE_BAR_MAX_DP보다 길지 않아서 카드와 겹치지 않는다.
             ScaleBar(it, Modifier.align(Alignment.BottomEnd).padding(end = 44.dp, bottom = 44.dp + LocateSize + 20.dp))
         }
-        LocateButton(onClick = { handle.recenter(car.at, maxHeight.value.toDouble()) }, Modifier.align(Alignment.BottomEnd).padding(44.dp))
+        LocateButton(onClick = { handle.recenter(car, maxHeight.value.toDouble()) }, Modifier.align(Alignment.BottomEnd).padding(44.dp))
         // OpenStreetMap 이용 조건이라 지우지 않는다. 카드와 현재 위치 버튼이 닿지 않는 자리다.
         Text(
             stringResource(R.string.fielddrop_map_attribution),
@@ -246,16 +247,14 @@ private fun PreviewMarkers(markers: MapMarkers, project: (GeoPoint) -> Offset) {
     val dim = remember { Paint().apply { alpha = (DIM_ALPHA * 255).roundToInt() } }
     Canvas(Modifier.fillMaxSize()) {
         val c = drawContext.canvas.nativeCanvas
-        val at = project(markers.car)
-        val carArt = rotatedCar(images.getValue(markers.carIcon), markers.carRotate)
-        c.drawBitmap(carArt, at.x - carArt.width / 2f, at.y - carArt.height / 2f, null)
-        val tag = images.getValue(MY_CAR_TAG)
-        c.drawBitmap(tag, at.x - tag.width / 2f, at.y + CAR_TAG_TOP_DP * density, null)
         markers.mushrooms.forEach { m ->
             val b = images.getValue(m.icon)
             val p = project(m.at)
             c.drawBitmap(b, p.x - b.width / 2f, p.y - b.height, if (m.dim) dim else null)
         }
+        val at = project(markers.car)
+        val carArt = rotatedCar(images.getValue(markers.carIcon), markers.carRotate)
+        c.drawBitmap(carArt, at.x - carArt.width / 2f, at.y - carArt.height / 2f, null)
     }
 }
 
@@ -275,7 +274,7 @@ private fun pixelPainter(@DrawableRes id: Int): Painter =
 @Composable
 private fun TopChips(coins: Int, today: Int, limit: Int, modifier: Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-        Tag(stringResource(R.string.route_field_drop), AppColors.Selected)
+        ScreenTitle(stringResource(R.string.route_field_drop))
         Spacer(Modifier.weight(1f))
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(Margin, Alignment.End),

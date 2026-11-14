@@ -27,14 +27,15 @@ data class PhotoState(
     val x: Float = 0.49f,
     val y: Float = 0.53f,
     val sizeIndex: Int = 1,
-    val flipped: Boolean = false,
+    val turns: Int = 0,
     val editing: Boolean = false,
     val shot: Boolean = false,
 ) {
     val camera get() = SceneCamera(preset, rotation)
-    val character get() = poseId?.let { SceneCharacter(it, x, y, CharacterSizes[sizeIndex], flipped) }
+    val character get() = poseId?.let { SceneCharacter(it, x, y, CharacterSizes[sizeIndex], turns) }
 
     fun rotated() = copy(rotation = camera.rotated().rotation)
+    fun turned() = copy(turns = (turns + 1) % 4)
     fun resized(delta: Int) = copy(sizeIndex = (sizeIndex + delta).coerceIn(0, CharacterSizes.lastIndex))
     fun moved(dx: Float, dy: Float) = copy(x = (x + dx).coerceIn(0f, 1f), y = (y + dy).coerceIn(0f, 1f))
 
@@ -46,12 +47,12 @@ data class PhotoState(
         if (poseId != null || spawn == null) copy(poseId = poseId ?: options.first(), editing = true)
         else copy(poseId = options.first(), editing = true, x = spawn.first, y = spawn.second)
 
-    fun toList(): List<Any> = listOf(preset.name, rotation, poseId ?: "", x, y, sizeIndex, flipped, editing, shot)
+    fun toList(): List<Any> = listOf(preset.name, rotation, poseId ?: "", x, y, sizeIndex, turns, editing, shot)
 
     companion object {
         fun fromList(l: List<Any>) = PhotoState(
             CameraPreset.valueOf(l[0] as String), l[1] as Int, (l[2] as String).ifEmpty { null },
-            l[3] as Float, l[4] as Float, l[5] as Int, l[6] as Boolean, l[7] as Boolean, l[8] as Boolean,
+            l[3] as Float, l[4] as Float, l[5] as Int, l[6] as Int, l[7] as Boolean, l[8] as Boolean,
         )
     }
 }
@@ -90,15 +91,15 @@ fun qrModules(seed: Int, size: Int = 25): List<BooleanArray> {
  * The character as a voxel model standing in the scene. [SceneCharacter.x] and y are fractions of a
  * [grid] x [grid] floor; size 0.071 (the Figma sample) is the model at its own scale.
  */
-fun characterObject(c: SceneCharacter, grid: Int, baseScale: Float = 1f): IsoObject {
+fun characterObject(c: SceneCharacter, grid: Int, baseScale: Float = 1f, pickable: Boolean = false): IsoObject {
     val pose = c.imageId.takeIf { it.startsWith("pose_") }
     val base = if (pose != null) IsoShapes.sprout else IsoShapes.of(c.imageId) ?: IsoShapes.sprout
     val scale = c.size / CharacterSizes[1] * baseScale
-    val turns = IsoShapes.poseTurns(pose) + if (c.flipped) FLIP_TURNS else 0
+    val turns = IsoShapes.poseTurns(pose) + c.turns
     return IsoObject(
         "character", IsoShapes.posed(base, pose), 0, 0, turns.mod(4),
         ox = c.x * grid - scale / 2f, oy = c.y * grid - scale / 2f,
-        z = if (pose == "pose_jump") JUMP_CELLS else 0f, scale = scale, pickable = false,
+        z = if (pose == "pose_jump") JUMP_CELLS else 0f, scale = scale, pickable = pickable,
     )
 }
 
@@ -116,5 +117,4 @@ fun captureFrame(width: Float, height: Float, panelLeft: Float, gap: Float): Fra
     return FrameRect(left, top, w.coerceAtLeast(0f), height * 640f / 901f)
 }
 
-private const val FLIP_TURNS = 3 // the model faces +y; three quarter turns make it face +x, the mirrored side on screen
 private const val JUMP_CELLS = 0.3f

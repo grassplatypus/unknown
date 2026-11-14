@@ -1,5 +1,7 @@
 package com.break8t.unknown.ui.components
 
+import com.break8t.unknown.ui.theme.PixelIndicationOnDark
+import com.break8t.unknown.ui.theme.PixelIndication
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -56,7 +58,7 @@ private fun RailItem(route: Route, selected: Boolean, onClick: () -> Unit) {
             .size(146.dp)
             .clip(ItemShape)
             .background(if (selected) AppColors.Card else Color.Transparent)
-            .selectable(selected, onClick = onClick, role = Role.Tab)
+            .selectable(selected, null, if (selected) PixelIndication else PixelIndicationOnDark, role = Role.Tab, onClick = onClick)
             .padding(top = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

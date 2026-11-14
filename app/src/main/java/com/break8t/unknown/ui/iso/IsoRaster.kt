@@ -62,6 +62,7 @@ fun renderScene(
     scene.objects.forEachIndexed { i, o ->
         names[i] = if (o.pickable) o.id else null
         if (o.wall != null && !(scene.wallHeight > 0f && wallVisible(o.wall, p))) return@forEachIndexed
+        if (o.shape === IsoScenery.laneY) r.roadIds += i + 1
         r.model(o, scene.baseZ(o), i + 1)
     }
     if (ghostObj != null) {
@@ -129,6 +130,8 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
     val color = IntArray(w * h)
     val depth = FloatArray(w * h) { Float.NEGATIVE_INFINITY }
     val ids = IntArray(w * h)
+    /** Ids of road surfaces (floor cells, bridge cells, lane paint). Outlines between them only mark real steps. */
+    val roadIds = HashSet<Int>()
     var tint = 0
     var tintAmount = 0f
     var bias = 0f
@@ -240,6 +243,7 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
                 x in ghost.x until ghost.x + ghost.footW && y in ghost.y until ghost.y + ghost.footD
             tint = if (inGhost) mark else 0
             tintAmount = if (inGhost) 0.45f else 0f
+            if (cell.floor == FloorType.ROAD) roadIds += id
             face(4, x.toFloat(), y.toFloat(), bot, x + 1f, y + 1f, cell.height, 0, id, Textures.top(cell.floor), seed)
             for (dir in 0 until 4) {
                 val nx = x + VoxelModel.DX[dir]; val ny = y + VoxelModel.DY[dir]
@@ -259,6 +263,7 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
             val x = road.x + k * road.dx; val y = road.y + k * road.dy
             if (scene.inside(x, y)) continue
             val id = ROAD_ID - k
+            roadIds += id
             val seed = x * 7919 + y * 104729
             face(4, x.toFloat(), y.toFloat(), -road.depth, x + 1f, y + 1f, 0f, 0, id, Textures.top(FloorType.ROAD), seed)
             for (dir in 0 until 4) {
@@ -334,12 +339,21 @@ internal class Raster(val w: Int, val h: Int, val p: Projection, private val nig
         val n = y * w + x
         val nid = ids[n]
         if (nid == 0) return true
-        val nd = depth[n]
-        if (nid == id) return nd < d - EDGE_DEPTH
-        // Coplanar neighbours (flat floor seen from the top) outline on one side only.
-        return nd < d - 1e-3f || (abs(nd - d) <= 1e-3f && nid < id)
+        return outlines(id, d, nid, depth[n], id in roadIds && nid in roadIds)
     }
 }
+
+/**
+ * Whether a pixel of [id] at depth [d] gets the dark outline next to a nearer neighbour [nid] at [nd].
+ * Road cells (floor, bridge, lane paint) count as one object: seen along the road (low front view) each next cell is nearer, which
+ * otherwise drew a dark line across the road at every cell and made it look bumpy.
+ */
+internal fun outlines(id: Int, d: Float, nid: Int, nd: Float, bothRoad: Boolean = false): Boolean {
+    if (nid == id || bothRoad) return nd < d - EDGE_DEPTH
+    // Coplanar neighbours (flat floor seen from the top) outline on one side only.
+    return nd < d - 1e-3f || (abs(nd - d) <= 1e-3f && nid < id)
+}
+
 
 internal fun argb(r: Float, g: Float, b: Float): Int =
     (0xFF shl 24) or (r.toInt().coerceIn(0, 255) shl 16) or (g.toInt().coerceIn(0, 255) shl 8) or b.toInt().coerceIn(0, 255)

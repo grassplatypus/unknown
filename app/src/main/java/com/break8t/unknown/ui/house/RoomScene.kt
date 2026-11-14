@@ -53,7 +53,7 @@ data class SceneCamera(val preset: CameraPreset = CameraPreset.OBLIQUE, val rota
 }
 
 /** 장면 위에 세운 캐릭터. x, y는 장면 너비와 높이에 대한 비율, size는 높이에 대한 비율이다. */
-data class SceneCharacter(val imageId: String, val x: Float, val y: Float, val size: Float, val flipped: Boolean)
+data class SceneCharacter(val imageId: String, val x: Float, val y: Float, val size: Float, val turns: Int)
 
 /** 장면을 그리는 데 필요한 것 전부. 섬 사진이면 [plots]와 [carId]로 섬을 그린다. */
 data class RoomSceneState(
@@ -102,7 +102,7 @@ object RoomMap {
 
     /** Wall cells the window and the lantern take. Passed to the placement rules as if something hung there. */
     val Fixed: List<Placed> = listOf(
-        Placed(FIXED_ID, Surface.LEFT_WALL, 1, 1), Placed(FIXED_ID, Surface.LEFT_WALL, 1, 2),
+        Placed(FIXED_ID, Surface.LEFT_WALL, 1, 1), Placed(FIXED_ID, Surface.LEFT_WALL, 1, 2), Placed(FIXED_ID, Surface.LEFT_WALL, 1, 3),
         Placed(FIXED_ID, Surface.RIGHT_WALL, 1, 2), Placed(FIXED_ID, Surface.RIGHT_WALL, 1, 3),
     )
 
@@ -122,7 +122,8 @@ object RoomMap {
             )
         }
         return posts + listOf(
-            IsoObject("window", IsoScenery.window, 0, 1, wall = WallSide.WEST, z = row, pickable = false),
+            // Sits WINDOW_LIFT voxels above the first row so a sofa against this wall (7 high) clears the sill.
+            IsoObject("window", IsoScenery.window, 0, 1, wall = WallSide.WEST, z = row + WINDOW_LIFT / VPC, pickable = false),
             IsoObject("lantern", IsoScenery.lantern, 1, 0, wall = WallSide.NORTH, z = 2 * row, pickable = false),
         )
     }
@@ -249,3 +250,5 @@ private val NoiseColors = listOf(
     Color(0xFF01233F), Color(0xFF01233F), Color(0xFF01233F), Color(0xFF004674), Color(0xFF004674),
     Color(0xFF088DB3), Color(0xFF00D3F3), Color(0xFF02142A),
 )
+
+private const val WINDOW_LIFT = 3f

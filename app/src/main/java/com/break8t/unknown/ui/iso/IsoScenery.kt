@@ -130,9 +130,12 @@ object IsoScenery {
     val lowPost = IsoShape(1, 1, listOf(c(0, 3, 0, 2, 2, 6, P.Wood), c(0, 3, 6, 2, 2, 1, P.WoodLight)))
 
 
-    /** Flat road paint for a road running along y: kerbs on both sides, a dash in the middle. */
+    /**
+     * Flat road paint for a road running along y: kerbs on both sides and a centre line. The centre line runs the
+     * whole cell so cells join into one line; half-cell dashes stacked into a bumpy ladder in the low front view.
+     */
     val laneY = IsoShape(1, 1, listOf(
-        c(0, 0, 0, 1, 8, 1, P.RoadKerb), c(7, 0, 0, 1, 8, 1, P.RoadKerb), c(3, 1, 0, 2, 4, 1, P.White),
+        c(0, 0, 0, 1, 8, 1, P.RoadKerb), c(7, 0, 0, 1, 8, 1, P.RoadKerb), c(3, 0, 0, 2, 8, 1, P.White),
     ))
 
     /** Flat white parking box on road cells. */
@@ -147,9 +150,12 @@ object IsoScenery {
         c(0, 2, 0, 16, 4, 1, P.CloudShade),
     ))
 
-    /** A tiny floating grass block from the sky in the art; place it with a z offset. */
+    /**
+     * A tiny floating chunk of island from the sky in the art; place it with a z offset. The earth under the grass
+     * narrows step by step like the island's own underside; a thin stem under the grass read as a floating tree.
+     */
     val islet = IsoShape(1, 1, listOf(
-        c(2, 2, 2, 4, 4, 2, P.GrassC), c(3, 3, 0, 2, 2, 2, P.DirtC),
+        c(1, 1, 3, 6, 6, 1, P.GrassC), c(1, 1, 2, 6, 6, 1, P.DirtC), c(2, 2, 1, 4, 4, 1, P.DirtC), c(3, 3, 0, 2, 2, 1, P.StoneC),
     ))
 
     /** Window for a room wall: frame, four panes and a sill. */

@@ -14,19 +14,16 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 /**
- * 픽셀 아트용 누름 표시. 물결 대신 누르는 동안 2dp 내려앉고 한 단계 어두워지며, 떼면 바로 돌아온다.
+ * 픽셀 아트용 누름 표시. 물결 대신 누르는 동안 2dp 내려앉고 [shade]를 덮으며, 떼면 바로 돌아온다.
  * 서서히 변하는 애니메이션은 넣지 않는다(디자인 패턴과 주행 중 정적 화면 규칙).
  */
-object PixelIndication : IndicationNodeFactory {
-    private val SINK = 2.dp
-    private val SHADE = Color.Black.copy(alpha = 0.14f)
+class PixelPress(private val shade: Color) : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode = PressNode(interactionSource, shade)
 
-    override fun create(interactionSource: InteractionSource): DelegatableNode = PressNode(interactionSource)
+    override fun equals(other: Any?) = other is PixelPress && other.shade == shade
+    override fun hashCode() = shade.hashCode()
 
-    override fun equals(other: Any?) = other === this
-    override fun hashCode() = 7
-
-    private class PressNode(private val source: InteractionSource) : Modifier.Node(), DrawModifierNode {
+    private class PressNode(private val source: InteractionSource, private val shade: Color) : Modifier.Node(), DrawModifierNode {
         private var pressed = 0
 
         override fun onAttach() {
@@ -44,10 +41,18 @@ object PixelIndication : IndicationNodeFactory {
 
         override fun ContentDrawScope.draw() {
             if (pressed == 0) return drawContent()
-            translate(top = SINK.toPx()) {
+            translate(top = SINK.dp.toPx()) {
                 this@draw.drawContent()
-                drawRect(SHADE)
+                drawRect(shade)
             }
         }
     }
 }
+
+private const val SINK = 2
+
+/** 앱 전체 기본값. 밝은 바탕을 한 단계 어둡게 한다. */
+val PixelIndication = PixelPress(Color.Black.copy(alpha = 0.14f))
+
+/** 갈색처럼 진한 바탕용. 어둡게 하면 거의 티가 나지 않아서 밝게 한다. */
+val PixelIndicationOnDark = PixelPress(Color.White.copy(alpha = 0.3f))

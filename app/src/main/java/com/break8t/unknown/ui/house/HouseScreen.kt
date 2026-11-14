@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.house
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,6 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -127,7 +129,7 @@ internal fun HouseScreenImpl(
             ) {
                 if (draft == null) {
                     TopChip(stringResource(R.string.house_to_island), onBack, icon = R.drawable.house_ic_back)
-                    TopChip(stringResource(R.string.house_title), null)
+                    ScreenTitle(stringResource(R.string.house_title))
                     Spacer(Modifier.weight(1f))
                     TopChip(stringResource(R.string.house_take_photo), onTakePhoto, icon = R.drawable.house_ic_cam)
                     TopChip(stringResource(R.string.house_decorate), { setDraft(saved) })
@@ -239,8 +241,10 @@ private fun StorageCard(
                 AppChip(stringResource(R.string.house_tab_wall), tab == StorageTab.WALL, { onTab(StorageTab.WALL) })
             }
             // DemoState는 메모리에 바로 있어서 불러오는 단계가 없다. 그래서 0개면 곧 빈 상태다.
+            // 보이지 않는 칸 하나를 깔아서, 마지막 가구를 놓아도 카드 높이가 그대로다.
             if (entries.isEmpty()) {
-                Box(Modifier.fillMaxWidth().heightIn(min = 208.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.alpha(0f).clearAndSetSemantics {}) { StorageTile("it_plant", " ", 0, null) }
                     Text(stringResource(R.string.house_storage_empty), color = AppColors.TextSub, fontSize = 31.sp)
                 }
             } else {
@@ -255,14 +259,14 @@ private fun StorageCard(
 }
 
 @Composable
-private fun StorageTile(id: String, name: String, count: Int, onClick: () -> Unit) {
+private fun StorageTile(id: String, name: String, count: Int, onClick: (() -> Unit)?) {
     Column(
         Modifier
             .width(166.dp)
             .clip(ControlShape)
             .background(AppColors.Card)
             .border(BorderWidth, AppColors.Line, ControlShape)
-            .clickable(role = Role.Button, onClick = onClick)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .padding(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

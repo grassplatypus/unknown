@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.inventory
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -116,7 +117,7 @@ internal fun InventoryContent(
             HeaderBar(profile.coins) {
                 HeaderChip(stringResource(R.string.inventory_back), R.drawable.shop_ic_back, selected = false, onClick = onBack)
                 HeaderChip(stringResource(R.string.inventory_shop), null, selected = false, onClick = onOpenShop)
-                HeaderChip(stringResource(R.string.inventory_title), R.drawable.shop_ic_box, selected = true, onClick = null)
+                ScreenTitle(stringResource(R.string.inventory_title))
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 InventoryTab.entries.forEach { t ->

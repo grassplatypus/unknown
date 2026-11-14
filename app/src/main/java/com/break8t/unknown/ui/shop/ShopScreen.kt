@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.shop
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -127,7 +128,7 @@ internal fun ShopContent(
         Column(verticalArrangement = Arrangement.spacedBy(Gap)) {
             HeaderBar(profile.coins) {
                 HeaderChip(stringResource(R.string.shop_back), R.drawable.shop_ic_back, selected = false, onClick = onBack)
-                HeaderChip(stringResource(R.string.shop_title), null, selected = true, onClick = null)
+                ScreenTitle(stringResource(R.string.shop_title))
                 HeaderChip(stringResource(R.string.shop_inventory), R.drawable.shop_ic_box, selected = false, onClick = onOpenInventory)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(Gap)) {

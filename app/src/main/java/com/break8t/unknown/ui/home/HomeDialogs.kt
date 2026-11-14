@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -34,6 +36,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.break8t.unknown.R
+import com.break8t.unknown.ui.collection.POSTCARD_ASPECT
 import com.break8t.unknown.data.Profile
 import com.break8t.unknown.reward.DriveSession
 import com.break8t.unknown.reward.RewardResult
@@ -53,22 +57,31 @@ import com.break8t.unknown.ui.theme.AppColors
 private val DialogShape = RoundedCornerShape(20.fdp)
 private val RowShape = RoundedCornerShape(12.fdp)
 
-// 보상 알림은 버튼으로만 닫는다. 바깥을 잘못 눌러 넘기면 받은 내용을 못 본다.
+// 바깥을 직접 그려야 어둡게 칠할 수 있어서, 바깥 터치도 플랫폼 대신 여기서 받는다.
 @Composable
-private fun HomeDialog(onDismiss: () -> Unit, closeOutside: Boolean, content: @Composable ColumnScope.() -> Unit) =
-    Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = closeOutside)) {
-        Column(
+private fun HomeDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) =
+    Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)) {
+        Box(
             Modifier
-                .padding(24.dp)
-                .widthIn(max = 720.fdp)
-                .clip(DialogShape)
-                .background(AppColors.Card)
-                .border(BorderWidth, AppColors.Line, DialogShape)
-                .verticalScroll(rememberScrollState())
-                .padding(40.fdp),
-            verticalArrangement = Arrangement.spacedBy(24.fdp),
-            content = content,
-        )
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f))
+                .clickable(interactionSource = null, indication = null, onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                Modifier
+                    .padding(24.dp)
+                    .widthIn(max = 720.fdp)
+                    .pointerInput(Unit) { detectTapGestures {} } // 카드 안을 누르면 닫히지 않게 터치를 먹는다
+                    .clip(DialogShape)
+                    .background(AppColors.Card)
+                    .border(BorderWidth, AppColors.Line, DialogShape)
+                    .verticalScroll(rememberScrollState())
+                    .padding(40.fdp),
+                verticalArrangement = Arrangement.spacedBy(24.fdp),
+                content = content,
+            )
+        }
     }
 
 @Composable
@@ -78,7 +91,7 @@ private fun Title(text: String, align: TextAlign? = null) =
 /** D-02 주행 보상. 레벨 줄은 보상을 더한 뒤의 값이다. */
 @Composable
 internal fun RewardDialog(reward: RewardResult, session: DriveSession, profile: Profile, onOk: () -> Unit) =
-    HomeDialog(onOk, closeOutside = false) {
+    HomeDialog(onOk) {
         val jamSec = session.jamSegmentsSec.sum()
         Title(stringResource(R.string.home_reward_title))
         RewardRow(
@@ -150,7 +163,7 @@ private fun LevelRow(profile: Profile) = Row(
 
 /** D-03 레벨 업. */
 @Composable
-internal fun LevelUpDialog(level: Int, onOk: () -> Unit) = HomeDialog(onOk, closeOutside = false) {
+internal fun LevelUpDialog(level: Int, onOk: () -> Unit) = HomeDialog(onOk) {
     Box(Modifier.fillMaxWidth().height(220.fdp), contentAlignment = Alignment.Center) {
         Image(
             painterResource(R.drawable.home_ch_sprout),
@@ -171,29 +184,27 @@ internal fun NewItemDialog(
     onClose: () -> Unit,
     onShare: () -> Unit,
     onOpenEncyclopedia: () -> Unit,
-) = HomeDialog(onClose, closeOutside = false) {
+    postcard: Boolean = false,
+) = HomeDialog(onClose) {
     Image(
         painterResource(image),
         contentDescription = null,
-        Modifier.fillMaxWidth().aspectRatio(640f / 300f).clip(RowShape),
-        contentScale = ContentScale.Crop,
+        if (postcard) Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT) else Modifier.fillMaxWidth().aspectRatio(640f / 300f).clip(RowShape),
+        contentScale = if (postcard) ContentScale.Fit else ContentScale.Crop,
     )
     Title(title)
     HomeText(name, 28, Modifier.fillMaxWidth(), color = AppColors.TextSub, lineHeight = 42)
-    FlowRow(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(25.fdp),
-        verticalArrangement = Arrangement.spacedBy(16.fdp),
-    ) {
-        PrimaryButton(stringResource(R.string.home_close), onClose, Modifier.widthIn(min = 170.fdp))
-        SecondaryButton(stringResource(R.string.home_share), onShare, Modifier.widthIn(min = 170.fdp))
-        SecondaryButton(stringResource(R.string.home_open_encyclopedia), onOpenEncyclopedia, Modifier.widthIn(min = 250.fdp))
+    // 고정 최소 폭 합이 카드 안쪽 폭과 같아서 글자 폭만큼 넘쳐 줄이 바뀌었다. 긴 버튼은 글자만큼, 나머지가 남은 폭을 나눈다.
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(25.fdp)) {
+        PrimaryButton(stringResource(R.string.home_close), onClose, Modifier.weight(1f))
+        SecondaryButton(stringResource(R.string.home_share), onShare, Modifier.weight(1f))
+        SecondaryButton(stringResource(R.string.home_open_encyclopedia), onOpenEncyclopedia)
     }
 }
 
 /** D-06 함께 지나는 사람 모두 보기. */
 @Composable
-internal fun PeopleDialog(people: List<Participant>, onClose: () -> Unit) = HomeDialog(onClose, closeOutside = true) {
+internal fun PeopleDialog(people: List<Participant>, onClose: () -> Unit) = HomeDialog(onClose) {
     Title(stringResource(R.string.home_raid_group, people.size))
     val scroll = rememberScrollState()
     Row(Modifier.fillMaxWidth().height(430.fdp)) {
@@ -234,7 +245,7 @@ private fun ScrollBar(state: ScrollState, modifier: Modifier) = Canvas(modifier)
 
 /** D-07 동승자 QR. 실제 코드는 아직 없어서 스캔되지 않는 견본 무늬를 그린다. */
 @Composable
-internal fun PassengerQrDialog(onClose: () -> Unit) = HomeDialog(onClose, closeOutside = true) {
+internal fun PassengerQrDialog(onClose: () -> Unit) = HomeDialog(onClose) {
     HomeText(stringResource(R.string.home_passenger_qr), 40, weight = FontWeight.Bold)
     QrPlaceholder(Modifier.padding(vertical = 68.fdp).size(264.fdp).align(Alignment.CenterHorizontally))
     PrimaryButton(stringResource(R.string.home_close), onClose, Modifier.fillMaxWidth())

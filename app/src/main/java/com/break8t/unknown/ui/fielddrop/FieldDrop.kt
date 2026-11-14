@@ -128,8 +128,8 @@ fun markerTap(m: Mushroom, car: GeoPoint, state: FieldDropState, config: Balance
     else -> MarkerTap.CARD
 }
 
-/** 자동차 그림의 앞쪽은 회전 0일 때 남서(225도)를 본다. 북 0도, 시계 방향. */
-const val SPRITE_FRONT_DEG = 225f
+/** 자동차 그림(TopCar.kt)의 앞쪽은 회전 0일 때 북(위)을 본다. 북 0도, 시계 방향. */
+const val SPRITE_FRONT_DEG = 0f
 
 /** 앞쪽이 heading을 보도록 그림을 돌릴 각도. [0, 360) */
 fun carRotation(headingDeg: Float): Float = ((headingDeg - SPRITE_FRONT_DEG) % 360f + 360f) % 360f

@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.components
 
+import com.break8t.unknown.ui.theme.PixelIndicationOnDark
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,7 +34,7 @@ internal val BorderWidth = 3.dp
 /** 주 버튼. Figma 노드의 글자색은 #FFFAF0(Card)이다. */
 @Composable
 fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) =
-    Label(text, AppColors.Primary, AppColors.OnPrimary, bordered = false, 44.sp, modifier, Modifier.clickable(role = Role.Button, onClick = onClick))
+    Label(text, AppColors.Primary, AppColors.OnPrimary, bordered = false, 44.sp, modifier, Modifier.clickable(null, PixelIndicationOnDark, role = Role.Button, onClick = onClick))
 
 /** 보조 버튼(다이얼로그의 취소 등). */
 @Composable

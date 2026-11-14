@@ -39,7 +39,7 @@ class PhotoRulesTest {
     }
 
     @Test fun stateSurvivesSaveRoundTrip() {
-        val s = PhotoState(CameraPreset.SIDE, 2, "pose_sit", 0.3f, 0.7f, 3, true, true, false)
+        val s = PhotoState(CameraPreset.SIDE, 2, "pose_sit", 0.3f, 0.7f, 3, 3, true, false)
         assertEquals(s, PhotoState.fromList(s.toList()))
         assertEquals(PhotoState(), PhotoState.fromList(PhotoState().toList()))
     }

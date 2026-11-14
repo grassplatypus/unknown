@@ -34,7 +34,7 @@
 
 | 화면 | 함수 | 위치 |
 |---|---|---|
-| 시작과 계정 (사이드 메뉴 밖, 로그인 전) | `AccountFlow(mode, onSignedIn)` | `ui/account/` |
+| 시작과 계정 (사이드 메뉴 밖, 로그인 전) | `AccountFlow(mode, onSignedIn, skipSplash)` | `ui/account/` |
 | 홈 | `HomeScreen(mode, onNavigate)` | `ui/home/` |
 | 필드 드랍 | `FieldDropScreen()` | `ui/fielddrop/` |
 | 섬 | `IslandScreen(onOpen)` | `ui/island/` |

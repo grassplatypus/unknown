@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.collection
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.annotation.StringRes
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -33,6 +33,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -166,15 +169,16 @@ internal fun CollectionPane(
             }
         }
         when (listPhase(loaded, visible.size)) {
-            ListPhase.LOADING -> Loading()
+            ListPhase.LOADING -> Loading(kind)
             ListPhase.EMPTY -> Empty(kind, onOpenFieldDrop)
             ListPhase.CONTENT -> Grid(kind, visible, profile, onItem)
         }
     }
 }
 
+/** 목록과 불러오는 중 자리표시가 같은 칸 나누기를 쓴다. 그래야 자리표시가 실제 카드 자리에 놓인다. */
 @Composable
-private fun Grid(kind: CollectionKind, items: List<Collectible>, profile: Profile, onItem: (Collectible) -> Unit) {
+private fun KindGrid(kind: CollectionKind, modifier: Modifier, scroll: Boolean, content: LazyGridScope.() -> Unit) {
     val cells = when (kind) {
         CollectionKind.CARD -> GridCells.Adaptive(260.dp)
         CollectionKind.BADGE -> GridCells.Fixed(1)
@@ -182,11 +186,18 @@ private fun Grid(kind: CollectionKind, items: List<Collectible>, profile: Profil
     }
     LazyVerticalGrid(
         cells,
-        Modifier.fillMaxSize(),
+        modifier,
         horizontalArrangement = Arrangement.spacedBy(35.dp),
         verticalArrangement = Arrangement.spacedBy(if (kind == CollectionKind.BADGE) 31.dp else 35.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = ScreenPadding),
-    ) {
+        userScrollEnabled = scroll,
+        content = content,
+    )
+}
+
+@Composable
+private fun Grid(kind: CollectionKind, items: List<Collectible>, profile: Profile, onItem: (Collectible) -> Unit) =
+    KindGrid(kind, Modifier.fillMaxSize(), scroll = true) {
         items(items, key = { it.id }) { item ->
             val select = when (kind) {
                 CollectionKind.CHARACTER -> item.id == profile.selectedCharacterId
@@ -201,7 +212,6 @@ private fun Grid(kind: CollectionKind, items: List<Collectible>, profile: Profil
             }
         }
     }
-}
 
 @Composable
 private fun Name(item: Collectible, size: Int) = Text(
@@ -241,8 +251,8 @@ private fun CardTile(item: Collectible, onClick: () -> Unit) = Tile(onClick) {
 
 @Composable
 private fun PostcardTile(item: Collectible, onClick: () -> Unit) = Tile(onClick) {
-    Box(Modifier.fillMaxWidth().aspectRatio(313f / 209f).clip(ArtShape), Alignment.Center) {
-        Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Crop, if (item.owned) 1f else 0.25f)
+    Box(Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT), Alignment.Center) {
+        Art(item.art, item.name, Modifier.fillMaxSize(), ContentScale.Fit, if (item.owned) 1f else 0.25f)
         if (!item.owned) LockIcon()
     }
     Spacer(Modifier.height(20.dp))
@@ -281,25 +291,48 @@ private fun BadgeRow(item: Collectible, onClick: () -> Unit) = Tile(onClick, Mod
 }
 
 // Figma S-24-b. 주행 중 화면이 정적이어야 하므로 반짝이는 효과 없이 상자만 둔다.
+// 칸마다 실제 타일과 같은 틀, 그림 비율, 글줄 높이를 써서 다 불러온 뒤에도 자리가 움직이지 않는다.
 @Composable
-private fun Loading() = Column(Modifier.fillMaxSize()) {
-    FlowRow(
-        Modifier.weight(1f),
-        horizontalArrangement = Arrangement.spacedBy(35.dp),
-        verticalArrangement = Arrangement.spacedBy(35.dp),
-    ) {
-        repeat(8) {
-            Column(
-                Modifier.width(328.dp).clip(TileShape).background(AppColors.Muted).padding(21.dp),
-                verticalArrangement = Arrangement.spacedBy(21.dp),
-            ) {
-                SkeletonBox(Modifier.fillMaxWidth().aspectRatio(220f / 147f))
-                SkeletonBox(Modifier.size(208.dp, 34.dp))
-                SkeletonBox(Modifier.size(130.dp, 26.dp))
+private fun Loading(kind: CollectionKind) = Column(Modifier.fillMaxSize()) {
+    KindGrid(kind, Modifier.weight(1f), scroll = false) {
+        items(8) { SkeletonTile(kind) }
+    }
+    Text(stringResource(R.string.encyclopedia_loading), Modifier.padding(vertical = 20.dp), color = AppColors.TextSub, fontSize = 31.sp)
+}
+
+@Composable
+private fun SkeletonTile(kind: CollectionKind) {
+    val frame = Modifier.clip(TileShape).background(AppColors.Muted).padding(21.dp)
+    when (kind) {
+        CollectionKind.CARD, CollectionKind.POSTCARD -> Column(frame) {
+            val card = kind == CollectionKind.CARD
+            SkeletonBox(Modifier.fillMaxWidth().aspectRatio(if (card) 220f / 147f else POSTCARD_ASPECT))
+            Spacer(Modifier.height(if (card) 17.dp else 20.dp))
+            SkeletonLine((if (card) 36 else 39) * 1.4f, 0.7f)
+            Spacer(Modifier.height(13.dp))
+            SkeletonLine(40f, 0.45f)
+        }
+        CollectionKind.CHARACTER, CollectionKind.CAR -> Row(frame, horizontalArrangement = Arrangement.spacedBy(26.dp)) {
+            SkeletonBox(Modifier.size(208.dp))
+            Column(Modifier.weight(1f).padding(top = 10.dp)) { SkeletonLine(39 * 1.4f, 0.8f) }
+        }
+        CollectionKind.BADGE -> Row(frame.heightIn(min = 122.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(31.dp)) {
+            SkeletonBox(Modifier.size(125.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SkeletonLine(42 * 1.4f, 0.4f)
+                SkeletonLine(31 * 1.4f, 0.6f)
             }
         }
     }
-    Text(stringResource(R.string.encyclopedia_loading), Modifier.padding(vertical = 20.dp), color = AppColors.TextSub, fontSize = 31.sp)
+}
+
+/** 글 한 줄 자리. 높이는 그 줄의 줄 높이(sp)와 같고, 상자는 그 안에서 조금 낮게 그린다. */
+@Composable
+private fun SkeletonLine(lineSp: Float, widthFraction: Float) {
+    val h = with(LocalDensity.current) { lineSp.sp.toDp() }
+    Box(Modifier.fillMaxWidth().height(h), contentAlignment = Alignment.CenterStart) {
+        SkeletonBox(Modifier.fillMaxWidth(widthFraction).fillMaxHeight(0.7f))
+    }
 }
 
 @Composable
@@ -392,7 +425,7 @@ private fun Stat(@StringRes label: Int, value: String) =
 @Composable
 private fun PostcardDetail(item: Collectible, onClose: () -> Unit, onShare: ShareHandler) =
     DialogFrame(1040.dp) {
-        Art(item.art, item.name, Modifier.fillMaxWidth().aspectRatio(720f / 400f).clip(ArtShape), ContentScale.Crop)
+        Art(item.art, item.name, Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT), ContentScale.Fit)
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             DialogTitle(item.name)
             DialogBody(item.note.orEmpty())
@@ -431,14 +464,14 @@ internal class EncyclopediaStates : PreviewParameterProvider<Pair<CollectionKind
 @Composable
 private fun EncyclopediaPreview(@PreviewParameter(EncyclopediaStates::class) state: Pair<CollectionKind, Boolean>) =
     PreviewShell(Route.ENCYCLOPEDIA) {
-        CollectionPane(collections(Profile()), state.first, {}, state.second, true, Profile(), { HeaderChip("도감") }, {}) {}
+        CollectionPane(collections(Profile()), state.first, {}, state.second, true, Profile(), { ScreenTitle("도감") }, {}) {}
     }
 
 @ScreenPreviews
 @Composable
 private fun EncyclopediaEmptyPreview() = PreviewShell(Route.ENCYCLOPEDIA) {
     val all = collections(Profile()) + (CollectionKind.POSTCARD to emptyList())
-    CollectionPane(all, CollectionKind.POSTCARD, {}, true, true, Profile(), { HeaderChip("도감") }, {}) {}
+    CollectionPane(all, CollectionKind.POSTCARD, {}, true, true, Profile(), { ScreenTitle("도감") }, {}) {}
 }
 
 internal class DialogStates : PreviewParameterProvider<String> {
@@ -450,13 +483,13 @@ internal class DialogStates : PreviewParameterProvider<String> {
 private fun ItemDialogPreview(@PreviewParameter(DialogStates::class) id: String) = PreviewShell(Route.ENCYCLOPEDIA) {
     val all = collections(Profile())
     val kind = all.entries.first { e -> e.value.any { it.id == id } }.key
-    CollectionPane(all, kind, {}, true, true, Profile(), { HeaderChip("도감") }, {}) {}
+    CollectionPane(all, kind, {}, true, true, Profile(), { ScreenTitle("도감") }, {}) {}
     Overlay({}) { ItemDialog(all.getValue(kind).first { it.id == id }, {}, { _, _, _, _ -> }, {}) }
 }
 
 @ScreenPreviews
 @Composable
 private fun CharacterChangedPreview() = PreviewShell(Route.ENCYCLOPEDIA) {
-    CollectionPane(collections(Profile()), CollectionKind.CHARACTER, {}, true, true, Profile(selectedCharacterId = "ch_cat"), { HeaderChip("도감") }, {}) {}
+    CollectionPane(collections(Profile()), CollectionKind.CHARACTER, {}, true, true, Profile(selectedCharacterId = "ch_cat"), { ScreenTitle("도감") }, {}) {}
     AppToast(stringResource(R.string.collection_character_changed, Josa.euroRo("냥이")), Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp))
 }

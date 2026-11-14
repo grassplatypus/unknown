@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.photo
 
+import com.break8t.unknown.ui.collection.POSTCARD_ASPECT
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -70,9 +71,11 @@ fun ShareQrScreen(kind: ShareKind, title: String, subtitle: String, onClose: () 
 fun ShareQrScreen(kind: ShareKind, title: String, subtitle: String, @DrawableRes image: Int?, onClose: () -> Unit) =
     ShareQrLayout(kind, onClose, onRetake = null) {
         val shape = RoundedCornerShape(10.dp)
-        val pictureModifier = Modifier.fillMaxWidth().aspectRatio(660f / 420f).clip(shape)
+        val postcard = kind == ShareKind.POSTCARD && image != null
+        val pictureModifier = if (postcard) Modifier.fillMaxWidth().aspectRatio(POSTCARD_ASPECT)
+        else Modifier.fillMaxWidth().aspectRatio(660f / 420f).clip(shape)
         if (image != null) {
-            Image(painterResource(image), null, pictureModifier, contentScale = ContentScale.Crop)
+            Image(painterResource(image), null, pictureModifier, contentScale = if (postcard) ContentScale.Fit else ContentScale.Crop)
         } else {
             Box(pictureModifier.background(AppColors.Muted))
         }

@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.home
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -59,7 +60,7 @@ internal fun ParkedHome(profile: Profile, onVoiceChange: (Boolean) -> Unit, modi
                 horizontalArrangement = Arrangement.spacedBy(27.fdp),
                 verticalArrangement = Arrangement.spacedBy(12.fdp),
             ) {
-                Tag(AppColors.Selected) { HomeText(stringResource(R.string.route_home), 34, weight = FontWeight.Bold) }
+                ScreenTitle(stringResource(R.string.route_home))
                 Spacer(Modifier.weight(1f))
                 Tag(AppColors.Accent, Modifier.widthIn(min = 220.fdp)) {
                     HomeText(stringResource(R.string.home_chip_parked), 30, weight = FontWeight.Bold)

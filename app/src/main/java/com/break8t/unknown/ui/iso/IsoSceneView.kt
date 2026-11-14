@@ -445,8 +445,14 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<
         }
     }
 
-private fun clampPan(pan: Offset, zoom: Float, view: Size): Offset {
-    val lx = view.width * zoom / 2f
-    val ly = view.height * zoom / 2f
+/**
+ * The scene is framed to fill the view at zoom 1, so it may move only by how much it overflows the view
+ * plus [PAN_SLACK] of the view. Before this the centre could reach the view edge and half the island left the screen.
+ */
+internal fun clampPan(pan: Offset, zoom: Float, view: Size): Offset {
+    val lx = max(0f, view.width * zoom - view.width) / 2f + view.width * PAN_SLACK
+    val ly = max(0f, view.height * zoom - view.height) / 2f + view.height * PAN_SLACK
     return Offset(pan.x.coerceIn(-lx, lx), pan.y.coerceIn(-ly, ly))
 }
+
+private const val PAN_SLACK = 0.15f

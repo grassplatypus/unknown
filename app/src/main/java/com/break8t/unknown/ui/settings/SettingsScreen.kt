@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.settings
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -148,7 +149,6 @@ private fun SettingsContent(
         }
     }
 
-
     val statusSaved = stringResource(R.string.settings_status_saved)
     val nicknameSaved = stringResource(R.string.settings_nickname_saved)
     val voiceChanged = stringResource(R.string.settings_voice_changed)
@@ -255,7 +255,7 @@ private fun MainPage(
     val demo = LocalDemoState.current
     val locked = LocalUxLimits.current.noSetup
     FlowRow(horizontalArrangement = Arrangement.spacedBy(21.dp), verticalArrangement = Arrangement.spacedBy(21.dp)) {
-        Pill(stringResource(R.string.route_settings), Modifier.padding(end = 31.dp))
+        ScreenTitle(stringResource(R.string.route_settings), Modifier.padding(end = 31.dp))
         Tab.entries.forEach { t -> AppChip(stringResource(t.label), t == tab, onClick = { onTab(t) }) }
     }
     if (locked) Text(stringResource(R.string.settings_driving_locked), color = AppColors.TextSub, fontSize = 34.sp)
@@ -531,7 +531,7 @@ private fun SubHeader(@StringRes title: Int, onBack: () -> Unit) {
 @DrawableRes
 private fun artFor(id: String): Int? = when (id) {
     "ch_sprout", "voice_default", "voice_sprout" -> R.drawable.settings_ch_sprout
-    else -> null
+    else -> com.break8t.unknown.ui.collection.artFor(id) // 다른 캐릭터는 도감 그림을 쓴다. 없으면 첫 글자만 나왔다
 }
 
 @Composable

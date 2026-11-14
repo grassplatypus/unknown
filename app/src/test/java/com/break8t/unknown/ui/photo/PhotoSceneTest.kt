@@ -20,23 +20,24 @@ class PhotoSceneTest {
     }
 
     @Test fun characterStandsWhereItsFractionPointsAndScalesWithItsSize() {
-        val o = characterObject(SceneCharacter("ch_cat", 0.5f, 0.25f, CharacterSizes[1], false), 10)
+        val o = characterObject(SceneCharacter("ch_cat", 0.5f, 0.25f, CharacterSizes[1], 0), 10)
         assertEquals(1f, o.scale, 1e-4f)
         assertEquals(5f, o.x + o.ox + o.scale / 2, 1e-4f)
         assertEquals(2.5f, o.y + o.oy + o.scale / 2, 1e-4f)
         assertEquals(IsoShapes.cat, o.shape)
-        assertEquals(2f, characterObject(SceneCharacter("ch_cat", 0.5f, 0.5f, CharacterSizes[1] * 2, false), 10).scale, 1e-4f)
+        assertEquals(2f, characterObject(SceneCharacter("ch_cat", 0.5f, 0.5f, CharacterSizes[1] * 2, 0), 10).scale, 1e-4f)
     }
 
     @Test fun posesAreSmallModelChangesOrTurns() {
-        fun of(id: String, flipped: Boolean = false) = characterObject(SceneCharacter(id, 0.5f, 0.5f, CharacterSizes[1], flipped), 5)
+        fun of(id: String, turns: Int = 0) = characterObject(SceneCharacter(id, 0.5f, 0.5f, CharacterSizes[1], turns), 5)
         val stand = of("ch_sprout")
         assertEquals(0, stand.rotation)
         assertNotEquals(stand.shape, of("pose_wave").shape)
         assertTrue(of("pose_jump").z > 0f)
         assertEquals(1, of("pose_side").rotation)
         assertEquals(2, of("pose_back").rotation)
-        assertEquals(3, of("ch_sprout", flipped = true).rotation)
+        assertEquals(1, of("ch_sprout", turns = 1).rotation)
+        assertEquals(3, of("pose_back", turns = 1).rotation)
     }
 
     @Test fun aNewCharacterStandsAtTheSpawnAndKeepsItsSpotAfterwards() {

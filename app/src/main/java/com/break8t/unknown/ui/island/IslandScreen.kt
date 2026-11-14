@@ -1,5 +1,6 @@
 package com.break8t.unknown.ui.island
 
+import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -191,7 +192,7 @@ internal fun IslandStageView(
         },
     )
     if (entrance) {
-        IslandTopBar(coins, start = { IslandChip(stringResource(R.string.island_entrance_title), selected = true) })
+        IslandTopBar(coins, start = { ScreenTitle(stringResource(R.string.island_entrance_title)) })
         PrimaryButton(
             stringResource(R.string.island_enter),
             onEnter,
@@ -200,8 +201,9 @@ internal fun IslandStageView(
     } else {
         IslandTopBar(
             coins,
-            start = { IslandChip(stringResource(R.string.island_title), selected = true) },
+            start = { ScreenTitle(stringResource(R.string.island_title)) },
             end = {
+                IslandChip(stringResource(R.string.island_shop), icon = R.drawable.island_ic_shop, onClick = { onOpen(IslandPlace.SHOP) })
                 IslandChip(stringResource(R.string.island_inventory), icon = R.drawable.island_ic_box, onClick = { onOpen(IslandPlace.INVENTORY) })
                 IslandChip(stringResource(R.string.island_photo), icon = R.drawable.island_ic_cam, onClick = { onOpen(IslandPlace.PHOTO) })
             },
