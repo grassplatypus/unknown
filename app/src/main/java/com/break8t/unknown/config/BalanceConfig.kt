@@ -41,6 +41,8 @@ data class BalanceConfig(
 
     // 도감 뱃지: 모은 엽서가 이 수에 닿을 때마다 뱃지 하나가 열린다. 작은 수부터 적는다.
     val postcardBadgeSteps: List<Int> = listOf(3, 5, 10),
+    // 레이드 아바타 테두리: 레벨이 이 수에 닿을 때마다 기본, 은, 금, 금과 보석 순으로 한 단계 오른다.
+    val avatarFrameLevels: List<Int> = listOf(5, 10, 20),
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

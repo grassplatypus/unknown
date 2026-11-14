@@ -35,14 +35,14 @@
 | 화면 | 함수 | 위치 |
 |---|---|---|
 | 시작과 계정 (사이드 메뉴 밖, 로그인 전) | `AccountFlow(mode, onSignedIn, skipSplash)` | `ui/account/` |
-| 홈 | `HomeScreen(mode, onNavigate)` | `ui/home/` |
+| 홈 | `HomeScreen(mode, onNavigate, onShare)` | `ui/home/` |
 | 필드 드랍 | `FieldDropScreen()` | `ui/fielddrop/` |
 | 섬 | `IslandScreen(onOpen)` | `ui/island/` |
 | 상점, 보관함 (섬 아래) | `ShopScreen(onBack, onOpenInventory)`, `InventoryScreen(onBack, onOpenShop, onPlaceFurniture)` | `ui/shop/`, `ui/inventory/` |
 | 설정 | `SettingsScreen(onSwitchAccount, onLogout, onOpenShop)` | `ui/settings/` |
 | 집 (섬 아래) | `HouseScreen(onBack, onOpenInventory, onTakePhoto)` | `ui/house/` |
 | 사진 찍기 (섬 아래) | `PhotoScreen(inHouse, onClose)` | `ui/photo/` |
-| 공유 QR (도감, 내 정보에서) | `ShareQrScreen(kind, title, subtitle, onClose)` | `ui/photo/` |
+| 공유 QR (도감, 내 정보, 홈 알림에서) | `ShareQrScreen(kind, title, subtitle, onClose)` | `ui/photo/` |
 | 내 정보, 친구 | `MyInfoScreen(onShare)` | `ui/myinfo/` |
 | 도감 | `EncyclopediaScreen(onShare, onOpenFieldDrop)` | `ui/encyclopedia/` (목록 부품은 `ui/collection/`) |
 
