@@ -62,8 +62,8 @@ private val demoBadges = listOf(
     badge("badge_safe", "부드러운 통과", R.drawable.myinfo_badge_safe, "급제동 없이 10번 지남", "2026-10-20"),
     badge("badge_regular", "단골 10번", R.drawable.myinfo_badge_regular, "같은 정체를 10번 만남", "2026-09-14"),
     badge("badge_holiday", "명절 귀성길", R.drawable.myinfo_badge_holiday, "추석에 경부고속도로를 지남", "2026-09-25"),
-    // Figma도 잠긴 뱃지 자리에 badge_safe를 흐리게 쓴다.
-    Collectible(CollectionKind.BADGE, "badge_night", "밤길 운전", R.drawable.myinfo_badge_safe, owned = false),
+    // Figma는 이 자리에 badge_safe를 흐리게 썼다. 명절 귀성길 뱃지를 참고 그림으로 같은 방식으로 만든 밤길 그림을 쓴다.
+    Collectible(CollectionKind.BADGE, "badge_night", "밤길 운전", R.drawable.myinfo_badge_night, owned = false),
 )
 
 /** 다섯 묶음 전체. 캐릭터와 자동차는 Catalog와 보유 목록에서, 나머지는 견본에서 온다. */
