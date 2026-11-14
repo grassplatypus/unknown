@@ -6,7 +6,6 @@ import com.break8t.unknown.ui.house.CameraPreset
 import com.break8t.unknown.ui.house.SceneCamera
 import com.break8t.unknown.ui.house.SceneCharacter
 import com.break8t.unknown.ui.iso.IsoObject
-import com.break8t.unknown.ui.iso.IsoPalette
 import com.break8t.unknown.ui.iso.IsoShapes
 import kotlin.random.Random
 
@@ -62,12 +61,6 @@ data class PhotoState(
 fun poseOptions(characterId: String, owned: Set<String>): List<String> =
     listOf(characterId) + Catalog.ofKind(ItemKind.POSE).map { it.id }.filter { it in owned }
 
-// 포즈가 덧붙이는 팔과 발의 색. 캐릭터 모델의 몸 색과 맞춘다.
-private val LimbColors = mapOf(
-    "ch_sprout" to IsoPalette.SproutBody, "ch_cat" to IsoPalette.Orange, "ch_mush" to IsoPalette.Cream,
-    "ch_cloud" to IsoPalette.White, "ch_firefly" to IsoPalette.Yellow,
-)
-
 fun isNight(realTime: Boolean, nightFlag: Boolean, hour: Int): Boolean =
     if (realTime) hour >= NIGHT_FROM_HOUR || hour < NIGHT_UNTIL_HOUR else nightFlag
 
@@ -91,7 +84,7 @@ fun qrModules(seed: Int, size: Int = 25): List<BooleanArray> {
 
 /**
  * The character as a voxel model standing in the scene. [SceneCharacter.x] and y are fractions of a
- * [grid] x [grid] floor; size 0.071 (the Figma sample) is the model at its own scale.
+ * [grid] x [grid] floor; size 0.071 (the Figma sample) stands one cell across.
  * @param characterId the character a pose id is put on; a character id in [c] stands for itself.
  */
 fun characterObject(
@@ -103,13 +96,11 @@ fun characterObject(
 ): IsoObject {
     val pose = c.imageId.takeIf { it.startsWith("pose_") }
     val who = if (pose != null) characterId else c.imageId
-    val base = IsoShapes.of(who) ?: IsoShapes.sprout
-    val scale = c.size / CharacterSizes[1] * baseScale
-    val turns = IsoShapes.poseTurns(pose) + c.turns
+    val shape = IsoShapes.character(who, pose) ?: IsoShapes.character("ch_sprout", pose)!!
+    val cells = c.size / CharacterSizes[1] * baseScale
     return IsoObject(
-        "character", IsoShapes.posed(base, pose, LimbColors[who] ?: IsoPalette.SproutBody), 0, 0, turns.mod(4),
-        ox = c.x * grid - scale / 2f, oy = c.y * grid - scale / 2f,
-        z = if (pose == "pose_jump") JUMP_CELLS else 0f, scale = scale, pickable = pickable,
+        "character", shape, 0, 0, c.turns.mod(4),
+        ox = c.x * grid - cells / 2f, oy = c.y * grid - cells / 2f, scale = cells / shape.w, pickable = pickable,
     )
 }
 
@@ -126,5 +117,3 @@ fun captureFrame(width: Float, height: Float, panelLeft: Float, gap: Float): Fra
     val w = minOf(width * 760f / 1144f, panelLeft - gap - left)
     return FrameRect(left, top, w.coerceAtLeast(0f), height * 640f / 901f)
 }
-
-private const val JUMP_CELLS = 0.3f

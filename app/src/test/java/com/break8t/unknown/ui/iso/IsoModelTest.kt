@@ -60,8 +60,7 @@ class IsoModelTest {
             "house" to Triple(24, 24, 24), "farm_empty" to Triple(8, 8, 1), "farm_sprout" to Triple(8, 8, 4),
             "farm_growing" to Triple(8, 8, 8), "farm_grown" to Triple(8, 8, 10), "tree" to Triple(8, 8, 12),
             "fence" to Triple(8, 8, 6), "path" to Triple(8, 8, 1), "water" to Triple(16, 16, 1),
-            "car" to Triple(16, 8, 8), "ch_sprout" to Triple(8, 8, 9), "ch_cat" to Triple(8, 8, 9),
-            "ch_mush" to Triple(8, 8, 8), "ch_cloud" to Triple(8, 8, 6), "ch_firefly" to Triple(8, 8, 9),
+            "car" to Triple(16, 8, 8),
         )
         for ((id, size) in expected) {
             val s = IsoShapes.of(id) ?: error("no shape for $id")

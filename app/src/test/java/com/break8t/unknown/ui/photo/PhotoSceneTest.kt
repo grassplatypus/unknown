@@ -8,6 +8,7 @@ import com.break8t.unknown.ui.iso.IsoShapes
 import com.break8t.unknown.ui.iso.ViewPreset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -21,31 +22,32 @@ class PhotoSceneTest {
 
     @Test fun characterStandsWhereItsFractionPointsAndScalesWithItsSize() {
         val o = characterObject(SceneCharacter("ch_cat", 0.5f, 0.25f, CharacterSizes[1], 0), 10)
-        assertEquals(1f, o.scale, 1e-4f)
-        assertEquals(5f, o.x + o.ox + o.scale / 2, 1e-4f)
-        assertEquals(2.5f, o.y + o.oy + o.scale / 2, 1e-4f)
+        val across = o.footW * o.scale
+        assertEquals(1f, across, 1e-4f)
+        assertEquals(5f, o.x + o.ox + across / 2, 1e-4f)
+        assertEquals(2.5f, o.y + o.oy + across / 2, 1e-4f)
         assertEquals(IsoShapes.cat, o.shape)
-        assertEquals(2f, characterObject(SceneCharacter("ch_cat", 0.5f, 0.5f, CharacterSizes[1] * 2, 0), 10).scale, 1e-4f)
+        val big = characterObject(SceneCharacter("ch_cat", 0.5f, 0.5f, CharacterSizes[1] * 2, 0), 10)
+        assertEquals(2f, big.footW * big.scale, 1e-4f)
     }
 
-    @Test fun posesAreSmallModelChangesOrTurns() {
+    @Test fun posesAreTheirOwnModelsAndOnlyTheUsersTurnRotates() {
         fun of(id: String, turns: Int = 0) = characterObject(SceneCharacter(id, 0.5f, 0.5f, CharacterSizes[1], turns), 5)
-        val stand = of("ch_sprout")
-        assertEquals(0, stand.rotation)
-        assertNotEquals(stand.shape, of("pose_wave").shape)
-        assertTrue(of("pose_jump").z > 0f)
-        assertEquals(1, of("pose_side").rotation)
-        assertEquals(2, of("pose_back").rotation)
-        assertEquals(1, of("ch_sprout", turns = 1).rotation)
-        assertEquals(3, of("pose_back", turns = 1).rotation)
+        for (id in listOf("ch_sprout", "pose_wave", "pose_jump", "pose_sit", "pose_side", "pose_back")) {
+            assertEquals(id, 0, of(id).rotation)
+            assertEquals(0f, of(id).z, 0f)
+            assertEquals(id, 3, of(id, turns = 3).rotation)
+        }
+        assertSame(IsoShapes.character("ch_sprout", "pose_back"), of("pose_back").shape)
     }
 
     @Test fun aPoseIsPutOnTheChosenCharacter() {
         fun cat(id: String) = characterObject(SceneCharacter(id, 0.5f, 0.5f, CharacterSizes[1], 0), 5, characterId = "ch_cat")
-        assertEquals(IsoShapes.cat, cat("ch_cat").shape)
-        assertEquals(IsoShapes.posed(IsoShapes.cat, "pose_wave", com.break8t.unknown.ui.iso.IsoPalette.Orange), cat("pose_wave").shape)
-        assertEquals(IsoShapes.cat, cat("pose_back").shape)
-        assertEquals(2, cat("pose_back").rotation)
+        assertSame(IsoShapes.cat, cat("ch_cat").shape)
+        assertSame(IsoShapes.character("ch_cat", "pose_wave"), cat("pose_wave").shape)
+        assertNotEquals(IsoShapes.character("ch_sprout", "pose_wave"), cat("pose_wave").shape)
+        // An unknown character id falls back to the sprout in the same pose.
+        assertSame(IsoShapes.character("ch_sprout", "pose_sit"), characterObject(SceneCharacter("pose_sit", 0.5f, 0.5f, CharacterSizes[1], 0), 5, characterId = "ch_none").shape)
     }
 
     @Test fun aNewCharacterStandsAtTheSpawnAndKeepsItsSpotAfterwards() {

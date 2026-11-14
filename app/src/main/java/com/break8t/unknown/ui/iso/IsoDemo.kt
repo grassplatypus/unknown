@@ -37,7 +37,7 @@ object IsoSamples {
             IsoObject("plant", IsoShapes.plant, 4, 4),
             IsoObject("picture", IsoShapes.picture, 0, 2, wall = WallSide.WEST, z = 1.5f),
             IsoObject("picture2", IsoShapes.picture, 1, 0, wall = WallSide.NORTH, z = 1.5f),
-            IsoObject("cat", IsoShapes.cat, 2, 3),
+            IsoObject("cat", IsoShapes.cat, 2, 3, scale = 0.5f),
         ),
     )
 
@@ -76,10 +76,10 @@ object IsoSamples {
                 IsoObject("tree3", IsoShapes.tree, 9, 4),
                 IsoObject("tree4", IsoShapes.tree, 8, 7),
                 IsoObject("tree5", IsoShapes.tree, 4, 7),
-                IsoObject("sprout", IsoShapes.sprout, 8, 5),
-                IsoObject("mush", IsoShapes.mush, 6, 7),
-                IsoObject("cloud", IsoShapes.cloud, 0, 3),
-                IsoObject("firefly", IsoShapes.firefly, 4, 1),
+                IsoObject("sprout", IsoShapes.sprout, 8, 5, scale = 0.5f),
+                IsoObject("mush", IsoShapes.mush, 6, 7, scale = 0.5f),
+                IsoObject("cloud", IsoShapes.cloud, 0, 3, scale = 0.5f),
+                IsoObject("firefly", IsoShapes.firefly, 4, 1, scale = 0.5f),
             ) + farm + (1..3).map { IsoObject("fence$it", IsoShapes.fence, it, 0) },
         )
     }
