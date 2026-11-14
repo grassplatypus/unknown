@@ -1,4 +1,4 @@
-package com.playground.jeongche.ui.components
+package com.break8t.unknown.ui.components
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -25,9 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.playground.jeongche.R
-import com.playground.jeongche.ui.Route
-import com.playground.jeongche.ui.theme.AppColors
+import com.break8t.unknown.R
+import com.break8t.unknown.ui.Route
+import com.break8t.unknown.ui.theme.AppColors
 
 // Figma v4/Rail. Sizes are Figma px x 1.3 (app frame 1284x901 px vs window 1682x1210 dp).
 private val ItemShape = RoundedCornerShape(26.dp)

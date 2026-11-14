@@ -1,7 +1,7 @@
-package com.playground.jeongche.ui
+package com.break8t.unknown.ui
 
 import androidx.annotation.StringRes
-import com.playground.jeongche.R
+import com.break8t.unknown.R
 
 /** 사이드 메뉴 순서와 같다. 주행 중에는 allowedWhileDriving이 아닌 화면을 흐리게 덮는다. */
 enum class Route(@StringRes val label: Int, val allowedWhileDriving: Boolean, @StringRes val parkHint: Int?) {

@@ -1,4 +1,4 @@
-package com.playground.jeongche.ui.components
+package com.break8t.unknown.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,8 +23,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.playground.jeongche.R
-import com.playground.jeongche.ui.theme.AppColors
+import com.break8t.unknown.R
+import com.break8t.unknown.ui.theme.AppColors
 
 // Figma "0. 공통 조각" Button, 상태 버튼, Chip. Sizes are Figma px x 1.3, see SideRail.kt.
 internal val ControlShape = RoundedCornerShape(16.dp)

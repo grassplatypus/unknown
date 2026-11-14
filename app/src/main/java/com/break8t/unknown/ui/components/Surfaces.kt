@@ -1,4 +1,4 @@
-package com.playground.jeongche.ui.components
+package com.break8t.unknown.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.playground.jeongche.R
-import com.playground.jeongche.ui.theme.AppColors
+import com.break8t.unknown.R
+import com.break8t.unknown.ui.theme.AppColors
 
 // Figma "0. 공통 조각" Card, Dialog, Toast. Sizes are Figma px x 1.3, see SideRail.kt.
 private val DialogShape = RoundedCornerShape(26.dp)

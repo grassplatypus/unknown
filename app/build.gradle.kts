@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.playground.jeongche"
+    namespace = "com.break8t.unknown"
     compileSdk = 36
     // CarPropertyManager 컴파일용 stub. 런타임은 기기의 car framework를 쓴다.
     useLibrary("android.car")
 
     defaultConfig {
-        applicationId = "com.playground.jeongche"
+        applicationId = "com.break8t.unknown"
         minSdk = 28
         // Pleos Connect Emulator 2.1.0 = API 34
         targetSdk = 34

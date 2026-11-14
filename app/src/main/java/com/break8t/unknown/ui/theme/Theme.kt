@@ -1,4 +1,4 @@
-package com.playground.jeongche.ui.theme
+package com.break8t.unknown.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme

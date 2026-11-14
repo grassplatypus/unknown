@@ -1,6 +1,6 @@
-package com.playground.jeongche.reward
+package com.break8t.unknown.reward
 
-import com.playground.jeongche.config.BalanceConfig
+import com.break8t.unknown.config.BalanceConfig
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

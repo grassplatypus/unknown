@@ -11,7 +11,7 @@
 - 다른 회사 캐릭터 그림(`ip_*`)을 저장소에 넣지 않는다.
 
 ```
-app/src/main/java/com/playground/jeongche/
+app/src/main/java/com/break8t/unknown/
   config/      BalanceConfig (상수 전부)
   drive/       기어 상태 (DriveMode, DriveStateSource)
   reward/      보상 계산

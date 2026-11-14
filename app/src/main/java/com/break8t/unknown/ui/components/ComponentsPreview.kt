@@ -1,4 +1,4 @@
-package com.playground.jeongche.ui.components
+package com.break8t.unknown.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -20,10 +20,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.playground.jeongche.R
-import com.playground.jeongche.ui.Route
-import com.playground.jeongche.ui.theme.AppColors
-import com.playground.jeongche.ui.theme.AppTheme
+import com.break8t.unknown.R
+import com.break8t.unknown.ui.Route
+import com.break8t.unknown.ui.theme.AppColors
+import com.break8t.unknown.ui.theme.AppTheme
 
 // Sample text below is preview-only and never shipped to users.
 @Preview(name = "기본 창", widthDp = 1682, heightDp = 1210)

@@ -1,6 +1,6 @@
-package com.playground.jeongche.reward
+package com.break8t.unknown.reward
 
-import com.playground.jeongche.config.BalanceConfig
+import com.break8t.unknown.config.BalanceConfig
 import java.math.BigDecimal
 import java.math.RoundingMode
 

@@ -1,4 +1,4 @@
-package com.playground.jeongche.ui.components
+package com.break8t.unknown.ui.components
 
 import android.os.Build
 import androidx.compose.foundation.background
@@ -27,7 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.playground.jeongche.ui.theme.AppColors
+import com.break8t.unknown.ui.theme.AppColors
 
 // Figma S-11-b. 크기는 Figma px × 1.3이다(SideRail.kt 참고).
 private val PillShape = RoundedCornerShape(16.dp)

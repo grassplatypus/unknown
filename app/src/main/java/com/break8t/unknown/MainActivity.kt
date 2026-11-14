@@ -1,14 +1,14 @@
-package com.playground.jeongche
+package com.break8t.unknown
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.playground.jeongche.drive.DriveStateSource
-import com.playground.jeongche.drive.DriveStateSources
-import com.playground.jeongche.ui.AppShell
-import com.playground.jeongche.ui.theme.AppTheme
+import com.break8t.unknown.drive.DriveStateSource
+import com.break8t.unknown.drive.DriveStateSources
+import com.break8t.unknown.ui.AppShell
+import com.break8t.unknown.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var drive: DriveStateSource

@@ -1,4 +1,4 @@
-package com.playground.jeongche.ui
+package com.break8t.unknown.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -16,12 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import com.playground.jeongche.R
-import com.playground.jeongche.drive.DriveMode
-import com.playground.jeongche.ui.components.DrivingCover
-import com.playground.jeongche.ui.components.SideRail
-import com.playground.jeongche.ui.components.drivingBlur
-import com.playground.jeongche.ui.theme.AppColors
+import com.break8t.unknown.R
+import com.break8t.unknown.drive.DriveMode
+import com.break8t.unknown.ui.components.DrivingCover
+import com.break8t.unknown.ui.components.SideRail
+import com.break8t.unknown.ui.components.drivingBlur
+import com.break8t.unknown.ui.theme.AppColors
 
 /** 사이드 메뉴와 본문. 주행 중이면 허용되지 않은 화면 위에 DrivingCover를 덮는다. */
 @Composable

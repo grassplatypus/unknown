@@ -1,4 +1,4 @@
-package com.playground.jeongche.config
+package com.break8t.unknown.config
 
 /**
  * 배율, 기준, 상한 같은 숫자는 전부 여기 있다. 코드에 숫자를 직접 쓰지 않는다.
