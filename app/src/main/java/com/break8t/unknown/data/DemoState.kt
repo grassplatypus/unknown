@@ -16,7 +16,7 @@ data class Profile(
     val selectedCarId: String = "car_red",
     val selectedCharacterId: String = "ch_sprout",
     val voiceGuideOn: Boolean = true,
-    val voicePackId: String = "default",
+    val voicePackId: String = "voice_default",
     val drivingStatusPublic: Boolean = true,
     // 섬 시간: 실제 시간을 따를지, 따르지 않으면 밤인지
     val islandRealTime: Boolean = true,
