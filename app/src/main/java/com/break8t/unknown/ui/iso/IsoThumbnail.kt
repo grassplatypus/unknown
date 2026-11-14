@@ -1,12 +1,6 @@
 package com.break8t.unknown.ui.iso
 
 import android.graphics.Bitmap
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
@@ -15,18 +9,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
-import com.break8t.unknown.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -71,20 +60,3 @@ fun IsoThumbnail(shape: IsoShape, modifier: Modifier = Modifier, rotation: Int =
 }
 
 private fun toImage(f: IsoFrame): ImageBitmap = Bitmap.createBitmap(f.pixels, f.w, f.h, Bitmap.Config.ARGB_8888).asImageBitmap()
-
-/** Busy indicator in the scene's pixel style: three blocks lit in turn, instead of a smooth spinner. */
-@Composable
-fun PixelBusy(modifier: Modifier = Modifier, block: Dp = 12.dp) {
-    val t by rememberInfiniteTransition(label = "busy").animateFloat(
-        0f, 3f, infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart), label = "step",
-    )
-    Canvas(modifier.size(block * 5, block)) {
-        val b = block.toPx()
-        for (i in 0 until 3) {
-            drawRect(
-                if (t.toInt() == i) AppColors.Primary else AppColors.Muted,
-                Offset(i * 2 * b, 0f), Size(b, b),
-            )
-        }
-    }
-}

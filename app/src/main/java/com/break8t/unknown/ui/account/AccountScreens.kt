@@ -23,7 +23,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.break8t.unknown.R
+import com.break8t.unknown.ui.components.PixelBusy
 import com.break8t.unknown.ui.components.AppCard
 import com.break8t.unknown.ui.components.AppChip
 import com.break8t.unknown.ui.components.BorderWidth
@@ -381,7 +381,7 @@ private fun QrSide(expired: Boolean, remainingSec: Int, ttlSec: Int, canLeave: B
                 horizontalArrangement = Arrangement.spacedBy(21.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CircularProgressIndicator(Modifier.size(47.dp), color = AppColors.Primary, strokeWidth = 6.5.dp, trackColor = Color.Transparent)
+                PixelBusy(block = 12.dp)
                 Text(stringResource(R.string.account_qr_waiting), color = AppColors.Text, fontSize = 36.sp, fontWeight = FontWeight.Bold)
             }
             Text(

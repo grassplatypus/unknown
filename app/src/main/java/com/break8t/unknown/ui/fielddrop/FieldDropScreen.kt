@@ -29,7 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
+import com.break8t.unknown.ui.components.PixelBusy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -171,7 +171,7 @@ internal fun FieldDropContent(
         if (!preview && handle.status == MapStatus.LOADING) {
             // Liberty 원래 색이 잠깐 보이지 않도록 다시 칠할 때까지 땅 색으로 덮는다.
             Box(Modifier.fillMaxSize().background(Color(MapPalette.LAND)))
-            CircularProgressIndicator(Modifier.align(Alignment.Center), color = AppColors.Primary)
+            PixelBusy(Modifier.align(Alignment.Center))
         }
 
         TopChips(coins, state.todayCount, config.mushroomDailyLimit, Modifier.fillMaxWidth().padding(Margin))
