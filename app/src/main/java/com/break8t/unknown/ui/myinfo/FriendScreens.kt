@@ -1,5 +1,7 @@
 package com.break8t.unknown.ui.myinfo
 
+import com.break8t.unknown.ui.home.FramedAvatar
+import com.break8t.unknown.ui.home.profileFrame
 import com.break8t.unknown.ui.components.ScreenTitle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -132,9 +134,7 @@ internal fun FriendsPane(
 
 @Composable
 private fun Avatar(friend: Friend, size: androidx.compose.ui.unit.Dp) =
-    Box(Modifier.size(size).clip(ArtShape).background(AppColors.Accent).border(3.dp, AppColors.Line, ArtShape), Alignment.Center) {
-        Art(artFor(friend.characterId), friend.nickname, Modifier.size(size - 8.dp))
-    }
+    FramedAvatar(friend.characterId, profileFrame(null, friend.level), Modifier.size(size))
 
 @Composable
 private fun DrivingChip() = Row(

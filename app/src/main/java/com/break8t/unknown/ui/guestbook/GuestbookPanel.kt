@@ -1,5 +1,9 @@
 package com.break8t.unknown.ui.guestbook
 
+import com.break8t.unknown.ui.home.AvatarFrame
+import com.break8t.unknown.ui.home.FramedAvatar
+import com.break8t.unknown.ui.home.profileFrame
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -85,6 +89,7 @@ fun MyGuestbookPanel(newSince: Long, onClose: () -> Unit, onOpenFriend: () -> Un
     MyGuestbookContent(
         entries, newSince, System.currentTimeMillis(), friends,
         onAuthor = { profileId = it.id }, onDelete = { deleteId = it.id }, onStore = { askStore = true }, onClose = onClose,
+        myFrame = myFrame(),
     )
     friends.firstOrNull { it.id == profileId }?.let { Profile(it, { profileId = null }, onOpenFriend) }
     entries.firstOrNull { it.id == deleteId }?.let { e ->
@@ -116,7 +121,7 @@ fun FriendGuestbookPanel(friendId: String, friendNickname: String, onClose: () -
     FriendGuestbookContent(
         friendNickname, friendBoardShown(friendId), entries, System.currentTimeMillis(), friends,
         canDelete = { canDelete(friendId, it) }, onAuthor = { profileId = it.id }, onDelete = { deleteId = it.id },
-        onWrite = { writing = true }, onClose = onClose,
+        onWrite = { writing = true }, onClose = onClose, myFrame = profileFrame(profile.avatarFrame, profile.level),
     )
     friends.firstOrNull { it.id == profileId }?.let { Profile(it, { profileId = null }, {}) }
     if (writing) {
@@ -244,13 +249,14 @@ internal fun MyGuestbookContent(
     onDelete: (GuestbookEntry) -> Unit,
     onStore: () -> Unit,
     onClose: () -> Unit,
+    myFrame: AvatarFrame = AvatarFrame.BASIC,
 ) = PanelFrame(
     stringResource(R.string.guestbook_title), onClose,
     actions = { SecondaryButton(stringResource(R.string.guestbook_store), onStore) },
 ) {
     val fresh = newSince(entries, newSince).map { it.id }.toSet()
     EntryList(entries, Modifier.weight(1f)) { e ->
-        EntryRow(e, isNew = e.id in fresh, now, authorOf(e, friends, onAuthor), onDelete.takeIf { canDelete(GuestbookStore.MY_ISLAND, e) })
+        EntryRow(e, isNew = e.id in fresh, now, entryFrame(e, friends, myFrame), authorOf(e, friends, onAuthor), onDelete.takeIf { canDelete(GuestbookStore.MY_ISLAND, e) })
     }
 }
 
@@ -266,6 +272,7 @@ internal fun FriendGuestbookContent(
     onDelete: (GuestbookEntry) -> Unit,
     onWrite: () -> Unit,
     onClose: () -> Unit,
+    myFrame: AvatarFrame = AvatarFrame.BASIC,
 ) = PanelFrame(
     stringResource(R.string.guestbook_friend_title, friendNickname), onClose,
     actions = { if (boardShown) PrimaryButton(stringResource(R.string.guestbook_write), onWrite) },
@@ -274,7 +281,7 @@ internal fun FriendGuestbookContent(
         Text(stringResource(R.string.guestbook_board_off), color = AppColors.TextSub, fontSize = 39.sp)
         return@PanelFrame
     }
-    EntryList(entries, Modifier.weight(1f)) { e -> EntryRow(e, isNew = false, now, authorOf(e, friends, onAuthor), onDelete.takeIf { canDelete(e) }) }
+    EntryList(entries, Modifier.weight(1f)) { e -> EntryRow(e, isNew = false, now, entryFrame(e, friends, myFrame), authorOf(e, friends, onAuthor), onDelete.takeIf { canDelete(e) }) }
 }
 
 /** 패널 틀. 아래 섬을 누르지 않게 화면 전체를 덮고, 가운데에 카드를 둔다. */
@@ -340,7 +347,7 @@ private fun EntryList(
 }
 
 @Composable
-private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, onAuthor: (() -> Unit)?, onDelete: ((GuestbookEntry) -> Unit)?) = Row(
+private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, frame: AvatarFrame, onAuthor: (() -> Unit)?, onDelete: ((GuestbookEntry) -> Unit)?) = Row(
     Modifier
         .fillMaxWidth()
         .heightIn(min = 128.dp)
@@ -352,7 +359,7 @@ private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, onAuthor:
 ) {
     // 그림과 이름을 누르면 프로필이 열린다. 친구가 아닌 사람(나, 지운 친구)은 누를 수 없다.
     val author = if (onAuthor != null) Modifier.clip(ControlShape).clickable(role = Role.Button, onClick = onAuthor) else Modifier
-    Avatar(entry.characterId, 88.dp, 13.dp, author)
+    FramedAvatar(entry.characterId, frame, author.size(88.dp))
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -366,6 +373,18 @@ private fun EntryRow(entry: GuestbookEntry, isNew: Boolean, now: Long, onAuthor:
         Text(entry.text, color = AppColors.Text, fontSize = 36.sp, lineHeight = 52.sp)
     }
     if (onDelete != null) DangerButton(stringResource(R.string.guestbook_delete), { onDelete(entry) }, Modifier.align(Alignment.CenterVertically))
+}
+
+/** 남긴 사람의 프로필 테두리. 나는 내가 고른 테두리, 친구는 그 레벨의 테두리, 친구가 아니면 기본이다. */
+internal fun entryFrame(entry: GuestbookEntry, friends: List<Friend>, mine: AvatarFrame): AvatarFrame = when {
+    entry.authorId == GuestbookStore.ME -> mine
+    else -> friendOf(entry, friends)?.let { profileFrame(null, it.level) } ?: AvatarFrame.BASIC
+}
+
+@Composable
+private fun myFrame(): AvatarFrame {
+    val p by LocalDemoState.current.profile.collectAsState()
+    return profileFrame(p.avatarFrame, p.level)
 }
 
 /** 남긴 사람이 지금 친구 목록에 있으면 그 친구. 나와 지운 친구는 null이라 프로필을 열 수 없다. */

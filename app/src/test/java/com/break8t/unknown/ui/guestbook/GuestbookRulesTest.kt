@@ -113,6 +113,15 @@ class GuestbookRulesTest {
         assertTrue(demoGuestbooks(now).getValue(GuestbookStore.MY_ISLAND).all { friendOf(it, friends) != null })
     }
 
+    @Test fun entryFrameFollowsMyChoiceAndFriendLevels() {
+        val friends = com.break8t.unknown.ui.myinfo.demoFriends
+        val gold = com.break8t.unknown.ui.home.AvatarFrame.GOLD
+        assertEquals(gold, entryFrame(entry(GuestbookStore.ME), friends, gold))
+        // 새벽출근 is level 21, so the jewel frame; someone no longer a friend gets the basic frame.
+        assertEquals(com.break8t.unknown.ui.home.AvatarFrame.JEWEL, entryFrame(entry("f_dawn"), friends, gold))
+        assertEquals(com.break8t.unknown.ui.home.AvatarFrame.BASIC, entryFrame(entry("f_gone"), friends, gold))
+    }
+
     @Test fun agoPicksTheLargestWholeUnit() {
         assertEquals(Ago.JustNow, ago(now, now - 30_000))
         assertEquals(Ago.Minutes(5), ago(now, now - 5 * 60_000))

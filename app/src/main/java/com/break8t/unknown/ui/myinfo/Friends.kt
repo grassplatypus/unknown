@@ -21,21 +21,23 @@ data class Friend(
     val islandLevel: Int = 0,
     val postcardIds: Set<String> = emptySet(),
     val badgeIds: Set<String> = emptySet(),
+    // 친구 레벨. 프로필 테두리(기본, 은, 금, 보석)가 이 레벨을 따른다.
+    val level: Int = 1,
 )
 
 // Figma 견본의 이름은 실제 사람 이름이 섞여 있어서 쓰지 않고 새로 지었다.
 internal val demoFriends = listOf(
     Friend("f_acorn", "도토리길", "출근길 같이 버텨요", "ch_cat", driving = true, 6, "벚꽃길", "2026.10.02",
-        "car_blue", 1, setOf("post_blossom", "post_coast", "post_cheomseongdae_xmas"), setOf("badge_regular", "badge_postcard_3")),
+        "car_blue", 1, setOf("post_blossom", "post_coast", "post_cheomseongdae_xmas"), setOf("badge_regular", "badge_postcard_3"), level = 12),
     Friend("f_turtle", "느린거북", "서두르지 않아요", "ch_mush", driving = true, 3, "등대 해안도로", "2026.09.18",
-        "car_yellow", 0, setOf("post_coast"), setOf("badge_safe")),
+        "car_yellow", 0, setOf("post_coast"), setOf("badge_safe"), level = 4),
     Friend("f_dawn", "새벽출근", "오늘도 서부간선", "ch_cloud", driving = false, 9, "경주 첨성대", "2026.08.30",
         "car_red", 2, setOf("post_cheomseongdae", "post_cheomseongdae_gold", "post_coast_gold", "post_blossom"),
-        setOf("badge_regular", "badge_holiday", "badge_night", "badge_postcard_3")),
+        setOf("badge_regular", "badge_holiday", "badge_night", "badge_postcard_3"), level = 21),
     Friend("f_camper", "주말캠퍼", "금요일만 기다려요", "ch_sprout", driving = false, 1, "등대 해안도로", "2026.08.11",
-        "car_red", 0, setOf("post_coast"), emptySet()),
+        "car_red", 0, setOf("post_coast"), emptySet(), level = 6),
     Friend("f_dusk", "퇴근요정", "정시 퇴근이 목표", "ch_firefly", driving = false, 4, "벚꽃길", "2026.07.05",
-        "car_yellow", 1, setOf("post_blossom", "post_cheomseongdae"), setOf("badge_night")),
+        "car_yellow", 1, setOf("post_blossom", "post_cheomseongdae"), setOf("badge_night"), level = 9),
 )
 
 /** 화면을 나누면 Activity가 다시 만들어지므로 친구 목록은 프로세스에 하나만 둔다(DemoStore와 같은 이유). */
@@ -84,5 +86,5 @@ fun checkFriendCode(input: String, friends: List<Friend>, config: BalanceConfig)
 
 fun demoNewFriend(today: LocalDate = LocalDate.now()) = Friend(
     "f_star", "별빛운전", "밤길이 좋아요", "ch_firefly", driving = false, 0, "벚꽃길",
-    today.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
+    today.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")), level = 3,
 )
