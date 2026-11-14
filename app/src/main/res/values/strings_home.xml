@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 공통 -->
+    <string name="home_chip_parked">P · 주차 중</string>
+    <string name="home_chip_driving">D · 주행 중</string>
+    <string name="home_jams_passed">지난 정체</string>
+    <string name="home_safety_score">안전점수</string>
+    <string name="home_places">%1$d곳</string>
+    <string name="home_points">%1$d점</string>
+    <string name="home_duration_hm">%1$d시간 %2$d분</string>
+    <string name="home_duration_m">%1$d분</string>
+    <string name="home_duration_ms">%1$d분 %2$d초</string>
+    <string name="home_ok">확인</string>
+    <string name="home_close">닫기</string>
+
+    <!-- 견본 정체 (Figma 견본과 같은 값) -->
+    <string name="home_demo_jam_name">성산대교 구간</string>
+    <string name="home_demo_road">서부간선도로</string>
+    <string name="home_demo_segment">성산대교 → 목동교</string>
+    <string name="home_demo_jam_time">오늘 오전 8:12</string>
+    <string name="home_demo_postcard">벚꽃길</string>
+
+    <!-- S-08 주차 중 -->
+    <string name="home_today_parked">오늘 %1$dkm를 %2$s 동안 달렸어요.</string>
+    <string name="home_recent_jam">최근에 지난 정체</string>
+    <string name="home_regular_jam">단골 정체 · %1$d번째 만남</string>
+    <string name="home_jam_took">%1$s 걸렸어요.</string>
+    <string name="home_this_week">이번 주</string>
+    <string name="home_collected_coins">모은 코인</string>
+    <string name="home_voice_guide">음성 안내</string>
+
+    <!-- S-09 주행 중 -->
+    <string name="home_today_driving">오늘 %1$dkm를 %2$d분째 달리고 있어요.</string>
+    <string name="home_remaining_km">%1$.1fkm 남음</string>
+    <string name="home_usual_minutes">보통 %1$d분쯤 걸려요</string>
+    <string name="home_raid_solo">혼자 지나는 중</string>
+    <string name="home_raid_group">함께 지나는 중 %1$d명</string>
+    <string name="home_raid_nobody">함께 지나는 사람이 아직 없어요.</string>
+    <string name="home_more_people">+%1$d</string>
+    <string name="home_see_all">모두 보기</string>
+    <string name="home_passenger_qr">동승자 QR</string>
+    <string name="home_end">종료</string>
+    <string name="home_passed_title">%1$d번째 정체를 지났어요</string>
+    <string name="home_took_time">걸린 시간</string>
+    <string name="home_coins_to_get">받을 코인</string>
+    <string name="home_passed_with">함께 통과한 %1$d명</string>
+    <string name="home_success">성공</string>
+    <string name="home_friend">친구</string>
+
+    <!-- D-02 ~ D-05 주차 후 알림 -->
+    <string name="home_reward_title">주행 보상을 받았어요</string>
+    <string name="home_reward_drive">주행 보상</string>
+    <string name="home_reward_drive_sub">정체를 뺀 주행 %1$s</string>
+    <string name="home_reward_raid">정체구간 보상</string>
+    <string name="home_reward_raid_sub">지난 정체 %1$d곳 · %2$s</string>
+    <string name="home_reward_safe">안전운전 보상</string>
+    <string name="home_reward_safe_sub">안전점수 %1$d점</string>
+    <string name="home_reward_xp">경험치</string>
+    <string name="home_reward_xp_sub">주행 %1$s · 정체 시간 가중</string>
+    <string name="home_plus_coin">+%1$d</string>
+    <string name="home_plus_xp">+%1$d XP</string>
+    <string name="home_level">Lv.%1$d</string>
+    <string name="home_xp_progress">%1$d / %2$d XP</string>
+    <string name="home_level_up_i">Lv.%1$d이 됐어요</string>
+    <string name="home_level_up_ga">Lv.%1$d가 됐어요</string>
+    <string name="home_new_postcard">새 엽서를 받았어요</string>
+    <string name="home_new_jam_card">새 정체 카드를 받았어요</string>
+    <string name="home_share">공유</string>
+    <string name="home_open_encyclopedia">도감에서 보기</string>
+</resources>
