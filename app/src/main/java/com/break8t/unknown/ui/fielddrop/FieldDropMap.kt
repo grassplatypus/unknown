@@ -59,9 +59,12 @@ class MapHandle {
         return PROBE_M / ((b.x - a.x) / density)
     }
 
+    internal var onRecenter: () -> Unit = {}
+
     /** 내 차를 가운데에 두고 기본 높이로 돌아간다. 화면 높이(dp)에 따라 줌이 달라진다. */
     fun recenter(p: GeoPoint, viewportHeightDp: Double) {
         val m = map ?: return
+        onRecenter()
         val zoom = defaultZoom(p, viewportHeightDp, m.maxZoomLevel)
         m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(p.lat, p.lng), zoom))
     }
@@ -76,7 +79,7 @@ private const val MAP_MAX_ZOOM = 25.5
 fun defaultZoom(at: GeoPoint, viewportHeightDp: Double, maxZoom: Double = MAP_MAX_ZOOM): Double =
     zoomForAltitude(at.lat, FIELD_DROP_ALTITUDE_M, viewportHeightDp, maxZoom)
 
-/** MapLibre 지도. 화면을 나누면 Activity가 다시 만들어지므로 카메라는 rememberSaveable에 둔다. */
+/** MapLibre 지도. 화면을 나누면 Activity가 다시 만들어진다. 사용자가 옮긴 카메라는 이어 가고, 아니면 새 창 높이로 기본 높이를 다시 잡는다. */
 @Composable
 fun LiveMap(handle: MapHandle, start: GeoPoint, viewportHeightDp: Double, onMapTap: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -84,14 +87,29 @@ fun LiveMap(handle: MapHandle, start: GeoPoint, viewportHeightDp: Double, onMapT
     var lat by rememberSaveable { mutableDoubleStateOf(start.lat) }
     var lng by rememberSaveable { mutableDoubleStateOf(start.lng) }
     var zoom by rememberSaveable { mutableDoubleStateOf(defaultZoom(start, viewportHeightDp)) }
+    var userMoved by rememberSaveable { mutableStateOf(false) }
+    handle.onRecenter = { userMoved = false }
     val mapView = remember(context) {
-        createMapView(context, handle, CameraPosition.Builder().target(LatLng(lat, lng)).zoom(zoom).build(), { tap() }) {
+        val camera = if (userMoved) {
+            CameraPosition.Builder().target(LatLng(lat, lng)).zoom(zoom).build()
+        } else {
+            CameraPosition.Builder().target(LatLng(start.lat, start.lng)).zoom(defaultZoom(start, viewportHeightDp)).build()
+        }
+        createMapView(context, handle, camera, { tap() }, { userMoved = true }) {
             lat = it.target?.latitude ?: lat
             lng = it.target?.longitude ?: lng
             zoom = it.zoom
         }
     }
     MapViewLifecycle(mapView)
+    // 창 크기만 바뀌고 Activity가 남는 경우에도 기본 시점이면 높이를 다시 맞춘다.
+    LaunchedEffect(handle.map, viewportHeightDp) {
+        val map = handle.map ?: return@LaunchedEffect
+        if (!userMoved) {
+            val z = defaultZoom(start, viewportHeightDp, map.maxZoomLevel)
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(start.lat, start.lng), z))
+        }
+    }
     // 실패 알림이 오지 않는 경우(응답 없는 연결)도 있어서 시간이 지나면 땅 색만 있는 스타일로 바꾼다.
     LaunchedEffect(mapView) {
         delay(STYLE_TIMEOUT_MS)
@@ -105,6 +123,7 @@ private fun createMapView(
     handle: MapHandle,
     camera: CameraPosition,
     onMapTap: () -> Unit,
+    onGesture: () -> Unit,
     onIdle: (CameraPosition) -> Unit,
 ): MapView {
     MapLibre.getInstance(context.applicationContext)
@@ -124,6 +143,7 @@ private fun createMapView(
             }
             map.cameraPosition = camera
             map.addOnCameraMoveListener { handle.moves++ }
+            map.addOnCameraMoveStartedListener { if (it == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) onGesture() }
             map.addOnCameraIdleListener { handle.moves++; onIdle(map.cameraPosition) }
             map.addOnMapClickListener { onMapTap(); false }
             handle.map = map
