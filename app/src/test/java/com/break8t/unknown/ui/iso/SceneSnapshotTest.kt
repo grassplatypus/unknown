@@ -77,19 +77,19 @@ class SceneSnapshotTest {
                 com.break8t.unknown.ui.house.SceneCharacter(pose ?: id, x, y, size, 0), grid, base, characterId = id,
             )
         val tw = 120; val th = 150; val k = 3
-        for (step in intArrayOf(0, 2)) {
+        for ((name, step, night) in listOf(Triple("cam0", 0, false), Triple("cam2", 2, false), Triple("night", 0, true))) {
             val sheet = BufferedImage(tw * k * poses.size, th * k * ids.size, BufferedImage.TYPE_INT_RGB)
             for ((r, id) in ids.withIndex()) for ((col, pose) in poses.withIndex()) {
                 val o = char(id, pose, 0.5f, 0.5f, com.break8t.unknown.ui.photo.CharacterSizes[1], 1)
                 val tile = IsoScene(1, 1, listOf(Cell(FloorType.GRASS)), listOf(o), floorDepth = 0.12f, frame = FrameBox(0f, 0f, 1f, 1f, -0.12f, 1.9f))
-                val f = renderScene(tile, IsoCamera.of(ViewPreset.OBLIQUE, step), tw, th)
+                val f = renderScene(tile, IsoCamera.of(ViewPreset.OBLIQUE, step), tw, th, night = night)
                 assertTrue("$id $pose", f.pixels.any { it ushr 24 != 0 })
                 for (y in 0 until th * k) for (x in 0 until tw * k) {
                     val c = f.pixels[(y / k) * f.w + x / k]
                     sheet.setRGB(col * tw * k + x, r * th * k + y, if (c ushr 24 == 0) 0x8C9AA6 else c)
                 }
             }
-            ImageIO.write(sheet, "png", File(out, "characters_sheet_cam$step.png"))
+            ImageIO.write(sheet, "png", File(out, "characters_sheet_$name.png"))
         }
         // The same models at the smallest photo size on the largest island, on the app's own pixel grid.
         val size = com.break8t.unknown.config.BalanceConfig.DEFAULT.islandSizes.last()

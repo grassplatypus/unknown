@@ -65,10 +65,14 @@ class CharacterModelsTest {
         }
     }
 
-    /** Whether any eye pixel reaches the frame: render once as is and once with the eyes recolored. */
-    private fun eyesShow(shape: IsoShape, step: Int): Boolean {
-        val eyeColors = setOf(CharacterPalette.Eye, CharacterPalette.Spark)
-        val marked = shape.copy(parts = shape.parts.map { if (it.color in eyeColors) it.copy(color = Color.Magenta) else it })
+    /**
+     * Whether any face pixel reaches the frame: render once as is and once with eyes, mouth and cheeks recolored.
+     * Cream cheeks (sprout, firefly) share their color with the belly and collar, so they are not checked here.
+     */
+    private fun faceShows(shape: IsoShape, step: Int): Boolean {
+        val P = CharacterPalette
+        val faceColors = setOf(P.Eye, P.Spark, P.Mouth, P.CloudCheek)
+        val marked = shape.copy(parts = shape.parts.map { if (it.color in faceColors) it.copy(color = Color.Magenta) else it })
         fun draw(s: IsoShape) = renderScene(thumbnailScene(s), IsoCamera.of(ViewPreset.OBLIQUE, step), 120, 150).pixels
         return !draw(shape).contentEquals(draw(marked))
     }
@@ -78,8 +82,8 @@ class CharacterModelsTest {
             // In the default view +x is dir 0 and +y (the front) is dir 2.
             assertTrue("$id stand shows its eyes", m(id, null).faces(2, eye) > 0)
             assertTrue("$id side looks toward +x", m(id, "pose_side").faces(0, eye) > 0)
-            assertTrue("$id stand eyes are drawn", eyesShow(IsoShapes.character(id, null)!!, 0))
-            for (step in intArrayOf(0, 3)) assertFalse("$id back shows its face at camera step $step", eyesShow(IsoShapes.character(id, "pose_back")!!, step))
+            assertTrue("$id stand face is drawn", faceShows(IsoShapes.character(id, null)!!, 0))
+            for (step in intArrayOf(0, 3)) assertFalse("$id back shows its face at camera step $step", faceShows(IsoShapes.character(id, "pose_back")!!, step))
         }
     }
 

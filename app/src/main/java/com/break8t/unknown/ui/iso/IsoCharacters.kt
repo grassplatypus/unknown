@@ -4,48 +4,48 @@ import androidx.compose.ui.graphics.Color
 import kotlin.math.abs
 import kotlin.math.pow
 
-/** Colors sampled from the encyclopedia art (res/drawable-nodpi/myinfo_ch_*.png); limbs a step darker so they read on the body. */
+/** Colors sampled from the encyclopedia and pose art (myinfo_ch_*.png, shop_pose_*.png); limbs take a darker sampled tone. */
 internal object CharacterPalette {
-    val Eye = Color(0xFF2F1408)
+    val Eye = Color(0xFF2F0F07)
     val Ink = Color(0xFF3A1907)
-    val Spark = Color(0xFFFFFBF0)
-    val Mouth = Color(0xFFE8735E)
+    val Spark = Color(0xFFFFFFF6)
+    val Mouth = Color(0xFFFC9E7B)
 
     val SproutBody = Color(0xFFC9D734)
-    val SproutLimb = Color(0xFFADBF24)
+    val SproutLimb = Color(0xFFB8C829)
     val SproutDark = Color(0xFF94A818)
-    val SproutLight = Color(0xFFDDE66A)
+    val SproutLight = Color(0xFFFFF2A9)
     val SproutCream = Color(0xFFFCF1A5)
     val SproutFeet = Color(0xFFFCEB9C)
 
     val CatOrange = Color(0xFFFDB102)
-    val CatLimb = Color(0xFFEE9A00)
+    val CatLimb = Color(0xFFEC9102)
     val CatCream = Color(0xFFFDE8AC)
     val CatStripe = Color(0xFFD86B01)
-    val CatCheek = Color(0xFFF59A6B)
+    val CatCheek = Color(0xFFFC9E7B)
     val CatHat = Color(0xFFBA683D)
-    val CatHatDark = Color(0xFF8E4F33)
+    val CatHatDark = Color(0xFF9F5A41)
     val CatScarf = Color(0xFFC65C29)
 
     val MushCap = Color(0xFFE82810)
     val MushCapDark = Color(0xFFBF1C09)
     val MushSpot = Color(0xFFFDECC1)
     val MushBody = Color(0xFFFCE9BD)
-    val MushLimb = Color(0xFFF3CF98)
-    val MushShade = Color(0xFFE9B97E)
+    val MushLimb = Color(0xFFF8CF96)
+    val MushShade = Color(0xFFF1BD80)
     val MushCheek = Color(0xFFFC9E7B)
 
     val CloudWhite = Color(0xFFFDF4E8)
-    val CloudPuff = Color(0xFFF4E6D2)
-    val CloudShade = Color(0xFFF0D8B8)
-    val CloudShoe = Color(0xFF81A4D4)
-    val CloudShoeDark = Color(0xFF5F86BE)
+    val CloudPuff = Color(0xFFFBEFDE)
+    val CloudShade = Color(0xFFF5DDBF)
+    val CloudShoe = Color(0xFF85ACE1)
+    val CloudShoeDark = Color(0xFF81A4D4)
     val CloudCheek = Color(0xFFF8B98B)
 
     val FlyYellow = Color(0xFFFDB901)
     val FlyLight = Color(0xFFFDDF3C)
     val FlyCream = Color(0xFFFDE9A1)
-    val FlyWing = Color(0xFFF6E3B0)
+    val FlyWing = Color(0xFFFDE9A8)
     val FlyOrange = Color(0xFFF09300)
     val FlyOrangeDark = Color(0xFFD77701)
     val FlyGlow = Color(0xFFFFF5AE)
@@ -59,11 +59,11 @@ internal object IsoCharacters {
     val ids = listOf("ch_sprout", "ch_cat", "ch_mush", "ch_cloud", "ch_firefly")
     val poses = listOf(null, "pose_wave", "pose_jump", "pose_sit", "pose_side", "pose_back")
 
-    fun of(id: String, pose: String?): IsoShape? = cache[id to pose.takeIf { it in poses }]
+    fun of(id: String, pose: String?): IsoShape? = cache[id to pose.takeIf { it in poses }]?.value
 
-    private val cache: Map<Pair<String, String?>, IsoShape> by lazy {
-        ids.flatMap { id -> poses.map { id to it } }.associateWith { (id, p) -> build(id, Pose.entries[poses.indexOf(p)]) }
-    }
+    // Built on first use, one model at a time, since the photo screen asks for them during composition.
+    private val cache: Map<Pair<String, String?>, Lazy<IsoShape>> =
+        ids.flatMap { id -> poses.map { id to it } }.associateWith { (id, p) -> lazy { build(id, Pose.entries[poses.indexOf(p)]) } }
 
     private fun build(id: String, p: Pose): IsoShape = when (id) {
         "ch_cat" -> cat(p)
@@ -89,8 +89,8 @@ internal object IsoCharacters {
     }
 
     private fun Vox.mouth(z: Int, open: Boolean) {
-        front(7, z, mouth); front(8, z, mouth)
-        if (open) { front(7, z - 1, mouth); front(8, z - 1, mouth) }
+        mark(7, z, mouth); mark(8, z, mouth)
+        if (open) { mark(7, z - 1, mouth); mark(8, z - 1, mouth) }
     }
 
     // 새싹이: a round green bud with a cream belly, stubby arms and a two-leaf sprout on top.
@@ -107,11 +107,14 @@ internal object IsoCharacters {
         }
         if (sit) ball(8f, 8f, 6.4f, 6.6f, 5.4f, 6f, body, e = 2.6f) else ball(8f, 8f, 7.5f, 6f, 5f, 6.5f, body, e = 2.6f)
         frontOval(8f, b + 3.5f, 3f, 2.2f, cream)
+        if (p == Pose.BACK) for (x in 0 until Vox.N) for (z in b + 1..b + 6) {
+            if ((x - 7.5f) * (x - 7.5f) / 9f + (z - b - 3.5f) * (z - b - 3.5f) / 5f <= 1f) back(x, z, cream)
+        }
         for (x in 5..8) for (y in 6..9) if ((x - 6.5f) * (x - 6.5f) + (y - 7.5f) * (y - 7.5f) < 4f) top(x, y, Mat(C.SproutLight))
         val ez = b + 9
         eyes(5, ez, p == Pose.JUMP)
         mouth(ez - 2, p == Pose.WAVE || p == Pose.JUMP)
-        for (x in intArrayOf(3, 4, 11, 12)) front(x, ez - 2, cream)
+        for (x in intArrayOf(3, 4, 11, 12)) mark(x, ez - 2, cream)
         when (p) {
             Pose.WAVE -> { box(1, 7, b + 4, 2, 3, 3, limb); box(13, 7, b + 7, 2, 2, 2, limb); box(14, 7, b + 9, 2, 2, 7, limb) }
             Pose.JUMP -> { box(1, 7, b + 8, 2, 2, 2, limb); box(0, 7, b + 10, 2, 2, 5, limb); box(13, 7, b + 8, 2, 2, 2, limb); box(14, 7, b + 10, 2, 2, 5, limb) }
@@ -149,10 +152,10 @@ internal object IsoCharacters {
         ball(8f, 8f, b + 8.6f, 4.6f, 3.8f, 1.1f, scarf)
         ball(8f, 8.5f, b + 12.5f, 6f, 4.8f, 4.2f, fur, e = 2.6f)
         frontOval(8f, b + 11f, 2.2f, 1.3f, cream)
-        front(7, b + 12, Mat(C.Ink)); front(8, b + 12, Mat(C.Ink))
-        if (p == Pose.WAVE || p == Pose.JUMP) { front(7, b + 10, mouth); front(8, b + 10, mouth) }
+        mark(7, b + 12, Mat(C.Ink)); mark(8, b + 12, Mat(C.Ink))
+        if (p == Pose.WAVE || p == Pose.JUMP) { mark(7, b + 10, mouth); mark(8, b + 10, mouth) }
         eyes(4, b + 13, p == Pose.JUMP)
-        front(3, b + 11, pink); front(12, b + 11, pink)
+        mark(3, b + 11, pink); mark(12, b + 11, pink)
         for (y in 6..11) for (z in intArrayOf(b + 11, b + 13)) { left(y, z, stripe); right(y, z, stripe) }
         for (x in 5..10) { back(x, b + 12, stripe); back(x, b + 14, stripe) }
         // A flat cap with a short brim; the ears come out on either side of it.
@@ -199,8 +202,8 @@ internal object IsoCharacters {
         if (sit) ball(8f, 8f, 4f, 5.2f, 4.6f, 4f, body, e = 2.6f) else ball(8f, 8f, 5f, 4.8f, 4.4f, 5f, body, e = 2.6f)
         val fz = if (sit) 4 else 5
         eyes(5, fz, p == Pose.JUMP)
-        if (p == Pose.WAVE || p == Pose.JUMP) mouth(fz - 1, true) else { front(6, fz - 1, eye); front(7, fz - 2, eye); front(8, fz - 2, eye); front(9, fz - 1, eye) }
-        for (x in intArrayOf(3, 4, 11, 12)) front(x, fz - 1, Mat(C.MushCheek))
+        if (p == Pose.WAVE || p == Pose.JUMP) mouth(fz - 1, true) else { mark(6, fz - 1, eye); mark(7, fz - 2, eye); mark(8, fz - 2, eye); mark(9, fz - 1, eye) }
+        for (x in intArrayOf(4, 5, 10, 11)) mark(x, fz - 1, Mat(C.MushCheek))
         when (p) {
             Pose.WAVE -> { box(2, 7, fz - 2, 2, 2, 2, limb); box(12, 7, fz - 1, 2, 2, 2, limb); box(14, 7, fz, 2, 2, 5, limb) }
             Pose.JUMP -> { box(1, 7, fz, 3, 2, 2, limb); box(0, 7, fz + 1, 1, 2, 2, limb); box(12, 7, fz, 3, 2, 2, limb); box(15, 7, fz + 1, 1, 2, 2, limb) }
@@ -247,7 +250,7 @@ internal object IsoCharacters {
         val arc = if (p == Pose.JUMP) intArrayOf(0, 1, 1, 0) else intArrayOf(1, 0, 0, 1)
         for (x0 in intArrayOf(3, 9)) for (i in 0..3) mark(x0 + i, ez + arc[i], eye)
         mouth(ez - 2, p == Pose.WAVE || p == Pose.JUMP)
-        for (x in intArrayOf(2, 3, 12, 13)) front(x, ez - 1, Mat(C.CloudCheek))
+        for (x in intArrayOf(2, 3, 12, 13)) mark(x, ez - 1, Mat(C.CloudCheek))
         fun arm(x: Float, y: Float, z: Float, r: Float = 1.8f) = ball(x, y, z, r, r + 0.2f, r, puff)
         when (p) {
             Pose.WAVE -> { arm(1.6f, 8f, b + 2.5f); arm(14f, 8f, b + 7f, 1.3f); arm(14.2f, 8f, b + 10f) }
@@ -281,7 +284,7 @@ internal object IsoCharacters {
         val ez = b + 11
         eyes(4, ez, p == Pose.JUMP)
         mouth(ez - 1, p == Pose.WAVE || p == Pose.JUMP)
-        for (x in intArrayOf(3, 12)) front(x, ez - 1, cream)
+        for (x in intArrayOf(3, 12)) mark(x, ez - 1, cream)
         // Antennae: two ink stalks with glowing tips; the waving side bends outward.
         val top = b + 16
         for ((x, out) in listOf(6 to -1, 9 to 1)) {
