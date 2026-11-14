@@ -40,7 +40,7 @@
 | 섬 | `IslandScreen(onOpen)` | `ui/island/` |
 | 상점, 보관함 (섬 아래) | `ShopScreen(onBack, onOpenInventory, fromVoicePacks = false)`, `InventoryScreen(onBack, onOpenShop, onPlaceFurniture)` | `ui/shop/`, `ui/inventory/` |
 | 설정 | `SettingsScreen(onSwitchAccount, onLogout, onOpenShop)` | `ui/settings/` |
-| 집 (섬 아래) | `HouseScreen(onBack, onOpenInventory, onTakePhoto)` | `ui/house/` |
+| 집 (섬 아래) | `HouseScreen(onBack, onOpenInventory, onTakePhoto, backToInventory = false)` | `ui/house/` |
 | 사진 찍기 (섬 아래) | `PhotoScreen(inHouse, onClose)` | `ui/photo/` |
 | 공유 QR (도감, 내 정보, 홈 알림에서) | `ShareQrScreen(kind, title, subtitle, onClose)` | `ui/photo/` |
 | 내 정보, 친구 | `MyInfoScreen(onShare)` | `ui/myinfo/` |

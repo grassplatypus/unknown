@@ -50,6 +50,9 @@ data class BalanceConfig(
     // 섬 넓히기: 단계별 섬 한 변의 칸 수, 그리고 i단계에서 i+1단계로 넓히는 코인(임시).
     val islandSizes: List<Int> = listOf(10, 12, 14),
     val islandExpandCoins: List<Int> = listOf(200, 400), // 임시
+    // 집 넓히기: houseGridSize 다음 단계의 칸 수와 그 단계로 가는 코인(같은 순서, 임시)
+    val houseGridSteps: List<Int> = listOf(6, 7),
+    val houseGridStepPrices: List<Int> = listOf(150, 300),
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

@@ -1,9 +1,9 @@
 package com.break8t.unknown.ui.house
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -12,9 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import com.break8t.unknown.R
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.ui.island.IslandMap
@@ -39,8 +37,7 @@ import com.break8t.unknown.ui.iso.WallSide
 import com.break8t.unknown.ui.iso.VPC
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import com.break8t.unknown.ui.iso.wallVisible
-import kotlin.math.max
-import kotlin.math.roundToInt
+import kotlin.math.floor
 
 enum class ScenePlace { HOUSE, ISLAND }
 
@@ -65,6 +62,7 @@ data class RoomSceneState(
     val character: SceneCharacter? = null,
     val plots: List<PlotView> = emptyList(),
     val carId: String = "car_red",
+    val islandSize: Int = IslandMap.SIZE,
 )
 
 /**
@@ -169,6 +167,35 @@ fun placeNewInRoom(layout: List<Placed>, itemId: String, config: BalanceConfig):
 fun rotateInRoom(layout: List<Placed>, index: Int, config: BalanceConfig): List<Placed>? =
     rotate(layout + RoomMap.Fixed, index, config)?.take(layout.size)
 
+/**
+ * Where a dragged piece may go. Floor pieces stay inside the room; a wall piece goes to the wall under the finger.
+ * In the house's oblique view (yaw 45) a wall point keeps x - y at any height, so that picks the wall and the cell.
+ */
+fun dragTarget(pl: Placement, at: Offset, current: Placed, config: BalanceConfig): Placement {
+    val n = config.houseGridSize
+    if (pl.wall == null) {
+        val (w, h) = footprint(current.copy(turns = RoomMap.rotationOf(pl.rotation)))
+        return pl.copy(x = pl.x.coerceIn(0, maxOf(0, n - w)), y = pl.y.coerceIn(0, maxOf(0, n - h)))
+    }
+    val w = specOf(current.itemId).w
+    val north = at.x >= at.y
+    val along = floor(if (north) at.x - at.y else at.y - at.x).toInt().coerceIn(0, maxOf(0, n - w))
+    val wall = if (north) WallSide.NORTH else WallSide.WEST
+    return pl.copy(x = if (north) along else 0, y = if (north) 0 else along, rotation = wall.ordinal, wall = wall)
+}
+
+/** Moves wall piece [index] [step] rows up (or down when negative), past taken rows. Null when no row is free that way. */
+fun shiftRowInRoom(layout: List<Placed>, index: Int, step: Int, config: BalanceConfig): List<Placed>? {
+    val p = layout.getOrNull(index)?.takeIf { it.surface != Surface.FLOOR } ?: return null
+    var y = p.y + step
+    while (y in 0 until config.houseWallHeight) {
+        val moved = p.copy(y = y)
+        if (fitsRoom(layout, moved, config, index)) return layout.toMutableList().also { it[index] = moved }
+        y += step
+    }
+    return null
+}
+
 /** Moves item [index] to an engine placement if the room rules allow it. */
 fun placeAt(layout: List<Placed>, index: Int, pl: Placement, config: BalanceConfig): List<Placed>? {
     val current = layout.getOrNull(index) ?: return null
@@ -179,6 +206,7 @@ fun placeAt(layout: List<Placed>, index: Int, pl: Placement, config: BalanceConf
 /**
  * 집과 섬 장면을 그리는 한 자리. 방은 [editMode]일 때 엔진의 편집(고르기, 끌기, 놓을 수 있는지 색)을 쓴다.
  * [canPlace]와 [onPlace]는 집의 배치 규칙을 거친다. [overlay]는 장면 위의 버튼 자리다.
+ * [frameInsets]는 장면이 그 아래로 계속 그려지는 칩과 카드 자리, [fixedView]는 끌기와 확대를 막는다.
  */
 @Composable
 fun RoomScene(
@@ -193,24 +221,33 @@ fun RoomScene(
     onPlace: (Placement) -> Unit = {},
     canPlace: (Placement) -> Boolean = { false },
     onTapCell: (com.break8t.unknown.ui.iso.IsoHit) -> Unit = {},
+    frameInsets: PaddingValues = PaddingValues(),
+    fixedView: Boolean = false,
     overlay: @Composable IsoOverlayScope.() -> Unit = {},
 ) {
     val camera = state.camera.iso
     val house = state.place == ScenePlace.HOUSE
     val stages = state.plots.map { it.seedId to it.grown }
-    val scene = remember(house, state.layout, camera, extra, stages, state.carId) {
-        if (house) RoomMap.scene(state.layout, config, camera, extra) else IslandMap.scene(state.plots, state.carId, extra)
+    val scene = remember(house, state.layout, camera, extra, stages, state.carId, state.islandSize) {
+        if (house) RoomMap.scene(state.layout, config, camera, extra) else IslandMap.scene(state.plots, state.carId, extra, size = state.islandSize)
     }
     SideEffect { view.night = state.night && !house }
     // The engine picks on tap and long press; the screen keeps an index, so follow the engine's choice.
     LaunchedEffect(view, editMode) {
         if (editMode) snapshotFlow { view.selectedId }.collect { onSelect(RoomMap.indexOf(it)) }
     }
+    // Room pieces are dragged by the house rules; island and photo extras keep the engine's own snapping.
+    val adjust: (Placement, Offset) -> Placement = { pl, at ->
+        val i = RoomMap.indexOf(pl.id)
+        val current = state.layout.getOrNull(i)
+        if (house && current != null) dragTarget(pl, at, current, config) else pl
+    }
     Box(if (!backdrop) modifier else modifier.background(if (house) HouseBg else sceneSky(state.night))) {
-        if (backdrop) { if (house) PixelNoise(Modifier.fillMaxSize()) else PixelSky(state.night, Modifier.fillMaxSize()) }
+        if (backdrop && !house) PixelSky(state.night, Modifier.fillMaxSize())
         IsoSceneView(
             scene, view, Modifier.fillMaxSize(),
-            editMode = editMode, onTap = onTapCell, canPlace = canPlace, onPlace = onPlace, camera = camera, overlay = overlay,
+            editMode = editMode, onTap = onTapCell, canPlace = canPlace, onPlace = onPlace, camera = camera,
+            frameInsets = frameInsets, fixedView = fixedView, adjustDrag = adjust, overlay = overlay,
         )
     }
 }
@@ -223,32 +260,7 @@ fun presetLabel(p: CameraPreset): Int = when (p) {
     CameraPreset.TOP -> R.string.photo_preset_top
 }
 
-/**
- * Figma S-14 바탕: 검은 바탕에 파란 픽셀이 흩어져 있고 위쪽일수록 촘촘하다.
- * 표에서 뽑은 고정 무늬라 다시 그려도 바뀌지 않는다.
- */
-@Composable
-internal fun PixelNoise(modifier: Modifier = Modifier) {
-    val cell = max(1f, (NOISE_DP * LocalDensity.current.density).roundToInt().toFloat())
-    Canvas(modifier) {
-        val cols = (size.width / cell).toInt() + 1
-        val rows = (size.height / cell).toInt() + 1
-        for (j in 0 until rows) for (i in 0 until cols) {
-            var h = i * 73856093 xor j * 19349663
-            h *= 0x27d4eb2d
-            h = (h xor (h ushr 15)) and 0x7FFFFFFF
-            val density = 0.75f - 0.55f * j / rows
-            if ((h % 1000) / 1000f > density) continue
-            drawRect(NoiseColors[(h / 1000) % NoiseColors.size], Offset(i * cell, j * cell), Size(cell, cell))
-        }
-    }
-}
-
-private const val NOISE_DP = 18f
-internal val HouseBg = Color(0xFF020A12)
-private val NoiseColors = listOf(
-    Color(0xFF01233F), Color(0xFF01233F), Color(0xFF01233F), Color(0xFF004674), Color(0xFF004674),
-    Color(0xFF088DB3), Color(0xFF00D3F3), Color(0xFF02142A),
-)
+/** 집 바탕은 검은 단색이다(팀 피드백). 방만 떠 보이게 한다. */
+internal val HouseBg = Color.Black
 
 private const val WINDOW_LIFT = 3f

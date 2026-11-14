@@ -59,12 +59,17 @@ import com.break8t.unknown.ui.shop.ShopDialog
 import com.break8t.unknown.ui.shop.TileShape
 import com.break8t.unknown.ui.shop.ToastHost
 import com.break8t.unknown.ui.theme.AppColors
+import com.break8t.unknown.ui.house.HouseStore
+import com.break8t.unknown.ui.house.Placed
+import com.break8t.unknown.ui.house.available
+import com.break8t.unknown.ui.house.trimToOwned
 
 /** 보관함 진입점(S-18). 섬, 상점, 방 꾸미기는 다른 묶음 화면이라 콜백으로 알린다. */
 @Composable
 fun InventoryScreen(onBack: () -> Unit, onOpenShop: () -> Unit, onPlaceFurniture: () -> Unit) {
     val state = LocalDemoState.current
     val profile by state.profile.collectAsState()
+    val placed by HouseStore.layout.collectAsState()
     val context = LocalContext.current
     var tab by rememberSaveable { mutableStateOf(InventoryTab.FURNITURE) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -74,7 +79,7 @@ fun InventoryScreen(onBack: () -> Unit, onOpenShop: () -> Unit, onPlaceFurniture
 
     Box(Modifier.fillMaxSize()) {
         InventoryContent(
-            profile, tab, selectedId, onBack, onOpenShop, onPlaceFurniture,
+            profile, placed, tab, selectedId, onBack, onOpenShop, onPlaceFurniture,
             onTab = { tab = it },
             onSelect = { selectedId = it },
             onDiscard = { discardId = it; qty = 1 },
@@ -83,12 +88,12 @@ fun InventoryScreen(onBack: () -> Unit, onOpenShop: () -> Unit, onPlaceFurniture
     }
 
     discardId?.let(Catalog::item)?.let { item ->
-        val held = profile.items[item.id] ?: 0
+        val held = available(profile.items, trimToOwned(placed, profile.items), item.id)
         val close = { discardId = null }
         ShopDialog(close) {
             DiscardDialogBody(item.id, item.name, held, qty.coerceAtMost(held), { qty = it }, close) {
                 val n = qty.coerceAtMost(held)
-                if (discard(state, item.id, n)) toast = context.getString(R.string.inventory_toast_discarded, item.name, n)
+                if (discard(state, item.id, n, placed)) toast = context.getString(R.string.inventory_toast_discarded, item.name, n)
                 close()
             }
         }
@@ -99,6 +104,7 @@ fun InventoryScreen(onBack: () -> Unit, onOpenShop: () -> Unit, onPlaceFurniture
 @Composable
 internal fun InventoryContent(
     profile: Profile,
+    placed: List<Placed>,
     tab: InventoryTab,
     selectedId: String?,
     onBack: () -> Unit,
@@ -108,7 +114,7 @@ internal fun InventoryContent(
     onSelect: (String) -> Unit,
     onDiscard: (String) -> Unit,
 ) {
-    val entries = inventoryEntries(profile, tab)
+    val entries = inventoryEntries(profile, tab, placed)
     // After the last one is thrown away the selection falls back to the first tile.
     val selected = entries.firstOrNull { it.item.id == selectedId } ?: entries.firstOrNull()
     BoxWithConstraints(Modifier.fillMaxSize().padding(ScreenPadding)) {
@@ -121,7 +127,7 @@ internal fun InventoryContent(
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 InventoryTab.entries.forEach { t ->
-                    AppChip(stringResource(tabLabel(t), inventoryEntries(profile, t).size), t == tab, { onTab(t) })
+                    AppChip(stringResource(tabLabel(t), inventoryEntries(profile, t, placed).size), t == tab, { onTab(t) })
                 }
             }
             // Profile lives in memory and is always loaded, so an empty list really is empty.

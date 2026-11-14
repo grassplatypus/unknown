@@ -1,6 +1,7 @@
 package com.break8t.unknown.ui.house
 
 import com.break8t.unknown.config.BalanceConfig
+import com.break8t.unknown.data.DemoState
 import kotlin.math.abs
 
 /** 가구가 놓이는 면. 벽은 바닥 격자의 두 변 위에 선다. */
@@ -131,4 +132,30 @@ fun encode(layout: List<Placed>): ArrayList<String> =
 fun decode(saved: List<String>): List<Placed> = saved.map { line ->
     val (id, s, x, y, t) = line.split(',')
     Placed(id, Surface.valueOf(s), x.toInt(), y.toInt(), t.toInt())
+}
+
+/** 다음 넓히기 단계: 넓힌 뒤 한 변의 칸 수와 드는 코인. */
+data class Expansion(val size: Int, val price: Int)
+
+/** 지금 크기 [current]보다 큰 첫 단계. 다 넓혔으면 null. */
+fun nextExpansion(current: Int, config: BalanceConfig): Expansion? {
+    val i = config.houseGridSteps.indexOfFirst { it > current }
+    return if (i < 0) null else Expansion(config.houseGridSteps[i], config.houseGridStepPrices[i])
+}
+
+enum class ExpandResult { DONE, NOT_ENOUGH, MAX }
+
+/** 코인을 내고 한 단계 넓힌다. 모자라거나 끝이면 바꾸지 않는다. 칸 번호가 그대로라 배치는 손대지 않는다. */
+fun expandHouse(state: DemoState, config: BalanceConfig): ExpandResult {
+    var result = ExpandResult.MAX
+    state.update { p ->
+        val next = nextExpansion(p.houseGridSize, config)
+        result = when {
+            next == null -> ExpandResult.MAX
+            p.coins < next.price -> ExpandResult.NOT_ENOUGH
+            else -> ExpandResult.DONE
+        }
+        if (next != null && result == ExpandResult.DONE) p.copy(coins = p.coins - next.price, houseGridSize = next.size) else p
+    }
+    return result
 }

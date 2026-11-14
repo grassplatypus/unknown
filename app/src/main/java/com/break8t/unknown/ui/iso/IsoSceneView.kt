@@ -11,6 +11,9 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -44,6 +47,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -138,6 +142,9 @@ fun rememberIsoViewState(preset: ViewPreset = ViewPreset.OBLIQUE, night: Boolean
  * Renders [scene] off the main thread into a low-resolution buffer and shows it with nearest-neighbour
  * scaling. Drag pans, pinch zooms, tap reports [onTap]. In [editMode] (oblique and top views) tap or
  * long press selects, and dragging the selection moves a ghost that [canPlace] judges before [onPlace].
+ * @param frameInsets edges the scene is framed clear of; it still draws out to the view edges.
+ * @param fixedView turns off pan and pinch.
+ * @param adjustDrag gets each drag placement and the world point under the finger at the piece's mid height.
  */
 @Composable
 fun IsoSceneView(
@@ -150,19 +157,38 @@ fun IsoSceneView(
     onPlace: (Placement) -> Unit = {},
     camera: IsoCamera = state.camera,
     matchVoxels: Boolean = false,
+    frameInsets: PaddingValues = PaddingValues(),
+    fixedView: Boolean = false,
+    adjustDrag: (Placement, Offset) -> Placement = { p, _ -> p },
     overlay: @Composable IsoOverlayScope.() -> Unit = {},
 ) {
     // Whole screen pixels per buffer pixel, so the zoom-1 image matches the viewport at any density.
-    val default = max(1, (PIXEL_DP * LocalDensity.current.density).roundToInt())
+    val density = LocalDensity.current
+    val default = max(1, (PIXEL_DP * density.density).roundToInt())
+    val dir = LocalLayoutDirection.current
     BoxWithConstraints(modifier) {
-        val base = if (!matchVoxels) default else remember(scene, camera, constraints.maxWidth, constraints.maxHeight) {
-            pixelBase(scene, camera, constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), default)
+        val ins = with(density) {
+            Insets(
+                frameInsets.calculateStartPadding(dir).roundToPx(), frameInsets.calculateTopPadding().roundToPx(),
+                frameInsets.calculateEndPadding(dir).roundToPx(), frameInsets.calculateBottomPadding().roundToPx(),
+            )
         }
-        val bw = constraints.maxWidth / base
-        val bh = constraints.maxHeight / base
+        val fw = max(0, constraints.maxWidth - ins.left - ins.right)
+        val fh = max(0, constraints.maxHeight - ins.top - ins.bottom)
+        val base = if (!matchVoxels) default else remember(scene, camera, fw, fh) {
+            pixelBase(scene, camera, fw.toFloat(), fh.toFloat(), default)
+        }
+        val bw = fw / base
+        val bh = fh / base
         val view = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
-        SceneCanvas(scene, state, camera, bw, bh, base, view, editMode, onTap, canPlace, onPlace, overlay)
+        SceneCanvas(scene, state, camera, bw, bh, base, view, ins, editMode, fixedView, onTap, canPlace, onPlace, adjustDrag, overlay)
     }
+}
+
+/** Edges of the view, in pixels, that the scene is framed clear of. */
+internal data class Insets(val left: Int, val top: Int, val right: Int, val bottom: Int) {
+    /** Moves the framed centre from the view centre to the centre of the inset area. */
+    val shift: Offset get() = Offset((left - right) / 2f, (top - bottom) / 2f)
 }
 
 /**
@@ -176,6 +202,7 @@ class IsoOverlayScope internal constructor(
     private val bh: Int,
     private val base: Int,
     private val state: IsoViewState,
+    private val ins: Insets = Insets(0, 0, 0, 0),
 ) : BoxScope by box {
     /** Puts the child's [align] point (bottom centre by default) on the world point ([x], [y], [z]). */
     fun Modifier.isoAnchor(x: Float, y: Float, z: Float, align: Alignment = Alignment.BottomCenter): Modifier = layout { m, c ->
@@ -183,11 +210,13 @@ class IsoOverlayScope internal constructor(
         layout(p.width, p.height) {
             val s = point(x, y, z, Size(c.maxWidth.toFloat(), c.maxHeight.toFloat()))
             val pin = align.align(IntSize.Zero, IntSize(p.width, p.height), layoutDirection)
-            // Kept inside the view with the screen's side margin, so a label near the edge is neither cut nor flush.
+            // Kept inside the framed area with the screen's side margin, so a label is neither cut nor covered.
             val e = EdgeMargin.roundToPx()
+            val x0 = ins.left + e
+            val y0 = ins.top + e
             p.place(
-                (s.x.roundToInt() - pin.x).coerceIn(e, max(e, c.maxWidth - p.width - e)),
-                (s.y.roundToInt() - pin.y).coerceIn(e, max(e, c.maxHeight - p.height - e)),
+                (s.x.roundToInt() - pin.x).coerceIn(x0, max(x0, c.maxWidth - ins.right - p.width - e)),
+                (s.y.roundToInt() - pin.y).coerceIn(y0, max(y0, c.maxHeight - ins.bottom - p.height - e)),
             )
         }
     }
@@ -204,7 +233,7 @@ class IsoOverlayScope internal constructor(
     }
 
     private fun point(x: Float, y: Float, z: Float, view: Size) =
-        screenPoint(projection, layoutOf(bw, bh, view, state.zoom, state.pan, base), x, y, z)
+        screenPoint(projection, layoutOf(bw, bh, view, state.zoom, state.pan + ins.shift, base), x, y, z)
 
     private fun rectOnScreen(x0: Float, y0: Float, x1: Float, y1: Float, z: Float, view: Size): Rect {
         val pts = listOf(point(x0, y0, z, view), point(x1, y0, z, view), point(x0, y1, z, view), point(x1, y1, z, view))
@@ -227,9 +256,9 @@ internal fun screenPoint(p: Projection, l: Layout, x: Float, y: Float, z: Float)
 
 @Composable
 private fun SceneCanvas(
-    scene: IsoScene, state: IsoViewState, camera: IsoCamera, bw: Int, bh: Int, base: Int, view: Size, editMode: Boolean,
-    onTap: (IsoHit) -> Unit, canPlace: (Placement) -> Boolean, onPlace: (Placement) -> Unit,
-    overlay: @Composable IsoOverlayScope.() -> Unit,
+    scene: IsoScene, state: IsoViewState, camera: IsoCamera, bw: Int, bh: Int, base: Int, view: Size, ins: Insets,
+    editMode: Boolean, fixedView: Boolean, onTap: (IsoHit) -> Unit, canPlace: (Placement) -> Boolean, onPlace: (Placement) -> Unit,
+    adjustDrag: (Placement, Offset) -> Placement, overlay: @Composable IsoOverlayScope.() -> Unit,
 ) {
     val night = state.night
     val selected = state.selectedId
@@ -238,8 +267,8 @@ private fun SceneCanvas(
     val inPreview = LocalInspectionMode.current
     // Pan and zoom move and scale the last image at once; the part of the buffer on screen (plus a margin) is
     // re-rendered when it changes by a step, so things that run to the screen edge, like the road, keep doing so.
-    val window by remember(bw, bh, base, view) {
-        derivedStateOf { visibleWindow(bw, bh, view, state.zoom, state.pan, base) }
+    val window by remember(bw, bh, base, view, ins) {
+        derivedStateOf { visibleWindow(bw, bh, view, state.zoom, state.pan + ins.shift, base) }
     }
     val previewFrame = if (inPreview && bw > 0 && bh > 0) {
         remember(scene, camera, night, selected, ghost, bw, bh) { render(scene, camera, bw, bh, night, selected, ghost, window) }
@@ -260,7 +289,9 @@ private fun SceneCanvas(
         }
     }
     val rendered = previewFrame ?: produced
-    val live = rememberUpdatedState(Live(scene, rendered, editMode && camera.pitch >= EDIT_MIN_PITCH, onTap, canPlace, onPlace))
+    val live = rememberUpdatedState(
+        Live(scene, rendered, editMode && camera.pitch >= EDIT_MIN_PITCH, fixedView, ins.shift, onTap, canPlace, onPlace, adjustDrag),
+    )
 
     // The rendered window is larger than the view, so clip it to the view.
     Box(Modifier.fillMaxSize().clipToBounds()) {
@@ -268,7 +299,7 @@ private fun SceneCanvas(
         Canvas(Modifier.fillMaxSize().pointerInput(state, base) { gestures(state, live, base) }) {
             if (night) drawRect(IsoPalette.Night.copy(alpha = NIGHT_OVERLAY))
             val r = rendered ?: return@Canvas
-            val l = layout(r.frame, size, state, base)
+            val l = layout(r.frame, size, state, base, ins.shift)
             drawImage(
                 r.image,
                 srcOffset = IntOffset.Zero,
@@ -283,7 +314,7 @@ private fun SceneCanvas(
         } else if (rendered != null) {
             // Same framing renderScene uses, so labels line up with the drawn pixels.
             val proj = remember(scene, camera, bw, bh) { Projection.framing(scene, camera, bw.toFloat(), bh.toFloat(), 1f, Offset.Zero) }
-            IsoOverlayScope(this, proj, bw, bh, base, state).overlay()
+            IsoOverlayScope(this, proj, bw, bh, base, state, ins).overlay()
         }
     }
 }
@@ -331,9 +362,12 @@ private class Live(
     val scene: IsoScene,
     val rendered: Rendered?,
     val editMode: Boolean,
+    val fixedView: Boolean,
+    val shift: Offset,
     val onTap: (IsoHit) -> Unit,
     val canPlace: (Placement) -> Boolean,
     val onPlace: (Placement) -> Unit,
+    val adjustDrag: (Placement, Offset) -> Placement,
 )
 
 private const val NIGHT_OVERLAY = 0.45f
@@ -347,8 +381,8 @@ internal class Layout(val left: Int, val top: Int, val px: Int) {
 }
 
 /** Screen placement of [f], which may be a window into its zoom-1 buffer. */
-private fun layout(f: IsoFrame, size: Size, state: IsoViewState, base: Int): Layout {
-    val l = layoutOf(f.fullW, f.fullH, size, state.zoom, state.pan, base)
+private fun layout(f: IsoFrame, size: Size, state: IsoViewState, base: Int, shift: Offset): Layout {
+    val l = layoutOf(f.fullW, f.fullH, size, state.zoom, state.pan + shift, base)
     return Layout(l.left + f.ox * l.px, l.top + f.oy * l.px, l.px)
 }
 
@@ -376,7 +410,7 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<
         val l = live.value
         val r = l.rendered
         val view = Size(size.width.toFloat(), size.height.toFloat())
-        val lay = r?.let { layout(it.frame, view, state, base) }
+        val lay = r?.let { layout(it.frame, view, state, base, l.shift) }
         val hit = if (r != null && lay != null) hitTest(l.scene, r.frame, lay.bx(start.x), lay.by(start.y)) else null
         val edit = l.editMode
         var dragId = (hit as? IsoHit.Item)?.id?.takeIf { edit && it == state.selectedId }
@@ -419,18 +453,27 @@ private suspend fun PointerInputScope.gestures(state: IsoViewState, live: State<
                     state.ghost = null
                     state.dragging = false
                     dragId = null
+                    if (l.fixedView) {
+                        e.changes.forEach { it.consume() }
+                        continue
+                    }
                     val centroid = e.calculateCentroid()
                     val k = (state.zoom * e.calculateZoom()).coerceIn(IsoViewState.MIN_ZOOM, IsoViewState.MAX_ZOOM) / state.zoom
-                    val c = Offset(view.width / 2f, view.height / 2f)
+                    val c = Offset(view.width / 2f, view.height / 2f) + l.shift
                     state.zoom *= k
                     state.pan = clampPan(centroid - c - (centroid - c - state.pan) * k + e.calculatePan(), state.zoom, view)
                 } else if (dragged != null && grab != null && dragId != null && proj != null && lay != null) {
                     val pos = e.changes.first { it.pressed }.position
-                    proj.floorCell(lay.bx(pos.x), lay.by(pos.y))?.let { (cx, cy) ->
-                        val p = l.scene.snap(dragged, cx, cy, grab.first, grab.second)
+                    val bx = lay.bx(pos.x)
+                    val by = lay.by(pos.y)
+                    // The world point at the piece's mid height, so a wall piece can follow the finger along a wall.
+                    val mid = l.scene.baseZ(dragged) + dragged.shape.model.sz * dragged.scale / VPC / 2f
+                    val at = proj.floorPoint(bx, by, mid)
+                    if (at != null) proj.floorCell(bx, by)?.let { (cx, cy) ->
+                        val p = live.value.adjustDrag(l.scene.snap(dragged, cx, cy, grab.first, grab.second), at)
                         if (state.ghost?.placement != p) state.ghost = Ghost(p, live.value.canPlace(p))
                     }
-                } else {
+                } else if (!l.fixedView) {
                     val c = e.changes.first { it.pressed }
                     state.pan = clampPan(state.pan + c.positionChange(), state.zoom, view)
                 }

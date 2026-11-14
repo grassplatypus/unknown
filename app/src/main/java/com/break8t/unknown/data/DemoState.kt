@@ -1,6 +1,7 @@
 package com.break8t.unknown.data
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.break8t.unknown.config.BalanceConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -35,6 +36,8 @@ data class Profile(
     val seenIds: Set<String> = emptySet(),
     // 섬을 넓힌 단계. 0이 처음 크기이고 크기는 BalanceConfig.islandSizes[islandLevel]이다.
     val islandLevel: Int = 0,
+    // 지금 집 한 변의 칸 수. 코인으로 BalanceConfig.houseGridSteps 단계까지 넓힌다
+    val houseGridSize: Int = BalanceConfig.DEFAULT.houseGridSize,
 )
 
 class DemoState(initial: Profile = Profile()) {
