@@ -6,40 +6,124 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import java.util.Locale
+import kotlin.math.asin
+import kotlin.math.cos
+import kotlin.math.log2
+import kotlin.math.pow
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.math.tan
 
 enum class MushroomKind { GOLD, BLUE }
 
-/** 지도 위 버섯. x, y는 지도 그림 안에서의 비율(0..1)이라 창 크기와 상관없다. */
+/** WGS84 좌표. 지도 라이브러리 타입을 쓰지 않아서 Android 없이 테스트할 수 있다. */
+data class GeoPoint(val lat: Double, val lng: Double)
+
+/** 내 차 위치와 진행 방향(북 0도, 시계 방향). */
+data class CarFix(val at: GeoPoint, val headingDeg: Float)
+
 data class Mushroom(
     val id: String,
     val kind: MushroomKind,
     val place: String,
     val ad: Boolean,
-    val distanceM: Int,
-    val minutes: Int,
-    val x: Float,
-    val y: Float,
+    val at: GeoPoint,
     val rewardCoins: Int,
     val rewardSeedId: String?,
 )
 
-/** 필드 드랍 견본. 위치는 S-10-a에서 잰 값을 지도 그림 비율로 옮긴 것이다. */
+/** 필드 드랍 견본. 양천구 신정동, 안양천 건너 서부간선도로 옆에 차를 두었다. */
 object FieldDropSamples {
-    const val CAR_X = 0.402f
-    const val CAR_Y = 0.728f
+    // FusedLocation이 들어오기 전까지 쓰는 값. 250도는 S-10-a의 차가 25도 돌아 있는 것과 같다.
+    val CAR = CarFix(GeoPoint(37.5180, 126.8760), headingDeg = 250f)
 
-    // FusedLocation heading이 들어오기 전까지 쓰는 값. S-10-a의 차가 25도 돌아 있는 것과 같다.
-    const val DEMO_HEADING_DEG = 250f
-
-    // 금색 보상은 D-08 견본(코인 30, 당근 씨앗 1). 파란 버섯 보상은 임시.
+    // 거리는 S-10 견본(1.2km, 800m, 1.6km)에 맞춰 골랐다. 금색 보상은 D-08 견본(코인 30, 당근 씨앗 1).
     val mushrooms = listOf(
-        Mushroom("park_sisa", MushroomKind.BLUE, "시사 공영주차장", false, 1200, 4, 0.279f, 0.235f, 10, null),
-        Mushroom("shop_bossam", MushroomKind.GOLD, "항아리 보쌈", true, 1200, 4, 0.493f, 0.413f, 30, "seed_carrot"),
-        Mushroom("park_sinjeong", MushroomKind.BLUE, "신정 공영주차장", false, 800, 3, 0.331f, 0.579f, 10, null),
-        Mushroom("shop_bunsik", MushroomKind.GOLD, "새싹 분식", true, 1600, 5, 0.522f, 0.213f, 30, "seed_carrot"),
+        Mushroom("park_sisa", MushroomKind.BLUE, "시사 공영주차장", false, GeoPoint(37.52807, 126.87112), 10, null),
+        Mushroom("shop_bossam", MushroomKind.GOLD, "항아리 보쌈", true, GeoPoint(37.52878, 126.87671), 30, "seed_carrot"),
+        Mushroom("park_sinjeong", MushroomKind.BLUE, "신정 공영주차장", false, GeoPoint(37.51614, 126.86724), 10, null),
+        Mushroom("shop_bunsik", MushroomKind.GOLD, "새싹 분식", true, GeoPoint(37.53233, 126.87758), 30, "seed_carrot"),
         // 시연용: 내 차 바로 옆이라 누르면 D-08이 열린다. 받아도 남아 있어서 오늘 한도까지 시연할 수 있다.
-        Mushroom("shop_cafe", MushroomKind.GOLD, "골목 카페", true, 15, 0, 0.47f, 0.66f, 30, "seed_carrot"),
+        Mushroom("shop_cafe", MushroomKind.GOLD, "골목 카페", true, GeoPoint(37.51806, 126.87605), 30, "seed_carrot"),
     )
+}
+
+/** 내 차 위치를 주는 곳. FusedLocation 의존성과 권한이 들어오면 그 구현으로 바꾼다. */
+interface CarLocationSource {
+    val fix: StateFlow<CarFix>
+    fun start() {}
+    fun stop() {}
+}
+
+class DemoCarLocation(fix: CarFix = FieldDropSamples.CAR) : CarLocationSource {
+    override val fix: StateFlow<CarFix> = MutableStateFlow(fix)
+}
+
+/** 두 좌표 사이의 거리(m). 하버사인 공식, 지구 반지름은 평균값. */
+fun distanceM(a: GeoPoint, b: GeoPoint): Double {
+    val dLat = Math.toRadians(b.lat - a.lat)
+    val dLng = Math.toRadians(b.lng - a.lng)
+    val h = sin(dLat / 2).pow(2) + cos(Math.toRadians(a.lat)) * cos(Math.toRadians(b.lat)) * sin(dLng / 2).pow(2)
+    return 2 * EARTH_RADIUS_M * asin(sqrt(h))
+}
+
+private const val EARTH_RADIUS_M = 6_371_008.8
+
+// ponytail: 시내 평균 18km/h로 어림한다. 경로 시간이 필요하면 NaviHelper 경로 탐색으로 바꾼다.
+private const val CITY_M_PER_MIN = 300.0
+
+fun distanceRoundedM(car: GeoPoint, m: Mushroom): Int = distanceM(car, m.at).roundToInt()
+
+fun minutesFor(meters: Int): Int = (meters / CITY_M_PER_MIN).roundToInt()
+
+/** 처음 열 때와 현재 위치 버튼을 누를 때의 카메라 높이(m). 합칠 때 BalanceConfig.fieldDropAltitudeM으로 바꾼다. */
+const val FIELD_DROP_ALTITUDE_M = 50.0
+
+/** MapLibre 기본 세로 시야각(0.6435 rad). 첫 화면과 현재 위치 버튼이 같은 값을 쓴다. */
+const val MAP_DEFAULT_FOV_DEG = 36.8699
+
+// MapLibre는 512dp 타일을 쓴다. 적도에서 줌 0일 때 1dp가 덮는 거리(m)다.
+private const val M_PER_DP_AT_Z0 = 78_271.517
+
+fun metersPerDp(latDeg: Double, zoom: Double): Double = M_PER_DP_AT_Z0 * cos(Math.toRadians(latDeg)) / 2.0.pow(zoom)
+
+/** 위에서 똑바로 내려다볼 때 카메라 높이(m). 화면 세로 절반이 시야각 절반에 걸린다. */
+fun altitudeM(latDeg: Double, zoom: Double, viewportHeightDp: Double, fovDeg: Double = MAP_DEFAULT_FOV_DEG): Double =
+    viewportHeightDp / 2 / tan(Math.toRadians(fovDeg / 2)) * metersPerDp(latDeg, zoom)
+
+/** [altitudeM]의 역. 스타일 최대 줌을 넘으면 최대 줌에서 멈춘다. */
+fun zoomForAltitude(
+    latDeg: Double,
+    altitudeM: Double,
+    viewportHeightDp: Double,
+    maxZoom: Double,
+    fovDeg: Double = MAP_DEFAULT_FOV_DEG,
+): Double {
+    val mPerDp = altitudeM * tan(Math.toRadians(fovDeg / 2)) / (viewportHeightDp / 2)
+    return log2(M_PER_DP_AT_Z0 * cos(Math.toRadians(latDeg)) / mPerDp).coerceAtMost(maxZoom)
+}
+
+private val SCALE_STEPS_M = listOf(1, 2, 5, 10, 20, 50, 100, 200, 500, 1_000, 2_000, 5_000, 10_000)
+
+/** 축척 막대에 적을 거리(m)와 막대 길이(dp). [maxDp]에 들어가는 가장 긴 눈금을 고른다. */
+fun scaleBar(metersPerDp: Double, maxDp: Double): Pair<Int, Double> {
+    val step = SCALE_STEPS_M.lastOrNull { it / metersPerDp <= maxDp } ?: SCALE_STEPS_M.first()
+    return step to step / metersPerDp
+}
+
+fun scaleLabel(meters: Int): String = if (meters < 1000) "${meters}m" else "${meters / 1000}km"
+
+fun reachable(car: GeoPoint, m: Mushroom, config: BalanceConfig): Boolean = distanceM(car, m.at) <= config.mushroomRadiusM
+
+/** 버섯을 눌렀을 때 일어나는 일. */
+enum class MarkerTap { NONE, CARD, REWARD }
+
+/** 한도에 닿으면 버섯은 흐려지고 눌리지 않는다. 반경 안이면 열고(D-08), 밖이면 카드를 띄운다. */
+fun markerTap(m: Mushroom, car: GeoPoint, state: FieldDropState, config: BalanceConfig): MarkerTap = when {
+    state.atLimit(config) -> MarkerTap.NONE
+    reachable(car, m, config) -> MarkerTap.REWARD
+    else -> MarkerTap.CARD
 }
 
 /** 자동차 그림의 앞쪽은 회전 0일 때 남서(225도)를 본다. 북 0도, 시계 방향. */
@@ -47,10 +131,6 @@ const val SPRITE_FRONT_DEG = 225f
 
 /** 앞쪽이 heading을 보도록 그림을 돌릴 각도. [0, 360) */
 fun carRotation(headingDeg: Float): Float = ((headingDeg - SPRITE_FRONT_DEG) % 360f + 360f) % 360f
-
-/** 지도 왼쪽 위의 위치를 화면 안으로 묶는다. 지도가 화면보다 작으면 가운데에 둔다. */
-fun clampPan(offset: Float, content: Float, viewport: Float): Float =
-    if (content <= viewport) (viewport - content) / 2f else offset.coerceIn(viewport - content, 0f)
 
 fun distanceText(meters: Int): String =
     if (meters < 1000) "${meters}m" else String.format(Locale.ROOT, "%.1fkm", meters / 1000.0)
@@ -86,12 +166,11 @@ class FieldDrop(
 
     fun mushroom(id: String?): Mushroom? = mushrooms.firstOrNull { it.id == id }
 
-    /** 가까운 버섯은 열고(D-08), 먼 버섯은 카드를 띄운다. 한도에 닿으면 아무것도 하지 않는다. */
-    fun tap(m: Mushroom, config: BalanceConfig) = mutable.update { s ->
-        when {
-            s.atLimit(config) -> s
-            m.distanceM <= config.mushroomRadiusM -> s.copy(openId = m.id, selectedId = null)
-            else -> s.copy(selectedId = m.id)
+    fun tap(m: Mushroom, car: GeoPoint, config: BalanceConfig) = mutable.update { s ->
+        when (markerTap(m, car, s, config)) {
+            MarkerTap.NONE -> s
+            MarkerTap.REWARD -> s.copy(openId = m.id, selectedId = null)
+            MarkerTap.CARD -> s.copy(selectedId = m.id)
         }
     }
 
@@ -126,4 +205,5 @@ class FieldDrop(
 /** 화면을 나누거나 메뉴를 옮겨도 오늘 받은 수가 남도록 프로세스에 하나만 둔다. */
 object FieldDropStore {
     val model = FieldDrop(FieldDropSamples.mushrooms, FakeWaypointSink())
+    val car: CarLocationSource = DemoCarLocation()
 }

@@ -17,4 +17,6 @@
     <string name="fielddrop_coin">코인</string>
     <string name="fielddrop_qty">x%1$d</string>
     <string name="fielddrop_receive">받기</string>
+    <string name="fielddrop_map_offline">지도를 불러오지 못했어요</string>
+    <string name="fielddrop_map_attribution" translatable="false">OpenFreeMap © OpenMapTiles © OpenStreetMap</string>
 </resources>
