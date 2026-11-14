@@ -40,6 +40,11 @@
 | 섬 | `IslandScreen(onOpen)` | `ui/island/` |
 | 상점, 보관함 (섬 아래) | `ShopScreen(onBack, onOpenInventory)`, `InventoryScreen(onBack, onOpenShop, onPlaceFurniture)` | `ui/shop/`, `ui/inventory/` |
 | 설정 | `SettingsScreen(onSwitchAccount, onLogout, onOpenShop)` | `ui/settings/` |
+| 집 (섬 아래) | `HouseScreen(onBack, onOpenInventory, onTakePhoto)` | `ui/house/` |
+| 사진 찍기 (섬 아래) | `PhotoScreen(inHouse, onClose)` | `ui/photo/` |
+| 공유 QR (도감, 내 정보에서) | `ShareQrScreen(kind, title, subtitle, onClose)` | `ui/photo/` |
+| 내 정보, 친구 | `MyInfoScreen(onShare)` | `ui/myinfo/` |
+| 도감 | `EncyclopediaScreen(onShare, onOpenFieldDrop)` | `ui/encyclopedia/` (목록 부품은 `ui/collection/`) |
 
 `AppShell`이 사이드 메뉴 선택에 따라 진입점을 부른다. 기능 담당은 진입점 시그니처를 바꾸지 않는다.
 
