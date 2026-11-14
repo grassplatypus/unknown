@@ -81,22 +81,24 @@ fun collections(profile: Profile, config: BalanceConfig = BalanceConfig.DEFAULT)
 )
 
 private val POSTCARD_BADGE_NAMES = listOf("첫 엽서 꾸러미", "엽서 수집가", "전국 일주")
+private val POSTCARD_BADGE_ARTS = listOf(R.drawable.myinfo_badge_post_bundle, R.drawable.myinfo_badge_post_album, R.drawable.myinfo_badge_post_tour)
 
 /**
- * 모은 엽서 수로 열리는 뱃지. [steps]번째 엽서를 얻은 날이 받은 날이고, 그 엽서 그림을 뱃지 그림으로 쓴다.
- * 아직 못 연 뱃지는 다른 잠긴 뱃지처럼 badge_safe를 흐리게 보이고, [Collectible.note]에 남은 수를 적는다.
+ * 모은 엽서 수로 열리는 뱃지. [steps]번째 엽서를 얻은 날이 받은 날이다. 그림은 단계마다 전용 뱃지 그림이고,
+ * 잠긴 뱃지는 같은 그림을 흐리게 보이며 [Collectible.note]에 남은 수를 적는다.
  */
 internal fun postcardBadges(postcards: List<Collectible>, steps: List<Int>): List<Collectible> {
     val got = postcards.filter { it.owned }.sortedBy { it.recency }
     return steps.mapIndexed { i, n ->
         val name = POSTCARD_BADGE_NAMES.getOrNull(i) ?: "엽서 ${n}장"
         val opener = got.getOrNull(n - 1)
+        val art = POSTCARD_BADGE_ARTS.getOrNull(i) ?: R.drawable.myinfo_badge_safe
         if (opener == null) {
-            Collectible(CollectionKind.BADGE, "badge_postcard_$n", name, R.drawable.myinfo_badge_safe, owned = false,
+            Collectible(CollectionKind.BADGE, "badge_postcard_$n", name, art, owned = false,
                 note = "엽서를 ${n}장 모으면 열려요. 지금 ${got.size}장이에요.")
         } else {
             val on = LocalDate.ofEpochDay(opener.recency).toString()
-            Collectible(CollectionKind.BADGE, "badge_postcard_$n", name, opener.art, true, opener.recency,
+            Collectible(CollectionKind.BADGE, "badge_postcard_$n", name, art, true, opener.recency,
                 note = "엽서 ${n}장을 모음", date = on.replace('-', '.'))
         }
     }
