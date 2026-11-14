@@ -43,7 +43,7 @@ object Catalog {
         CatalogItem("pose_sit", "앉기", ItemKind.POSE, null),
         CatalogItem("pose_side", "옆모습", ItemKind.POSE, 80),
         CatalogItem("pose_back", "뒷모습", ItemKind.POSE, null),
-        // 음성 방명록 게시판. 누구나 하나 가지고 시작하며 팔지도 버리지도 않는다
+        // 방명록 게시판. 누구나 하나 가지고 시작하며 팔지도 버리지도 않는다
         CatalogItem("deco_board", "게시판", ItemKind.OUTDOOR, null),
     )
 

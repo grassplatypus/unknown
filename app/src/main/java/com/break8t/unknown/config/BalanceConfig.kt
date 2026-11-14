@@ -54,8 +54,8 @@ data class BalanceConfig(
     val houseGridSteps: List<Int> = listOf(6, 7),
     val houseGridStepPrices: List<Int> = listOf(150, 300),
 
-    // 음성 방명록 한 개의 최대 녹음 길이(초)
-    val guestbookMaxSec: Int = 15,
+    // 방명록 한 개의 최대 글자 수
+    val guestbookMaxChars: Int = 60,
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

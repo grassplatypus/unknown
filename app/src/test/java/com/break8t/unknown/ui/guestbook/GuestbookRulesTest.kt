@@ -20,7 +20,7 @@ class GuestbookRulesTest {
     private val mine = demoGuestbooks(now).getValue(GuestbookStore.MY_ISLAND)
     private val lastVisit = now - DAY_MS
 
-    private fun entry(author: String, at: Long = now) = GuestbookEntry("e_$author$at", author, author, "ch_cat", at, 5)
+    private fun entry(author: String, at: Long = now) = GuestbookEntry("e_$author$at", author, author, "ch_cat", at, "글")
 
     @Test fun sampleHasOneOrTwoNewEntriesSinceTheSampleVisit() {
         assertEquals(listOf("g_me_1", "g_me_2"), newSince(mine, lastVisit).map { it.id })
@@ -94,27 +94,14 @@ class GuestbookRulesTest {
         assertTrue(canDelete("f_acorn", fromMe, viewerId = "f_acorn"))
     }
 
-    @Test fun recordingCountsDownToZeroAndNeverExceedsTheLimit() {
-        val cfg = BalanceConfig(guestbookMaxSec = 15)
-        assertEquals(15, recordSecondsLeft(0, cfg))
-        assertEquals(15, recordSecondsLeft(999, cfg))
-        assertEquals(14, recordSecondsLeft(1000, cfg))
-        assertEquals(1, recordSecondsLeft(14_001, cfg))
-        assertEquals(0, recordSecondsLeft(15_000, cfg))
-        assertEquals(0, recordSecondsLeft(20_000, cfg))
-        assertEquals(1, recordedSeconds(200, cfg))
-        assertEquals(6, recordedSeconds(6_400, cfg))
-        assertEquals(15, recordedSeconds(16_000, cfg))
-        assertEquals(15, BalanceConfig.DEFAULT.guestbookMaxSec)
-    }
-
-    @Test fun recordStepFollowsSoundDraftAndSaving() {
-        val draft = GuestbookDraft("/d.m4a", 4)
-        assertEquals(RecordStep.IDLE, recordStep(GuestbookSound.Idle, null, false))
-        assertEquals(RecordStep.RECORDING, recordStep(GuestbookSound.Recording(now), null, false))
-        assertEquals(RecordStep.RECORDED, recordStep(GuestbookSound.Idle, draft, false))
-        assertEquals(RecordStep.RECORDED, recordStep(GuestbookSound.Playing(DRAFT_KEY, now, 4000), draft, false))
-        assertEquals(RecordStep.SAVING, recordStep(GuestbookSound.Idle, draft, true))
+    @Test fun textIsTrimmedCappedAndBlankCannotBeLeft() {
+        val cfg = BalanceConfig(guestbookMaxChars = 5)
+        assertEquals("안녕하세요", guestbookText("  안녕하세요  ", cfg))
+        assertEquals("abcde", guestbookText("abcdefgh", cfg))
+        assertNull(guestbookText("", cfg))
+        assertNull(guestbookText("   	 ", cfg))
+        assertEquals(60, BalanceConfig.DEFAULT.guestbookMaxChars)
+        assertTrue(demoGuestbooks(now).values.flatten().all { it.text.length <= BalanceConfig.DEFAULT.guestbookMaxChars })
     }
 
     @Test fun agoPicksTheLargestWholeUnit() {

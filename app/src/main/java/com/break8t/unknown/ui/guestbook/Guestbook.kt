@@ -7,23 +7,16 @@ import com.break8t.unknown.data.Profile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.min
 
-/**
- * 음성 방명록 한 개. [authorId]는 "me" 또는 Friend.id라서 닉네임이 바뀌어도 누가 남겼는지 안다.
- * 녹음한 것은 [audioPath], 견본은 [sampleText]가 있다(견본은 글을 읽어 들려준다).
- */
+/** 방명록 한 개. [authorId]는 "me" 또는 Friend.id라서 닉네임이 바뀌어도 누가 남겼는지 안다. */
 data class GuestbookEntry(
     val id: String,
     val authorId: String,
     val nickname: String,
     val characterId: String,
     val atMs: Long,
-    val lengthSec: Int,
-    val audioPath: String? = null,
-    val sampleText: String? = null,
+    val text: String,
 )
 
 /** 섬 id마다 방명록 목록. 백엔드가 없어서 프로세스 안에만 있다(DemoStore와 같은 이유). */
@@ -78,13 +71,9 @@ fun friendBoardShown(friendId: String): Boolean = friendId !in friendsWithBoardS
 
 internal val friendsWithBoardStored = setOf("f_turtle")
 
-/** 녹음을 시작한 뒤 [elapsedMs]가 지났을 때 남은 초. 올림이라 마지막 1초 동안 1로 보인다. */
-fun recordSecondsLeft(elapsedMs: Long, config: BalanceConfig): Int =
-    max(0, ceil((config.guestbookMaxSec * 1000L - elapsedMs) / 1000.0).toInt())
-
-/** 녹음 길이(초). 최대 길이를 넘지 않고, 아주 짧아도 1초로 센다. */
-fun recordedSeconds(elapsedMs: Long, config: BalanceConfig): Int =
-    min(config.guestbookMaxSec, max(1, ((elapsedMs + 500) / 1000).toInt()))
+/** 남길 글. 앞뒤 공백을 지우고 최대 글자 수로 자른다. 비어 있으면 남길 수 없어 null이다. */
+fun guestbookText(raw: String, config: BalanceConfig = BalanceConfig.DEFAULT): String? =
+    raw.trim().take(config.guestbookMaxChars).takeIf { it.isNotEmpty() }
 
 /** 목록에 보일 "얼마 전". 화면 문구는 부르는 쪽이 고른다. */
 sealed interface Ago {
@@ -116,29 +105,29 @@ private val dawn = Author("f_dawn", "새벽출근", "ch_cloud")
 private val camper = Author("f_camper", "주말캠퍼", "ch_sprout")
 private val dusk = Author("f_dusk", "퇴근요정", "ch_firefly")
 
-private fun sample(id: String, a: Author, atMs: Long, sec: Int, text: String) =
-    GuestbookEntry(id, a.id, a.nickname, a.characterId, atMs, sec, sampleText = text)
+private fun sample(id: String, a: Author, atMs: Long, text: String) =
+    GuestbookEntry(id, a.id, a.nickname, a.characterId, atMs, text)
 
 internal fun demoGuestbooks(now: Long): Map<String, List<GuestbookEntry>> = mapOf(
     GuestbookStore.MY_ISLAND to listOf(
-        sample("g_me_1", dawn, now - 2 * HOUR_MS, 6, "오늘 서부간선 엄청 막혔죠? 텃밭 당근 잘 자라고 있네요."),
-        sample("g_me_2", acorn, now - 9 * HOUR_MS, 8, "출근길에 들렀어요. 집이 정말 아늑해 보여요. 내일도 같이 버텨요!"),
-        sample("g_me_3", camper, now - 3 * DAY_MS, 5, "주말에 캠핑 다녀왔어요. 다음엔 같이 가요."),
-        sample("g_me_4", dusk, now - 6 * DAY_MS, 7, "정시 퇴근 성공! 섬 구경 잘하고 가요."),
+        sample("g_me_1", dawn, now - 2 * HOUR_MS, "오늘 서부간선 엄청 막혔죠? 텃밭 당근 잘 자라고 있네요."),
+        sample("g_me_2", acorn, now - 9 * HOUR_MS, "출근길에 들렀어요. 집이 정말 아늑해 보여요. 내일도 같이 버텨요!"),
+        sample("g_me_3", camper, now - 3 * DAY_MS, "주말에 캠핑 다녀왔어요. 다음엔 같이 가요."),
+        sample("g_me_4", dusk, now - 6 * DAY_MS, "정시 퇴근 성공! 섬 구경 잘하고 가요."),
     ),
     "f_acorn" to listOf(
-        sample("g_acorn_1", dawn, now - 5 * HOUR_MS, 5, "도토리길님 섬에 사과나무가 예뻐요."),
-        sample("g_acorn_2", dusk, now - 2 * DAY_MS, 6, "오늘도 고생 많았어요. 푹 쉬어요."),
+        sample("g_acorn_1", dawn, now - 5 * HOUR_MS, "도토리길님 섬에 사과나무가 예뻐요."),
+        sample("g_acorn_2", dusk, now - 2 * DAY_MS, "오늘도 고생 많았어요. 푹 쉬어요."),
     ),
     "f_dawn" to listOf(
-        sample("g_dawn_1", acorn, now - 30 * 60 * 1000L, 4, "새벽출근님, 오늘은 좀 일찍 나섰어요?"),
+        sample("g_dawn_1", acorn, now - 30 * 60 * 1000L, "새벽출근님, 오늘은 좀 일찍 나섰어요?"),
     ),
     "f_camper" to listOf(
-        sample("g_camper_1", turtle, now - DAY_MS, 7, "천천히 가도 괜찮아요. 주말 캠핑 사진 보여 주세요."),
-        sample("g_camper_2", dawn, now - 3 * DAY_MS, 5, "금요일이 금방 올 거예요."),
-        sample("g_camper_3", acorn, now - 4 * DAY_MS, 6, "텃밭에 고구마 심었더라고요. 수확하면 나눠 줘요."),
+        sample("g_camper_1", turtle, now - DAY_MS, "천천히 가도 괜찮아요. 주말 캠핑 사진 보여 주세요."),
+        sample("g_camper_2", dawn, now - 3 * DAY_MS, "금요일이 금방 올 거예요."),
+        sample("g_camper_3", acorn, now - 4 * DAY_MS, "텃밭에 고구마 심었더라고요. 수확하면 나눠 줘요."),
     ),
     "f_dusk" to listOf(
-        sample("g_dusk_1", camper, now - 7 * HOUR_MS, 5, "퇴근요정님 섬은 밤에 더 예뻐요."),
+        sample("g_dusk_1", camper, now - 7 * HOUR_MS, "퇴근요정님 섬은 밤에 더 예뻐요."),
     ),
 )
