@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- S-20 -->
+    <string name="myinfo_title">내 정보</string>
+    <string name="myinfo_friends_button">친구 %d</string>
+    <string name="myinfo_level">Lv.%d</string>
+    <string name="myinfo_xp">경험치</string>
+    <string name="myinfo_xp_value">%1$d / %2$d XP</string>
+    <string name="myinfo_count">%d개</string>
+
+    <!-- S-22 -->
+    <string name="myinfo_friends_title">친구 %d</string>
+    <string name="myinfo_driving_public">내 운전 상태 공개</string>
+    <string name="myinfo_add_friend">친구 추가</string>
+    <string name="myinfo_driving">운전 중</string>
+    <string name="myinfo_friends_empty">아직 친구가 없어요</string>
+    <string name="myinfo_friend_jams">이번 주 지난 정체</string>
+    <string name="myinfo_friend_jams_value">%d곳</string>
+    <string name="myinfo_friend_postcard">최근 받은 엽서</string>
+    <string name="myinfo_friend_since">친구가 된 날</string>
+    <string name="myinfo_delete_friend">친구 삭제</string>
+
+    <!-- D-21, D-22. 이름 뒤 조사(을/를)는 코드가 붙인다 -->
+    <string name="myinfo_delete_title">%1$s 친구에서 삭제할까요?</string>
+    <string name="myinfo_delete_body">서로의 친구 목록에서 사라져요.</string>
+    <string name="myinfo_delete_confirm">삭제</string>
+    <string name="myinfo_public_title">운전 상태를 친구에게 보여 줄까요?</string>
+    <string name="myinfo_public_body">내가 운전 중인지, 그리고 같은 정체에 있을 때 함께 지나는 중이라는 것이 친구에게 보여요. 그 밖의 위치는 보이지 않아요. 언제든 끌 수 있어요.</string>
+    <string name="myinfo_public_confirm">공개하기</string>
+
+    <!-- S-23 -->
+    <string name="myinfo_close">닫기</string>
+    <string name="myinfo_friend_limit">친구 %1$d / %2$d</string>
+    <string name="myinfo_my_code">내 번호</string>
+    <string name="myinfo_code_expires">%1$d분 %2$d초 뒤에 새 번호로 바뀌어요</string>
+    <string name="myinfo_enter_code">친구 번호 입력</string>
+    <string name="myinfo_code_wrong">맞는 번호가 없어요.</string>
+    <string name="myinfo_code_full">친구는 %d명까지 추가할 수 있어요.</string>
+    <string name="myinfo_add">추가</string>
+    <string name="myinfo_backspace">한 글자 지우기</string>
+
+    <!-- D-23. 이름 뒤 조사(와/과)는 코드가 붙인다 -->
+    <string name="myinfo_friend_added">%1$s 친구가 됐어요</string>
+    <string name="myinfo_ok">확인</string>
+</resources>

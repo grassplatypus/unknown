@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="encyclopedia_title">도감</string>
+    <string name="encyclopedia_loading">도감을 불러오고 있어요</string>
+
+    <!-- collection_*: 내 정보(S-21)와 도감(S-24)이 함께 쓰는 묶음 부품의 문구 -->
+    <string name="collection_kind_card">정체 카드</string>
+    <string name="collection_kind_postcard">엽서</string>
+    <string name="collection_kind_character">캐릭터</string>
+    <string name="collection_kind_car">자동차</string>
+    <string name="collection_kind_badge">뱃지</string>
+    <string name="collection_tab">%1$s %2$d</string>
+    <string name="collection_meet_count">%d번</string>
+    <string name="collection_selected">현재 선택</string>
+    <string name="collection_locked_name">\?\?\?</string>
+    <string name="collection_locked">잠겨 있어요</string>
+
+    <string name="collection_empty_card">아직 정체 카드가 없어요</string>
+    <string name="collection_empty_postcard">아직 엽서가 없어요</string>
+    <string name="collection_empty_character">아직 캐릭터가 없어요</string>
+    <string name="collection_empty_car">아직 자동차가 없어요</string>
+    <string name="collection_empty_badge">아직 뱃지가 없어요</string>
+    <string name="collection_empty_card_body">정체 구간을 지나면 정체 카드가 생겨요.</string>
+    <string name="collection_empty_postcard_body">지점을 방문하거나 새 길을 지나면 엽서가 생겨요.</string>
+    <string name="collection_empty_pick_body">새로 얻으면 여기에 보여요.</string>
+    <string name="collection_empty_badge_body">조건을 채우면 뱃지를 받아요.</string>
+    <string name="collection_open_field_drop">필드 드랍 보기</string>
+
+    <!-- D-20, T-10. 이름 뒤 조사(로/으로)는 코드가 붙인다 -->
+    <string name="collection_change_character_title">%1$s 바꿀까요?</string>
+    <string name="collection_change_character_confirm">바꾸기</string>
+    <string name="collection_character_changed">캐릭터를 %1$s 바꿨어요</string>
+
+    <!-- D-24, D-25 -->
+    <string name="collection_meets">만난 횟수</string>
+    <string name="collection_fastest">가장 빨리 지난 기록</string>
+    <string name="collection_slowest">가장 느리게 지난 기록</string>
+    <string name="collection_usual_time">만나는 시간대</string>
+    <string name="collection_close">닫기</string>
+    <string name="collection_share">공유</string>
+
+    <!-- D-26. Figma 문구는 상점 힌트 하나라서 나머지는 새로 썼다 -->
+    <string name="collection_hint_shop">상점에서 살 수 있어요</string>
+    <string name="collection_hint_card">이 구간의 정체를 지나면 열려요</string>
+    <string name="collection_hint_postcard">그 지점을 지나면 열려요</string>
+    <string name="collection_hint_badge">조건을 채우면 열려요</string>
+    <string name="collection_hint_unknown">아직 얻을 수 없어요</string>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma icon/del (viewport from its 40x40 key slot) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp" android:height="40dp" android:viewportWidth="40" android:viewportHeight="40">
+    <path android:pathData="M15,10L5,20L15,30H33.333V10H15Z" android:strokeColor="#3A2A1C"
+        android:strokeWidth="3.667" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M20,16.668L26.667,23.335M26.667,16.668L20,23.335" android:strokeColor="#3A2A1C"
+        android:strokeWidth="3.667" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

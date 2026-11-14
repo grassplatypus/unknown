@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma icon/wheel -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp" android:height="26dp" android:viewportWidth="26" android:viewportHeight="26">
+    <path android:pathData="M22.75,13C22.75,18.385 18.385,22.75 13,22.75C7.615,22.75 3.25,18.385 3.25,13C3.25,7.615 7.615,3.25 13,3.25C18.385,3.25 22.75,7.615 22.75,13Z"
+        android:strokeColor="#4F8A2C" android:strokeWidth="2.383" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M15.167,13C15.167,14.195 14.197,15.165 13,15.165C11.803,15.165 10.833,14.195 10.833,13C10.833,11.802 11.803,10.832 13,10.832C14.197,10.832 15.167,11.802 15.167,13Z"
+        android:strokeColor="#4F8A2C" android:strokeWidth="2.383" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M13,15.167V22.75M3.792,11.375L10.942,12.458M22.208,11.375L15.058,12.458"
+        android:strokeColor="#4F8A2C" android:strokeWidth="2.383" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>
