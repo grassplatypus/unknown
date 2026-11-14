@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -141,11 +142,7 @@ internal fun ShopContent(
                         ShopTab.SEED, ShopTab.FURNITURE -> ProductGrid(shopItems(tab), profile, 260.dp, ProductSize, onPick) { item ->
                             Text(stringResource(R.string.shop_count, profile.items[item.id] ?: 0), color = AppColors.TextSub, fontSize = 29.sp)
                         }
-                        ShopTab.CHARACTER -> ProductGrid(shopItems(tab), profile, 260.dp, CharacterSize, onPick) { item ->
-                            if (item.voiceId != null) {
-                                Text(stringResource(R.string.shop_with_voice), color = AppColors.TextSub, fontSize = 29.sp)
-                            }
-                        }
+                        ShopTab.CHARACTER -> ProductGrid(shopItems(tab), profile, 260.dp, CharacterSize, onPick)
                         ShopTab.POSE -> ProductGrid(
                             shopItems(tab), profile, 177.dp, PoseSize, onPick,
                             header = stringResource(R.string.shop_pose_any),
@@ -220,9 +217,12 @@ private fun Tile(
                 ItemImage(item.id, item.name, size.image)
             }
             Text(item.name, color = AppColors.Text, fontSize = size.name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
-            when {
-                owned -> Text(stringResource(R.string.shop_owned), color = AppColors.Success, fontSize = 29.sp, fontWeight = FontWeight.Bold)
-                price != null -> CoinAmount(price, size.price, if (price > profile.coins) AppColors.Error else AppColors.Text)
+            // "소유 중"은 가격보다 낮아서, 가격 자리를 비워 두고 그 위에 써야 한 줄의 칸 높이가 같다.
+            Box(contentAlignment = Alignment.Center) {
+                Box(Modifier.alpha(if (owned || price == null) 0f else 1f)) {
+                    CoinAmount(price ?: 0, size.price, if ((price ?: 0) > profile.coins) AppColors.Error else AppColors.Text)
+                }
+                if (owned) Text(stringResource(R.string.shop_owned), color = AppColors.Success, fontSize = 29.sp, fontWeight = FontWeight.Bold)
             }
             footer()
         }

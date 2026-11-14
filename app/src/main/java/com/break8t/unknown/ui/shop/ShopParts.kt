@@ -76,6 +76,10 @@ internal fun shopImage(id: String): Int? = when (id) {
     "it_shelf" -> R.drawable.shop_it_shelf
     "ch_sprout" -> R.drawable.shop_ch_sprout
     "ch_cloud" -> R.drawable.shop_ch_cloud
+    // 상점용 그림이 없는 캐릭터는 내 정보의 같은 그림을 쓴다.
+    "ch_cat" -> R.drawable.myinfo_ch_cat
+    "ch_mush" -> R.drawable.myinfo_ch_mush
+    "ch_firefly" -> R.drawable.myinfo_ch_firefly
     "pose_wave" -> R.drawable.shop_pose_wave
     "pose_jump" -> R.drawable.shop_pose_jump
     "pose_sit" -> R.drawable.shop_pose_sit

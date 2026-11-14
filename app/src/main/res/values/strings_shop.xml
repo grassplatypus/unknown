@@ -10,7 +10,6 @@
     <string name="shop_tab_furniture">가구 %1$d</string>
     <string name="shop_tab_character">캐릭터 %1$d</string>
     <string name="shop_tab_pose">포즈 %1$d</string>
-    <string name="shop_with_voice">목소리 포함</string>
     <string name="shop_pose_any">사진을 찍을 때 어느 캐릭터에도 쓸 수 있어요.</string>
 
     <string name="shop_count">%1$d개</string>
