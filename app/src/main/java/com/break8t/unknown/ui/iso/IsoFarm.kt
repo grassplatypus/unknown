@@ -35,6 +35,18 @@ object IsoFarm {
         }
     }
 
+    /**
+     * Sprite rows hidden in the soil, so the crop reads as planted (S-13): carrots and sweet potatoes show
+     * their upper half, more while still growing; wheat stalks rise straight out of the ground.
+     */
+    internal fun buriedRows(stage: PlotStage, crop: Crop): Int = when {
+        stage == PlotStage.EMPTY -> 0
+        stage == PlotStage.SPROUT -> 3
+        crop == Crop.WHEAT -> 3
+        crop == Crop.CARROT -> if (stage == PlotStage.GROWN) 5 else 8
+        else -> if (stage == PlotStage.GROWN) 4 else 6
+    }
+
     /** Ripe wheat's gold turned to young green for a wheat bed that is still growing. */
     private fun unripe(c0: Int): Int {
         val r = c0 shr 16 and 0xFF; val g = c0 shr 8 and 0xFF; val b = c0 and 0xFF
@@ -48,26 +60,41 @@ object IsoFarm {
         PlotStage.entries.flatMap { st -> Crop.entries.map { st to it } }.associateWith { (st, cr) -> buildBed(st, cr) }
     }
 
+    /** Voxels the bed is lowered by so the crop's buried rows sit under the ground; the scene sets the object's z. */
+    fun sink(stage: PlotStage, crop: Crop): Int = buriedRows(stage, crop) * if (stage == PlotStage.SPROUT) 1 else ROW_H
+
+    /**
+     * Sprite from voxel 1 up, soil plate at [sink]: lowered by [sink], the plate is at ground level and the
+     * rows under it are hidden by the floor, as if planted. A dark rim in front is the hole the art draws.
+     */
     private fun buildBed(stage: PlotStage, crop: Crop): IsoShape = IsoShape(2 * FINE, 2 * FINE, buildList {
         val n = BED_VOXELS
-        add(c(0, 0, 0, n, n, 1, IsoPalette.SoilC))
+        val ground = sink(stage, crop)
+        val front = n * 5 / 8
+        val rows: List<String> = when {
+            stage == PlotStage.EMPTY -> emptyList()
+            stage == PlotStage.SPROUT -> IsoFarmArt.CARROT.take(SPROUT_ROWS)
+            crop == Crop.CARROT -> IsoFarmArt.CARROT
+            crop == Crop.SWEET_POTATO -> IsoFarmArt.POTATO
+            else -> IsoFarmArt.WHEAT
+        }
+        val x0 = if (rows.isEmpty()) 0 else (n - rows[0].length) / 2
+        if (stage == PlotStage.SPROUT) art(rows, x0, front, 2, 1, rowH = 1)
+        else if (rows.isNotEmpty()) {
+            val recolor: (Int) -> Int = if (crop == Crop.WHEAT && stage != PlotStage.GROWN) ::unripe else { x -> x }
+            art(rows, x0, front, 3, 1, recolor = recolor)
+        }
+        add(c(0, 0, ground, n, n, 1, IsoPalette.SoilC))
         // Diagonal furrows like the bed texture in the art.
         for (k in -n until n step 9) for (i in 0 until n) {
             val j = i + k
-            if (j in 0 until n) add(c(i, j, 0, 1, 1, 1, IsoPalette.SoilDarkC))
+            if (j in 0 until n) add(c(i, j, ground, 1, 1, 1, IsoPalette.SoilDarkC))
         }
-        val front = n * 5 / 8
-        when {
-            stage == PlotStage.EMPTY -> Unit
-            stage == PlotStage.SPROUT -> art(IsoFarmArt.CARROT.take(SPROUT_ROWS), (n - IsoFarmArt.CARROT[0].length) / 2, front, 2, 1, rowH = 1)
-            else -> {
-                val rows = when (crop) {
-                    Crop.CARROT -> IsoFarmArt.CARROT
-                    Crop.SWEET_POTATO -> IsoFarmArt.POTATO
-                    Crop.WHEAT -> IsoFarmArt.WHEAT
-                }
-                val recolor: (Int) -> Int = if (crop == Crop.WHEAT && stage != PlotStage.GROWN) ::unripe else { x -> x }
-                art(rows, (n - rows[0].length) / 2, front, 3, 1, recolor = recolor)
+        if (ground > 0) {
+            val low = rows.takeLast(buriedRows(stage, crop))
+            for (i in rows[0].indices) {
+                val near = (-1..1).any { d -> low.any { r -> r.getOrNull(i + d)?.let { ART.indexOf(it) >= 0 } == true } }
+                if (near) add(c(x0 + i, front + 1, ground, 1, RIM, 1, IsoPalette.SoilDarkC))
             }
         }
     })
@@ -89,5 +116,7 @@ object IsoFarm {
     })
 
     private const val SPROUT_ROWS = 14
+    private const val RIM = 3
+
     private const val TUFT = 0xFF2E6B2A.toInt()
 }

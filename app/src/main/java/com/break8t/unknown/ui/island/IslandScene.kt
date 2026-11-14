@@ -33,6 +33,7 @@ import com.break8t.unknown.ui.iso.IsoShape
 import com.break8t.unknown.ui.iso.IsoShapes
 import com.break8t.unknown.ui.iso.PIXEL_DP
 import com.break8t.unknown.ui.iso.PlotStage
+import com.break8t.unknown.ui.iso.VPC
 import com.break8t.unknown.ui.iso.RoadRay
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import com.break8t.unknown.ui.theme.AppColors
@@ -161,7 +162,12 @@ object IslandMap {
         val f = IsoFarm.FINE
         val e = side * f
         val farm = plots.mapIndexed { k, v ->
-            o("plot$k", IsoFarm.bed(plotStage(v), cropOf(v.seedId)), (1 + BED * (k % n)) * f, (1 + BED * (k / n)) * f, pick = true)
+            val (st, cr) = plotStage(v) to cropOf(v.seedId)
+            // Lowered so the plate is at ground level and the crop's base is in the soil (S-13).
+            IsoObject(
+                "plot$k", IsoFarm.bed(st, cr), (1 + BED * (k % n)) * f, (1 + BED * (k / n)) * f,
+                z = -IsoFarm.sink(st, cr).toFloat() / VPC,
+            )
         }
         // The art's fence spans about three quarters of the farm, centred on the back row.
         val fence = o("fence", IsoFarm.fence, (e - IsoFarm.fence.w) / 2, 1)
