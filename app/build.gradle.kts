@@ -37,6 +37,9 @@ dependencies {
     implementation("ai.pleos.playground:Vehicle:2.3.2")
     // Vehicle이 runtime 스코프로만 노출해서 VehicleGear 등을 쓰려면 직접 넣어야 한다.
     implementation("ai.pleos.playground:vehicle-data:1.1.11")
+    // 정체 레이드(경로 위 정체 목록)와 필드 드랍 경유지
+    implementation("ai.pleos.playground:NaviHelper:3.0.5")
+    implementation("ai.pleos.playground:navi-data:3.0.4")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")

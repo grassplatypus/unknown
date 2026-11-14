@@ -23,6 +23,7 @@ import com.break8t.unknown.ui.components.DrivingCover
 import com.break8t.unknown.ui.components.SideRail
 import com.break8t.unknown.ui.components.drivingBlur
 import com.break8t.unknown.data.LocalDemoState
+import com.break8t.unknown.ui.fielddrop.FieldDropScreen
 import com.break8t.unknown.ui.home.HomeScreen
 import com.break8t.unknown.ui.home.HomeStore
 import com.break8t.unknown.ui.settings.SettingsScreen
@@ -55,6 +56,7 @@ private fun ScreenFor(route: Route, mode: DriveMode, onNavigate: (Route) -> Unit
         Route.HOME -> HomeScreen(mode, onNavigate)
         // 계정 화면과 상점은 아직 합치지 않았다. 합치면 콜백을 연결한다.
         Route.SETTINGS -> SettingsScreen(onSwitchAccount = {}, onLogout = {}, onOpenShop = {})
+        Route.FIELD_DROP -> FieldDropScreen()
         else -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             Text(stringResource(R.string.screen_coming), color = AppColors.TextSub)
         }
