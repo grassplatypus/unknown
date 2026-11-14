@@ -132,7 +132,7 @@ private fun RecentJamCard(modifier: Modifier) = AppCard(modifier) {
         }
         Column(verticalArrangement = Arrangement.spacedBy(10.fdp)) {
             HomeText(
-                stringResource(R.string.home_regular_jam, HomeDemo.JAM_MEET_COUNT),
+                stringResource(R.string.home_meet_count, HomeDemo.JAM_MEET_COUNT),
                 26,
                 color = AppColors.Error,
                 weight = FontWeight.Bold,

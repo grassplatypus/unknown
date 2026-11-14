@@ -22,7 +22,7 @@
     <!-- S-08 주차 중 -->
     <string name="home_today_parked">오늘 %1$dkm를 %2$s 동안 달렸어요.</string>
     <string name="home_recent_jam">최근에 지난 정체</string>
-    <string name="home_regular_jam">단골 정체 · %1$d번째 만남</string>
+    <string name="home_meet_count">%1$d번째 만남</string>
     <string name="home_jam_took">%1$s 걸렸어요.</string>
     <string name="home_this_week">이번 주</string>
     <string name="home_collected_coins">모은 코인</string>

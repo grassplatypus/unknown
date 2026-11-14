@@ -181,7 +181,7 @@ private fun TwoColumns(wide: Boolean, left: @Composable ColumnScope.() -> Unit, 
 @Composable
 private fun ColumnScope.RaidInfo(jam: JamView, wide: Boolean) {
     HomeText(
-        jam.meetCount?.let { stringResource(R.string.home_regular_jam, it) } ?: stringResource(R.string.home_jam_now),
+        jam.meetCount?.let { stringResource(R.string.home_meet_count, it) } ?: stringResource(R.string.home_jam_now),
         30,
         color = AppColors.Error,
         weight = FontWeight.Bold,
