@@ -12,6 +12,15 @@
 - 섹션 "10. 프로토타입 전용 장면"은 보지 않는다.
 - 크기는 Figma 1px = 1.3dp. 창 1682×1210dp와 화면을 나눈 841×1210dp 두 크기 모두에서 깨지지 않아야 한다.
 
+## 막히면 다른 길로
+
+도구가 막혀도 멈추거나 결과를 줄이지 말고 다른 길을 찾아 계속한다. 보고서에는 어느 길을 썼고 그 길의 한계가 무엇인지 적는다.
+
+- Figma MCP가 호출 한도에 걸리면 Chrome(claude-in-chrome)에서 Figma 플러그인 API로 값을 **읽기만** 한다. Figma 파일은 고치지 않는다.
+- Figma에서 그림을 내보낼 수 없으면 `D:\playground\hyundai\assets\farm-demo`의 원본을 쓴다. 가능하면 Figma 것과 같은 파일인지 비교한다.
+- adb가 멈추면 버전이 다른 adb가 둘 있는지 본다. SDK의 `platform-tools/adb`를 쓴다.
+- 에뮬레이터에서 차량 값을 바꿀 때 `car_service` 명령이 막히면 Virtual Console(8088 포트, `tools/gear.py` 참고)을 쓴다.
+
 ## 그림
 
 - 일러스트는 Figma에서 내보내 `res/drawable-nodpi/<묶음>_<이름>.png`로 둔다(예: `farm_isl.png`). 접두어가 같으면 다른 묶음과 이름이 겹치지 않는다.
