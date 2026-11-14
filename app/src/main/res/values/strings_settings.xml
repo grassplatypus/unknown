@@ -31,7 +31,7 @@
 
     <!-- D-22와 같은 문구 (Figma 309:24114) -->
     <string name="settings_driving_public_title">운전 상태를 친구에게 보여 줄까요?</string>
-    <string name="settings_driving_public_body">내가 운전 중인지, 그리고 같은 정체에 있을 때 함께 지나는 중이라는 것이 친구에게 보여요. 그 밖의 위치는 보이지 않아요. 언제든 끌 수 있어요.</string>
+    <string name="settings_driving_public_body">운전 중인지와 같은 정체 구간을 지나는지만 친구에게 공개해요.</string>
     <string name="settings_driving_public_confirm">공개하기</string>
 
     <!-- S-26, S-27 -->
