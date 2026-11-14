@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma icon/next -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp" android:height="36dp" android:viewportWidth="36" android:viewportHeight="36">
+    <path android:pathData="M13.5,7.5L24,18L13.5,28.5" android:strokeColor="#3A2A1C"
+        android:strokeWidth="3.3" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

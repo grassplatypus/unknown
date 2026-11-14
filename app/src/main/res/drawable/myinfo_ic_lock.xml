@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma icon/lock -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp" android:height="56dp" android:viewportWidth="56" android:viewportHeight="56">
+    <path android:pathData="M16.333,25.668H39.667C42.244,25.668 44.333,27.757 44.333,30.335V44.335C44.333,46.912 42.244,49.001 39.667,49.001H16.333C13.756,49.001 11.667,46.912 11.667,44.335V30.335C11.667,27.757 13.756,25.668 16.333,25.668Z"
+        android:strokeColor="#3A2A1C" android:strokeWidth="5.133" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M18.667,25.667V16.333C18.667,13.858 19.65,11.484 21.4,9.734C23.151,7.983 25.525,7 28,7C30.475,7 32.849,7.983 34.6,9.734C36.35,11.484 37.333,13.858 37.333,16.333V25.667"
+        android:strokeColor="#3A2A1C" android:strokeWidth="5.133" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>
