@@ -98,6 +98,11 @@ class AccountRulesTest {
         assertTrue(a.due(11_000, config))
     }
 
+    @Test fun countdownsNeverShowMoreThanTheTotal() {
+        assertEquals(config.autoLoginSec, AutoLogin("x", startedAtMs = 1_000).remainingSec(800, config))
+        assertEquals(config.loginQrTtlSec, QrSession(issuedAtMs = 1_000).remainingSec(800, config))
+    }
+
     @Test fun touchCancelsAutoLoginForGood() {
         val a = AutoLogin("x", startedAtMs = 0).touched()
         assertFalse(a.due(10_000, config))

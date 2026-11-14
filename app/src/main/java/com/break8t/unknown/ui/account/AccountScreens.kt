@@ -59,7 +59,9 @@ import com.break8t.unknown.ui.theme.AppColors
 
 /** S-01: 안전 안내와 입장 준비 막대. */
 @Composable
-internal fun SplashContent(progress: Float) {
+internal fun SplashContent(progress: Float) = BoxWithConstraints(Modifier.fillMaxSize()) {
+    // 세로 창에서는 문구가 줄바꿈되어 길어지므로 여백을 줄여 진행 막대가 한 화면에 들어오게 한다.
+    val wide = maxWidth >= WideWidth
     // Figma S-01의 바탕은 다른 계정 화면과 달리 #F1E2BB다.
     Column(
         Modifier.fillMaxSize().background(AppColors.TextOnPrimary).verticalScroll(rememberScrollState()),
@@ -75,7 +77,7 @@ internal fun SplashContent(progress: Float) {
                 .clip(shape)
                 .background(AppColors.Card)
                 .border(5.dp, AppColors.Line, shape)
-                .padding(start = 73.dp, end = 73.dp, top = 47.dp, bottom = 62.dp),
+                .padding(start = if (wide) 73.dp else 36.dp, end = if (wide) 73.dp else 36.dp, top = 47.dp, bottom = 62.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             val boxShape = RoundedCornerShape(10.dp)
@@ -104,7 +106,7 @@ internal fun SplashContent(progress: Float) {
                 Text("•  " + stringResource(R.string.account_safety_item1), color = AppColors.Text, fontSize = 36.sp)
                 Text("•  " + stringResource(R.string.account_safety_item2), color = AppColors.Text, fontSize = 36.sp)
             }
-            Spacer(Modifier.height(109.dp))
+            Spacer(Modifier.height(if (wide) 109.dp else 40.dp))
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -282,7 +284,7 @@ internal fun QrContent(
     onRenew: () -> Unit,
     onLongPress: () -> Unit,
 ) {
-    if (phase == QrPhase.CANCELLED) return QrCancelledContent()
+    if (phase == QrPhase.CANCELLED) return QrCancelledContent(canLeave, onLeave)
     val expired = phase == QrPhase.EXPIRED
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= WideWidth
@@ -384,11 +386,14 @@ private fun QrSide(expired: Boolean, remainingSec: Int, ttlSec: Int, canLeave: B
     }
 }
 
-/** S-04-c: P단을 벗어나 QR 로그인을 취소했을 때. 다시 P가 되면 AccountFlow가 이 화면을 닫는다. */
+/**
+ * S-04-c: P단을 벗어나 QR 로그인을 취소했을 때. 다시 P가 되면 AccountFlow가 이 화면을 닫는다.
+ * 주행 중에도 계정 선택으로 돌아갈 수 있게 Figma에 없는 돌아가기 칩을 둔다.
+ */
 @Composable
-internal fun QrCancelledContent() {
+internal fun QrCancelledContent(canLeave: Boolean, onLeave: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        AppHeader()
+        if (canLeave) BackChip(stringResource(R.string.account_back_select), onLeave, Modifier.padding(35.dp)) else AppHeader()
         Column(
             Modifier.fillMaxWidth().padding(start = 40.dp, end = 40.dp, top = 220.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

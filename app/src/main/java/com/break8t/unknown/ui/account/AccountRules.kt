@@ -76,7 +76,8 @@ data class PinSetup(val first: String? = null, val input: PinInput = PinInput(),
  */
 data class AutoLogin(val targetId: String, val startedAtMs: Long, val cancelled: Boolean = false) {
     fun remainingSec(nowMs: Long, config: BalanceConfig): Int {
-        val leftMs = config.autoLoginSec * 1000L - (nowMs - startedAtMs)
+        // 시작 시각이 화면이 읽은 지금 시각보다 늦게 찍힐 수 있어서 흐른 시간을 0 밑으로 내리지 않는다.
+        val leftMs = config.autoLoginSec * 1000L - (nowMs - startedAtMs).coerceAtLeast(0)
         return ((leftMs + 999) / 1000).coerceAtLeast(0).toInt()
     }
 
@@ -116,7 +117,7 @@ data class QrSession(val issuedAtMs: Long, val cancelled: Boolean = false) {
     }
 
     fun remainingSec(nowMs: Long, config: BalanceConfig): Int =
-        ((config.loginQrTtlSec * 1000L - (nowMs - issuedAtMs) + 999) / 1000).coerceAtLeast(0).toInt()
+        ((config.loginQrTtlSec * 1000L - (nowMs - issuedAtMs).coerceAtLeast(0) + 999) / 1000).coerceAtLeast(0).toInt()
 
     /** 휴대폰 로그인을 흉내 내는 길게 누르기는 기다리는 중이고 막히지 않았을 때만 받는다. */
     fun canComplete(nowMs: Long, config: BalanceConfig, blocked: Boolean): Boolean =
