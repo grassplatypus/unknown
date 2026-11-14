@@ -67,7 +67,7 @@ internal fun SplashContent(progress: Float) = BoxWithConstraints(Modifier.fillMa
     val wide = maxWidth >= WideWidth
     // Figma S-01의 바탕은 다른 계정 화면과 달리 #F1E2BB다.
     Column(
-        Modifier.fillMaxSize().background(AppColors.TextOnPrimary).verticalScroll(rememberScrollState()),
+        Modifier.fillMaxSize().background(AppColors.Splash).verticalScroll(rememberScrollState()),
     ) {
         AppHeader()
         val shape = RoundedCornerShape(21.dp)
@@ -205,9 +205,9 @@ private fun AccountCard(account: Account, highlighted: Boolean, onClick: () -> U
             .clickable(role = Role.Button, onClick = onClick),
     ) {
         Column(
-            Modifier.fillMaxSize().padding(top = 36.dp, start = 8.dp, end = 8.dp),
+            Modifier.fillMaxSize().padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         ) {
             Avatar(account.characterId, 156.dp, 31.dp)
             Text(
@@ -217,11 +217,6 @@ private fun AccountCard(account: Account, highlighted: Boolean, onClick: () -> U
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                stringResource(if (account.pin != null) R.string.account_locked else R.string.account_saved),
-                color = AppColors.TextSub,
-                fontSize = 31.sp,
             )
         }
         if (account.pin != null) {
@@ -235,7 +230,8 @@ private fun AccountCard(account: Account, highlighted: Boolean, onClick: () -> U
                     .border(BorderWidth, AppColors.Line, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(painterResource(R.drawable.account_ic_lock), contentDescription = null, Modifier.size(42.dp), tint = AppColors.Text)
+                // 잠겼다는 글은 자물쇠로 대신한다. 화면 낭독기에는 글로 알린다.
+                Icon(painterResource(R.drawable.account_ic_lock), stringResource(R.string.account_locked), Modifier.size(42.dp), tint = AppColors.Text)
             }
         }
     }

@@ -126,7 +126,7 @@ fun Overlay(onDismiss: () -> Unit, content: @Composable BoxScope.() -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(AppColors.Text.copy(alpha = 0.5f))
+            .background(AppColors.Scrim)
             .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss)
             .padding(24.dp),
         contentAlignment = Alignment.Center,

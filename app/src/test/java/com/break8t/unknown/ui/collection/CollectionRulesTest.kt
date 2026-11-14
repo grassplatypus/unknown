@@ -37,6 +37,18 @@ class CollectionRulesTest {
     }
 
     @Test
+    fun postcardBadgeOpensOnTheNthPostcard() {
+        fun post(id: String, owned: Boolean, day: Long) = Collectible(CollectionKind.POSTCARD, id, id, null, owned, day)
+        val posts = listOf(post("c", true, 30), post("a", true, 10), post("x", false, 99), post("b", true, 20))
+        val badges = postcardBadges(posts, listOf(2, 3, 4))
+        assertEquals(listOf(true, true, false), badges.map { it.owned })
+        // 2번째로 얻은 엽서(b, 20일)가 첫 뱃지를 연다. 잠긴 엽서는 세지 않는다.
+        assertEquals(20L, badges[0].recency)
+        assertEquals(30L, badges[1].recency)
+        assertEquals("엽서를 4장 모으면 열려요. 지금 3장이에요.", badges[2].note)
+    }
+
+    @Test
     fun emptyOnlyAfterLoaded() {
         assertEquals(ListPhase.LOADING, listPhase(loaded = false, count = 0))
         assertEquals(ListPhase.LOADING, listPhase(loaded = false, count = 3))

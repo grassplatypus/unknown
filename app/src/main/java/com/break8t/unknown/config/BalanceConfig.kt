@@ -38,6 +38,9 @@ data class BalanceConfig(
     val houseGridSize: Int = 5,
     val houseWallHeight: Int = 4,
     val shopMaxQty: Int = 10,
+
+    // 도감 뱃지: 모은 엽서가 이 수에 닿을 때마다 뱃지 하나가 열린다. 작은 수부터 적는다.
+    val postcardBadgeSteps: List<Int> = listOf(3, 5, 10),
 ) {
     companion object {
         val DEFAULT = BalanceConfig()

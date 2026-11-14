@@ -2,6 +2,7 @@ package com.break8t.unknown.ui.collection
 
 import androidx.annotation.DrawableRes
 import com.break8t.unknown.R
+import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.config.Catalog
 import com.break8t.unknown.config.ItemKind
 import com.break8t.unknown.data.Profile
@@ -31,16 +32,23 @@ data class Collectible(
     val date: String? = null,
 )
 
-// Figma S-24 견본. 성산대교만 D-24 자세히 값이 있고, 날짜는 최근 순서를 정하는 데만 쓴다(화면에 안 보임).
+// Figma S-24 견본. D-24 자세히 값은 성산대교만 Figma에 있고 나머지는 같은 꼴로 지어 넣었다.
+// 날짜는 최근 순서를 정하는 데만 쓴다(화면에 안 보임). 한 번 만난 카드는 가장 빠른 기록과 느린 기록이 같다.
 private val demoCards = listOf(
     card("card_seongsan", "성산대교 구간", R.drawable.myinfo_card_seongsan, 14, "2026-10-21",
         route = "서부간선도로 · 성산대교 → 목동교", fastest = "6분 10초", slowest = "4시간 10분", usualTime = "평일 오전 8시쯤"),
-    card("card_hannam", "한남대교 북단", R.drawable.myinfo_card_hannam, 9, "2026-10-08"),
-    card("card_singal", "신갈 분기점", R.drawable.myinfo_card_ic, 6, "2026-09-25"),
-    card("card_tunnel", "남산1호터널", R.drawable.myinfo_card_tunnel, 4, "2026-09-02"),
-    card("card_hangang", "한강대교 구간", R.drawable.myinfo_card_hangang, 3, "2026-08-17"),
-    card("card_riverside", "올림픽대로 잠실", R.drawable.myinfo_card_riverside, 2, "2026-07-30"),
-    card("card_pangyo", "판교 나들목", R.drawable.myinfo_card_ic, 1, "2026-07-11"),
+    card("card_hannam", "한남대교 북단", R.drawable.myinfo_card_hannam, 9, "2026-10-08",
+        route = "강변북로 · 한남대교 북단 → 반포대교 북단", fastest = "4분 30초", slowest = "38분", usualTime = "금요일 저녁 7시쯤"),
+    card("card_singal", "신갈 분기점", R.drawable.myinfo_card_ic, 6, "2026-09-25",
+        route = "경부고속도로 · 신갈JC → 수원신갈IC", fastest = "7분 50초", slowest = "1시간 25분", usualTime = "주말 오후 5시쯤"),
+    card("card_tunnel", "남산1호터널", R.drawable.myinfo_card_tunnel, 4, "2026-09-02",
+        route = "남산1호터널 · 한남오거리 → 회현동", fastest = "3분 20초", slowest = "22분", usualTime = "평일 오전 9시쯤"),
+    card("card_hangang", "한강대교 구간", R.drawable.myinfo_card_hangang, 3, "2026-08-17",
+        route = "한강대로 · 노들역 → 한강대교 북단", fastest = "5분 40초", slowest = "41분", usualTime = "평일 저녁 6시쯤"),
+    card("card_riverside", "올림픽대로 잠실", R.drawable.myinfo_card_riverside, 2, "2026-07-30",
+        route = "올림픽대로 · 잠실대교 → 청담대교", fastest = "8분 10초", slowest = "52분", usualTime = "평일 저녁 7시쯤"),
+    card("card_pangyo", "판교 나들목", R.drawable.myinfo_card_ic, 1, "2026-07-11",
+        route = "경부고속도로 · 판교IC → 서초IC", fastest = "12분 30초", slowest = "12분 30초", usualTime = "주말 오전 11시쯤"),
     Collectible(CollectionKind.CARD, "card_gayang", "강변북로 가양", R.drawable.myinfo_card_unknown, owned = false),
 )
 
@@ -59,13 +67,36 @@ private val demoBadges = listOf(
 )
 
 /** 다섯 묶음 전체. 캐릭터와 자동차는 Catalog와 보유 목록에서, 나머지는 견본에서 온다. */
-fun collections(profile: Profile): Map<CollectionKind, List<Collectible>> = mapOf(
+fun collections(profile: Profile, config: BalanceConfig = BalanceConfig.DEFAULT): Map<CollectionKind, List<Collectible>> = mapOf(
     CollectionKind.CARD to demoCards,
     CollectionKind.POSTCARD to demoPostcards,
     CollectionKind.CHARACTER to fromCatalog(ItemKind.CHARACTER, CollectionKind.CHARACTER, profile),
     CollectionKind.CAR to fromCatalog(ItemKind.CAR, CollectionKind.CAR, profile),
-    CollectionKind.BADGE to demoBadges,
+    // 받은 뱃지를 앞에 두고 잠긴 뱃지를 뒤로 보낸다. 받은 것끼리는 Figma 순서를 지킨다.
+    CollectionKind.BADGE to (demoBadges + postcardBadges(demoPostcards, config.postcardBadgeSteps)).sortedBy { !it.owned },
 )
+
+private val POSTCARD_BADGE_NAMES = listOf("첫 엽서 꾸러미", "엽서 수집가", "전국 일주")
+
+/**
+ * 모은 엽서 수로 열리는 뱃지. [steps]번째 엽서를 얻은 날이 받은 날이고, 그 엽서 그림을 뱃지 그림으로 쓴다.
+ * 아직 못 연 뱃지는 다른 잠긴 뱃지처럼 badge_safe를 흐리게 보이고, [Collectible.note]에 남은 수를 적는다.
+ */
+internal fun postcardBadges(postcards: List<Collectible>, steps: List<Int>): List<Collectible> {
+    val got = postcards.filter { it.owned }.sortedBy { it.recency }
+    return steps.mapIndexed { i, n ->
+        val name = POSTCARD_BADGE_NAMES.getOrNull(i) ?: "엽서 ${n}장"
+        val opener = got.getOrNull(n - 1)
+        if (opener == null) {
+            Collectible(CollectionKind.BADGE, "badge_postcard_$n", name, R.drawable.myinfo_badge_safe, owned = false,
+                note = "엽서를 ${n}장 모으면 열려요. 지금 ${got.size}장이에요.")
+        } else {
+            val on = LocalDate.ofEpochDay(opener.recency).toString()
+            Collectible(CollectionKind.BADGE, "badge_postcard_$n", name, opener.art, true, opener.recency,
+                note = "엽서 ${n}장을 모음", date = on.replace('-', '.'))
+        }
+    }
+}
 
 // 캐릭터와 자동차에는 얻은 날짜가 없어서, 보유 목록에 들어간 순서(뒤가 최근)를 쓴다.
 private fun fromCatalog(itemKind: ItemKind, kind: CollectionKind, profile: Profile): List<Collectible> {

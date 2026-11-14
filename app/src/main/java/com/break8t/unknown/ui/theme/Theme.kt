@@ -14,29 +14,40 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-/** Figma "0. 공통 조각 / 색상표"의 값. 이름도 색상표의 이름을 따른다. */
+/**
+ * Figma "0. 공통 조각 / 색상표"의 값과 그 야간판(Figma "야간 색상표"). 이름도 색상표의 이름을 따른다.
+ * [night]는 MainActivity가 화면을 만들기 전에 정한다. 시스템 야간 모드가 바뀌면 Activity가 다시 만들어진다.
+ */
 object AppColors {
-    val Background = Color(0xFFF4EEDF) // 화면 바탕
-    val Card = Color(0xFFFFFAF0) // 카드, 다이얼로그, 기본 버튼
-    val Accent = Color(0xFFF6E3B4) // P/D 칩, 번호 표시
-    val Muted = Color(0xFFEBE0C8) // 꺼짐 버튼, 불러오는 중 상자
-    val Sky = Color(0xFF74BDF7) // 섬과 텃밭 배경
-    val Text = Color(0xFF3A2A1C) // 기본 글자
-    val TextSub = Color(0xFF6F5B47) // 설명, 꺼짐 글자
-    val TextOnPrimary = Color(0xFFF1E2BB) // 사이드 메뉴, 주 버튼 위 글자
-    val Line = Color(0xFF6B4A2E) // 카드와 버튼 테두리
-    val Primary = Color(0xFF5A3B22) // 주 버튼, 사이드 메뉴, 토스트
-    val Selected = Color(0xFFF2B33D) // 고른 탭, 켜짐 버튼, 코인
-    val CoinBorder = Color(0xFFB9791A)
-    val Divider = Color(0xFFDFD3B8)
-    val Success = Color(0xFF4F8A2C)
-    val SuccessBg = Color(0xFFDCEBC8)
-    val Error = Color(0xFFB8452F)
-    val Disabled = Color(0xFFE6DCC6)
-    val DisabledText = Color(0xFFA39582)
+    @Volatile var night = false
+    private fun pick(day: Long, dark: Long) = Color(if (night) dark else day)
+    val Background get() = pick(0xFFF4EEDF, 0xFF1E1711) // 화면 바탕
+    val Card get() = pick(0xFFFFFAF0, 0xFF2A2018) // 카드, 다이얼로그, 기본 버튼
+    val Accent get() = pick(0xFFF6E3B4, 0xFF4D3B1C) // P/D 칩, 번호 표시
+    val Muted get() = pick(0xFFEBE0C8, 0xFF3A2D21) // 꺼짐 버튼, 불러오는 중 상자
+    val Sky get() = pick(0xFF74BDF7, 0xFF223A55) // 섬과 텃밭 배경
+    val Text get() = pick(0xFF3A2A1C, 0xFFF1E2BB) // 기본 글자
+    val TextSub get() = pick(0xFF6F5B47, 0xFFC2AE8E) // 설명, 꺼짐 글자
+    val TextOnPrimary get() = pick(0xFFF1E2BB, 0xFFF1E2BB) // 사이드 메뉴 글자
+    val OnPrimary get() = pick(0xFFFFFAF0, 0xFFF1E2BB) // 주 버튼 위 글자. 낮에는 Card와 같다
+    val Splash get() = pick(0xFFF1E2BB, 0xFF1E1711) // S-01 시작 화면 바탕
+    val RailSelected get() = pick(0xFF5A3B22, 0xFFF1E2BB) // 사이드 메뉴에서 고른 칸의 아이콘과 글자
+    val Line get() = pick(0xFF6B4A2E, 0xFF8A6A48) // 카드와 버튼 테두리
+    val Primary get() = pick(0xFF5A3B22, 0xFF5A3B22) // 주 버튼, 사이드 메뉴, 토스트
+    val Selected get() = pick(0xFFF2B33D, 0xFF8C5E14) // 고른 탭, 켜짐 버튼
+    val Coin get() = pick(0xFFF2B33D, 0xFFF2B33D) // 코인은 그림이라 밤에도 같은 색
+    val CoinBorder get() = pick(0xFFB9791A, 0xFFB9791A)
+    val Divider get() = pick(0xFFDFD3B8, 0xFF3E3226)
+    val Success get() = pick(0xFF4F8A2C, 0xFF8FC46A)
+    val SuccessBg get() = pick(0xFFDCEBC8, 0xFF2E3D22)
+    val Error get() = pick(0xFFB8452F, 0xFFE0745A)
+    val Disabled get() = pick(0xFFE6DCC6, 0xFF2E251C)
+    val DisabledText get() = pick(0xFFA39582, 0xFF7F705E)
+    /** 대화상자 뒤를 어둡게 하는 막. 밤에도 어두워야 해서 낮의 글자색에 고정한다. */
+    val Scrim = Color(0x803A2A1C)
 }
 
-private val scheme = lightColorScheme(
+private fun scheme() = lightColorScheme(
     primary = AppColors.Primary,
     onPrimary = AppColors.TextOnPrimary,
     secondary = AppColors.Selected,
@@ -52,7 +63,7 @@ private val scheme = lightColorScheme(
 /** Material 물결 대신 PixelIndication을 앱 전체 누름 표시로 쓴다. 좁은 창에서는 전체를 같은 비율로 줄인다. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = scheme) {
+fun AppTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = scheme()) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val base = LocalDensity.current
         val k = windowScale(maxWidth.value)

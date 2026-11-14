@@ -119,7 +119,7 @@ internal fun HeaderChip(text: String, @DrawableRes icon: Int?, selected: Boolean
 /** Figma "coin". 그림 대신 원으로 그린다. */
 @Composable
 internal fun CoinDot(size: Dp) =
-    Box(Modifier.size(size).clip(CircleShape).background(AppColors.Selected).border(size / 9, AppColors.CoinBorder, CircleShape))
+    Box(Modifier.size(size).clip(CircleShape).background(AppColors.Coin).border(size / 9, AppColors.CoinBorder, CircleShape))
 
 @Composable
 internal fun CoinAmount(amount: Int, fontSize: TextUnit, color: Color = AppColors.Text) {

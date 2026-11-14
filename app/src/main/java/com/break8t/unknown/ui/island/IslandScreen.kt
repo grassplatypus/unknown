@@ -254,7 +254,7 @@ private fun Modifier.shrinkToFit() = layout { m, c ->
 
 @Composable
 private fun Coin() = Box(
-    Modifier.size(44.dp).clip(CircleShape).background(AppColors.Selected).border(4.dp, AppColors.CoinBorder, CircleShape),
+    Modifier.size(44.dp).clip(CircleShape).background(AppColors.Coin).border(4.dp, AppColors.CoinBorder, CircleShape),
 )
 
 /** Figma Chip: 글자 앞에 아이콘이 붙고, 텃밭에는 알림 점이 붙는다. 공용 AppChip은 아이콘을 받지 않는다. */

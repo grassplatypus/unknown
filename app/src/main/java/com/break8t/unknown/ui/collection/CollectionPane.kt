@@ -412,7 +412,8 @@ private fun LockedHint(item: Collectible, onClose: () -> Unit) {
     }
     DialogFrame(832.dp) {
         DialogTitle(stringResource(R.string.collection_locked_name))
-        DialogBody(stringResource(hint))
+        // 엽서 뱃지처럼 조건을 아는 잠긴 항목은 남은 수를 적은 note를 보인다.
+        DialogBody(item.note ?: stringResource(hint))
         PrimaryButton(stringResource(R.string.collection_close), onClose, Modifier.fillMaxWidth())
     }
 }

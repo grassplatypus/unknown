@@ -2,7 +2,6 @@ package com.break8t.unknown.ui
 
 import androidx.annotation.StringRes
 import com.break8t.unknown.R
-import com.break8t.unknown.drive.UxLimits
 
 /**
  * 사이드 메뉴 순서와 같다. 두 가지로 덮는다: 팀 결정(allowedWhileDriving=false면 P가 아닐 때)과
@@ -19,5 +18,6 @@ enum class Route(
     ENCYCLOPEDIA(R.string.route_encyclopedia, false, R.string.park_hint_encyclopedia),
     FIELD_DROP(R.string.route_field_drop, false, R.string.park_hint_field_drop),
     MY_INFO(R.string.route_my_info, false, R.string.park_hint_my_info),
-    SETTINGS(R.string.route_settings, true, R.string.park_hint_settings, blockedBy = UxLimits.NO_SETUP),
+    // NO_SETUP이면 화면 안에서 항목마다 막는다. 음성 안내 켜기와 끄기는 주행 중에도 써야 해서 화면은 덮지 않는다.
+    SETTINGS(R.string.route_settings, true, R.string.park_hint_settings),
 }

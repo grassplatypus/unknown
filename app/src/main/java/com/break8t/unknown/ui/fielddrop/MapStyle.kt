@@ -13,16 +13,17 @@ import org.maplibre.android.style.layers.SymbolLayer
 /** OpenFreeMap Liberty. 에뮬레이터에서 도로와 한글 지명이 뜨는 것을 확인한 스타일이다. */
 const val MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
 
-/** 지도 색. Figma 지도 그림(fielddrop_map_city)에서 뽑았고, 글자는 AppColors를 쓴다. */
+/** 지도 색. Figma 지도 그림(fielddrop_map_city)에서 뽑았고, 밤에는 같은 색을 어둡게 낮춘 값을 쓴다. */
 object MapPalette {
-    const val LAND = 0xFFBEAAA3.toInt()
-    const val EDGE = 0xFF806C68.toInt()
-    const val ROAD = 0xFFFEEFD5.toInt()
-    const val MAJOR_ROAD = 0xFFFEC28D.toInt()
-    const val WATER = 0xFF88B7DF.toInt()
-    const val PARK = 0xFFB8C77C.toInt()
-    const val RAIL = 0xFFA6A2A1.toInt()
-    val LABEL = AppColors.Text.toArgb()
+    private fun pick(day: Long, dark: Long) = (if (AppColors.night) dark else day).toInt()
+    val LAND get() = pick(0xFFBEAAA3, 0xFF3A302C)
+    val EDGE get() = pick(0xFF806C68, 0xFF5E4E48)
+    val ROAD get() = pick(0xFFFEEFD5, 0xFF6B5A48)
+    val MAJOR_ROAD get() = pick(0xFFFEC28D, 0xFF9A6A3E)
+    val WATER get() = pick(0xFF88B7DF, 0xFF2C4A66)
+    val PARK get() = pick(0xFFB8C77C, 0xFF3E4A2A)
+    val RAIL get() = pick(0xFFA6A2A1, 0xFF5A5654)
+    val LABEL get() = AppColors.Text.toArgb()
 }
 
 enum class MapPaint { LAND, BUILDING, PARK, WATER, ROAD, MAJOR_ROAD, RAIL, LABEL, HIDE }
@@ -99,7 +100,7 @@ private fun majorRoadColor(): Expression = Expression.match(
 )
 
 /** 타일을 못 받을 때 쓰는 스타일. 땅 색만 있어서 버섯과 내 차 표시는 그대로 놓인다. */
-val OFFLINE_STYLE_JSON = """
+val OFFLINE_STYLE_JSON get() = """
     {"version":8,"sources":{},"layers":[{"id":"background","type":"background",
     "paint":{"background-color":"#%06X"}}]}
 """.trimIndent().format(MapPalette.LAND and 0xFFFFFF)

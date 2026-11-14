@@ -320,7 +320,7 @@ private fun Coin(size: Dp) {
         Modifier
             .size(size)
             .clip(CircleShape)
-            .background(AppColors.Selected)
+            .background(AppColors.Coin)
             .border(size / 20, AppColors.CoinBorder, CircleShape),
     )
 }
@@ -418,7 +418,7 @@ private fun RewardOverlay(m: Mushroom, onReceive: () -> Unit, onClose: () -> Uni
     Box(
         Modifier
             .fillMaxSize()
-            .background(AppColors.Text.copy(alpha = 0.5f))
+            .background(AppColors.Scrim)
             .pointerInput(Unit) { detectTapGestures { onClose() } },
         contentAlignment = Alignment.Center,
     ) {

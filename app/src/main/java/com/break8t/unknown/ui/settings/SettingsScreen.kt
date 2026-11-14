@@ -139,6 +139,15 @@ private fun SettingsContent(
     }
     BackHandler(page != Page.MAIN) { page = Page.MAIN }
     val back = { page = Page.MAIN }
+    // 플랫폼이 주행 중 설정을 막으면(NO_SETUP) 열어 둔 하위 화면과 확인 창을 그 자리에서 닫는다.
+    val locked = LocalUxLimits.current.noSetup
+    LaunchedEffect(locked) {
+        if (locked) {
+            page = Page.MAIN
+            ask = Ask.NONE
+        }
+    }
+
 
     val statusSaved = stringResource(R.string.settings_status_saved)
     val nicknameSaved = stringResource(R.string.settings_nickname_saved)
@@ -244,30 +253,41 @@ private fun MainPage(
     onAskLogout: () -> Unit,
 ) = PageColumn {
     val demo = LocalDemoState.current
+    val locked = LocalUxLimits.current.noSetup
     FlowRow(horizontalArrangement = Arrangement.spacedBy(21.dp), verticalArrangement = Arrangement.spacedBy(21.dp)) {
         Pill(stringResource(R.string.route_settings), Modifier.padding(end = 31.dp))
         Tab.entries.forEach { t -> AppChip(stringResource(t.label), t == tab, onClick = { onTab(t) }) }
     }
+    if (locked) Text(stringResource(R.string.settings_driving_locked), color = AppColors.TextSub, fontSize = 34.sp)
     val change = stringResource(R.string.settings_change)
+    val wide = Modifier.widthIn(min = 286.dp)
+    // 주행 중에는 음성 안내 켜기와 끄기만 남기고, 나머지 버튼은 같은 글자의 꺼진 버튼으로 바꾼다.
+    val button = @Composable { text: String, onClick: () -> Unit ->
+        if (locked) DisabledPill(text, wide) else SecondaryButton(text, onClick, wide)
+    }
+    val toggle = @Composable { on: Boolean, onChange: (Boolean) -> Unit ->
+        if (locked) DisabledPill(stringResource(if (on) R.string.components_on else R.string.components_off), wide)
+        else StateButton(on, onChange)
+    }
     when (tab) {
         Tab.SOUND -> {
             SettingRow(stringResource(R.string.settings_voice_guide)) {
                 StateButton(p.voiceGuideOn, { on -> demo.update { it.copy(voiceGuideOn = on) } })
             }
             SettingRow(stringResource(R.string.settings_voice_pack), Catalog.item(p.voicePackId)?.name) {
-                SecondaryButton(change, { onOpen(Page.VOICE) }, Modifier.widthIn(min = 286.dp))
+                button(change) { onOpen(Page.VOICE) }
             }
         }
         Tab.DISPLAY -> {
             SettingRow(stringResource(R.string.settings_island_real_time)) {
-                StateButton(p.islandRealTime, { on -> demo.update { it.copy(islandRealTime = on) } })
+                toggle(p.islandRealTime) { on -> demo.update { it.copy(islandRealTime = on) } }
             }
             SettingRow(stringResource(R.string.settings_island_time)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(21.dp)) {
-                    TimeChip(R.string.settings_day, selected = !p.islandNight, enabled = islandTimeChoiceEnabled(p.islandRealTime)) {
+                    TimeChip(R.string.settings_day, selected = !p.islandNight, enabled = !locked && islandTimeChoiceEnabled(p.islandRealTime)) {
                         demo.update { it.copy(islandNight = false) }
                     }
-                    TimeChip(R.string.settings_night, selected = p.islandNight, enabled = islandTimeChoiceEnabled(p.islandRealTime)) {
+                    TimeChip(R.string.settings_night, selected = p.islandNight, enabled = !locked && islandTimeChoiceEnabled(p.islandRealTime)) {
                         demo.update { it.copy(islandNight = true) }
                     }
                 }
@@ -279,21 +299,22 @@ private fun MainPage(
                 stringResource(R.string.settings_no_pin),
                 lead = { Art(p.selectedCharacterId, 99.dp, bordered = true) },
             ) {
-                SecondaryButton(stringResource(R.string.settings_switch_account), onSwitchAccount, Modifier.widthIn(min = 286.dp))
+                button(stringResource(R.string.settings_switch_account), onSwitchAccount)
             }
             SettingRow(stringResource(R.string.settings_nickname), p.nickname) {
-                SecondaryButton(change, { onOpen(Page.NICKNAME) }, Modifier.widthIn(min = 286.dp))
+                button(change) { onOpen(Page.NICKNAME) }
             }
             SettingRow(stringResource(R.string.settings_status_message), p.statusMessage) {
-                SecondaryButton(change, { onOpen(Page.STATUS) }, Modifier.widthIn(min = 286.dp))
+                button(change) { onOpen(Page.STATUS) }
             }
             SettingRow(stringResource(R.string.settings_driving_public)) {
-                StateButton(p.drivingStatusPublic, onDrivingPublic)
+                toggle(p.drivingStatusPublic, onDrivingPublic)
             }
             SettingRow(stringResource(R.string.settings_logout_row)) {
-                Pill(
+                if (locked) DisabledPill(stringResource(R.string.settings_logout), wide)
+                else Pill(
                     stringResource(R.string.settings_logout),
-                    Modifier.widthIn(min = 286.dp),
+                    wide,
                     textColor = AppColors.Error,
                     line = AppColors.Error,
                     onClick = onAskLogout,
@@ -609,6 +630,9 @@ private fun Screen(
 private fun DisplayTabManual() = Frame(Profile(islandRealTime = false, islandNight = true)) { Screen(Tab.DISPLAY) }
 
 @SizePreviews @Composable private fun AccountTab() = Frame { Screen(Tab.ACCOUNT) }
+
+@SizePreviews @Composable
+private fun AccountTabDriving() = Frame(limits = UxLimits(true, UxLimits.NO_SETUP)) { Screen(Tab.ACCOUNT) }
 
 @SizePreviews @Composable
 private fun LogoutDialog() = Frame(dialog = {

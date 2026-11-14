@@ -50,7 +50,7 @@ fun SideRail(current: Route, onSelect: (Route) -> Unit, modifier: Modifier = Mod
 
 @Composable
 private fun RailItem(route: Route, selected: Boolean, onClick: () -> Unit) {
-    val tint = if (selected) AppColors.Primary else AppColors.TextOnPrimary
+    val tint = if (selected) AppColors.RailSelected else AppColors.TextOnPrimary
     Column(
         Modifier
             .size(146.dp)

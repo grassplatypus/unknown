@@ -1,5 +1,6 @@
 package com.break8t.unknown
 
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,6 +19,7 @@ import com.break8t.unknown.drive.DriveStateSources
 import com.break8t.unknown.drive.LocalUxLimits
 import com.break8t.unknown.drive.UxLimitsSource
 import com.break8t.unknown.ui.AppShell
+import com.break8t.unknown.ui.theme.AppColors
 import com.break8t.unknown.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,6 +29,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val uiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        AppColors.night = uiMode == Configuration.UI_MODE_NIGHT_YES
         drive = DriveStateSources.create(applicationContext).also { it.start() }
         ux = CarUxLimitsSource(applicationContext).also { it.start() }
         setContent {

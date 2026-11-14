@@ -72,7 +72,7 @@ internal fun Tag(fill: Color, modifier: Modifier = Modifier, content: @Composabl
 @Composable
 internal fun Coin(size: Int, modifier: Modifier = Modifier) = Canvas(modifier.size(size.fdp)) {
     val stroke = 3.fdp.toPx()
-    drawCircle(AppColors.Selected, radius = this.size.minDimension / 2 - stroke / 2)
+    drawCircle(AppColors.Coin, radius = this.size.minDimension / 2 - stroke / 2)
     drawCircle(AppColors.CoinBorder, radius = this.size.minDimension / 2 - stroke / 2, style = Stroke(stroke))
 }
 

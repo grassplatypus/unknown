@@ -104,8 +104,8 @@ internal fun PrimaryIconButton(text: String, @DrawableRes icon: Int, onClick: ()
         horizontalArrangement = Arrangement.spacedBy(13.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painterResource(icon), null, Modifier.size(49.dp), tint = AppColors.Card)
-        Text(text, color = AppColors.Card, fontSize = 44.sp, fontWeight = FontWeight.Bold)
+        Icon(painterResource(icon), null, Modifier.size(49.dp), tint = AppColors.OnPrimary)
+        Text(text, color = AppColors.OnPrimary, fontSize = 44.sp, fontWeight = FontWeight.Bold)
     }
 }
 
