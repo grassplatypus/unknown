@@ -29,5 +29,5 @@ D:/playground/hyundai/.venv/Scripts/python D:/playground/hyundai/tools/search.py
 - 에이전트마다 브랜치 하나와 worktree 하나(`.claude/worktrees/<이름>`)를 쓴다.
 - 맡은 경로만 고친다. 공용 파일(Gradle, 매니페스트, `Route.kt`, `AppShell.kt`, `BalanceConfig.kt`, `theme/`, `strings_common.xml`)은 고치지 않고, 필요한 변경을 보고서에 적는다.
 - 커밋할 때는 `git add <자기 경로>`만 쓴다. `git add -A`와 `git add .`는 훅이 막는다.
-- push하지 않는다. 합치는 일은 리드가 한 번에 하나씩 한다.
+- 에이전트는 push하지 않는다. 합치는 일과 push는 리드가 한다.
 - `docs/trajectory.jsonl`은 리드만 커밋한다.

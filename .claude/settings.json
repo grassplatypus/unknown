@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": ["Bash(./gradlew:*)", "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git add:*)", "Bash(git commit:*)", "Bash(git worktree:*)", "Bash(git merge:*)"],
-    "deny": ["Bash(git push:*)", "Bash(git reset --hard:*)", "Bash(git clean:*)"]
+    "deny": ["Bash(git reset --hard:*)", "Bash(git clean:*)"]
   },
   "hooks": {
     "PreToolUse": [

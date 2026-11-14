@@ -7,7 +7,6 @@ import sys
 EM_DASH = "—"
 REPO_MARK = re.compile(r"[\\/]playground[\\/]hyundai[\\/]app[\\/]", re.I)
 BASH_RULES = [
-    (re.compile(r"\bgit\b[^;&|]*\bpush\b"), "Do not push; the lead merges locally."),
     (re.compile(r"\bgit\b[^;&|]*\badd\s+(-A|--all|\.)(\s|$)"), "Stage only your own paths: git add <path>."),
     (re.compile(r"co-authored-by", re.I), "No Co-Authored-By trailer in commits."),
     (re.compile(r"--no-verify"), "Do not skip hooks."),
