@@ -13,10 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/**
- * AAOS GEAR_SELECTION으로 기어를 읽는다. Pleos Vehicle SDK는 서비스 연결이 끊겨도
- * 리스너에 알리지 않아서 지난 P 값이 남을 수 있으므로 쓰지 않는다.
- */
+/** AAOS GEAR_SELECTION으로 기어를 읽는다. Pleos Vehicle SDK는 서비스 연결이 끊겨도
+ *  리스너에 알리지 않아서 지난 P 값이 남을 수 있으므로 쓰지 않는다. */
 class CarDriveStateSource(context: Context) : DriveStateSource {
     private val context = context.applicationContext
     private val state = MutableStateFlow(DriveMode.UNKNOWN)
