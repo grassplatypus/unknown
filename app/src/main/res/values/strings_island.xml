@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- S-11-a, S-12 -->
+    <string name="island_entrance_title">섬</string>
+    <string name="island_enter">섬으로 들어가기</string>
+    <string name="island_title">내 섬</string>
+    <string name="island_inventory">보관함</string>
+    <string name="island_photo">사진 찍기</string>
+    <string name="island_house">집</string>
+    <string name="island_shop">상점</string>
+    <string name="island_farm">텃밭</string>
+    <string name="island_alert">!</string>
+
+    <!-- S-13 -->
+    <string name="island_back">섬으로</string>
+    <string name="island_plant_title">고른 빈 칸에 심기</string>
+    <string name="island_seed_count">%1$s %2$d</string>
+    <string name="island_plant">%s 심기</string>
+    <string name="island_grown">다 자람</string>
+    <string name="island_remaining">%s 남음</string>
+    <string name="island_days_hours">%1$d일 %2$d시간</string>
+    <string name="island_days">%d일</string>
+    <string name="island_hours">%d시간</string>
+    <string name="island_minutes">%d분</string>
+
+    <!-- T-05: 숫자 뒤 조사는 읽는 소리에 따라 다르다 -->
+    <string name="island_harvest_part">%1$s %2$d칸</string>
+    <string name="island_harvested_eul">%1$s을 수확했어요. 코인 %2$d을 받았어요</string>
+    <string name="island_harvested_reul">%1$s을 수확했어요. 코인 %2$d를 받았어요</string>
+
+    <!-- D-09 -->
+    <string name="island_pull_title">다 자라기 전에 뽑을까요?</string>
+    <string name="island_pull_body">지금 뽑으면 코인을 받지 못하고 씨앗도 돌아오지 않아요.</string>
+    <string name="island_keep">그대로 두기</string>
+    <string name="island_pull">뽑기</string>
+
+    <!-- D-10 -->
+    <string name="island_no_seed">%s 씨앗이 없어요</string>
+    <string name="island_close">닫기</string>
+    <string name="island_go_shop">상점으로 가기</string>
+</resources>
