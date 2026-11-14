@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="photo_cancel">취소</string>
+    <string name="photo_title">사진 찍기</string>
+    <string name="photo_preset_oblique">비스듬히</string>
+    <string name="photo_preset_low">낮은 정면</string>
+    <string name="photo_preset_side">옆에서</string>
+    <string name="photo_preset_top">하늘에서</string>
+    <string name="photo_rotate">90도 돌리기</string>
+    <string name="photo_character">캐릭터</string>
+    <string name="photo_shoot">촬영</string>
+    <string name="photo_pose">포즈</string>
+    <string name="photo_size">크기</string>
+    <string name="photo_smaller">작게</string>
+    <string name="photo_bigger">크게</string>
+    <string name="photo_flip">좌우 뒤집기</string>
+    <string name="photo_done">완료</string>
+
+    <string name="photo_close">닫기</string>
+    <string name="photo_share_photo">사진 공유</string>
+    <string name="photo_share_postcard">엽서 공유</string>
+    <string name="photo_share_jam_card">정체 카드 공유</string>
+    <string name="photo_qr_photo">휴대폰으로 QR을 찍으면\n사진이 열려요</string>
+    <string name="photo_qr_postcard">휴대폰으로 QR을 찍으면\n엽서가 열려요</string>
+    <string name="photo_qr_jam_card">휴대폰으로 QR을 찍으면\n정체 카드가 열려요</string>
+    <string name="photo_qr">QR 코드</string>
+    <string name="photo_ttl_min">%1$d분 %2$d초 안에 열어 주세요.</string>
+    <string name="photo_ttl_sec">%1$d초 안에 열어 주세요.</string>
+    <string name="photo_ttl_over">QR을 열 수 있는 시간이 지났어요.</string>
+    <string name="photo_retake">다시 찍기</string>
+</resources>
