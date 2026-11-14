@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_tab_sound">소리</string>
+    <string name="settings_tab_display">화면</string>
+    <string name="settings_tab_account">게임·계정</string>
+    <string name="settings_back">설정으로 돌아가기</string>
+
+    <!-- S-25-a 소리 -->
+    <string name="settings_voice_guide">음성 안내</string>
+    <string name="settings_voice_pack">음성팩</string>
+    <string name="settings_change">바꾸기</string>
+
+    <!-- S-25-b, S-25-d 화면 -->
+    <string name="settings_island_real_time">섬 시간을 실제 시간에 맞추기</string>
+    <string name="settings_island_time">시간 설정</string>
+    <string name="settings_day">낮</string>
+    <string name="settings_night">밤</string>
+
+    <!-- S-25-c 게임·계정 -->
+    <string name="settings_no_pin">PIN 없음</string>
+    <string name="settings_switch_account">계정 전환</string>
+    <string name="settings_nickname">닉네임</string>
+    <string name="settings_status_message">상태 메시지</string>
+    <string name="settings_driving_public">내 운전 상태 공개</string>
+    <string name="settings_logout_row">이 기기에서 로그아웃</string>
+    <string name="settings_logout">로그아웃</string>
+
+    <!-- D-27 -->
+    <string name="settings_logout_title">이 기기에서 로그아웃할까요?</string>
+    <string name="settings_logout_body">섬과 도감은 계정에 남아 있어요.</string>
+
+    <!-- D-22와 같은 문구 (Figma 309:24114) -->
+    <string name="settings_driving_public_title">운전 상태를 친구에게 보여 줄까요?</string>
+    <string name="settings_driving_public_body">내가 운전 중인지, 그리고 같은 정체에 있을 때 함께 지나는 중이라는 것이 친구에게 보여요. 그 밖의 위치는 보이지 않아요. 언제든 끌 수 있어요.</string>
+    <string name="settings_driving_public_confirm">공개하기</string>
+
+    <!-- S-26, S-27 -->
+    <string name="settings_counter">%1$d / %2$d</string>
+    <string name="settings_save">저장</string>
+    <string name="settings_clear">비우기</string>
+    <string name="settings_park_to_type">주차(P)하면 입력할 수 있어요</string>
+
+    <!-- S-28 -->
+    <string name="settings_voice_default_desc">차분하게 알려 줘요</string>
+    <string name="settings_in_use">사용 중</string>
+    <string name="settings_preview_voice">미리 듣기</string>
+    <string name="settings_more_in_shop">상점에서 더 보기</string>
+
+    <!-- T-11, T-12, T-13. T-13의 인자는 조사까지 붙은 이름이다(예: "기본 목소리로"). -->
+    <string name="settings_status_saved">상태 메시지를 바꿨어요</string>
+    <string name="settings_nickname_saved">닉네임을 바꿨어요</string>
+    <string name="settings_voice_changed">%1$s 바꿨어요</string>
+</resources>
