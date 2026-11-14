@@ -3,6 +3,7 @@ package com.break8t.unknown.ui.home
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.break8t.unknown.R
@@ -15,6 +16,8 @@ import com.break8t.unknown.ui.Route
 fun HomeScreen(mode: DriveMode, onNavigate: (Route) -> Unit) {
     val demo = LocalDemoState.current
     val home = HomeStore.controller
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { home.attachNavi(context) }
     LaunchedEffect(mode) { home.onMode(mode, demo) }
     val profile by demo.profile.collectAsStateWithLifecycle()
 

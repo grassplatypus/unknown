@@ -63,6 +63,7 @@ internal fun DrivingHome(
     // 레이드 상태가 바뀌면 그 상태에서 연 창(모두 보기, 동승자 QR)은 닫는다.
     var dialog by remember(raid::class) { mutableStateOf(DrivingDialog.NONE) }
     val inRaid = raid is RaidState.Solo || raid is RaidState.Group
+    val passed = raid is RaidState.Passed
     BoxWithConstraints(modifier.fillMaxSize()) {
         val wide = maxWidth >= WideMin
         Column(
@@ -71,15 +72,23 @@ internal fun DrivingHome(
         ) {
             TopBar(
                 showQr = inRaid,
-                showEnd = raid !is RaidState.None,
+                showEnd = inRaid || passed,
                 onQr = { dialog = DrivingDialog.QR },
                 onEnd = onEnd,
             )
             when (raid) {
-                RaidState.None -> NoRaid()
+                RaidState.None -> NoRaid(null)
+                is RaidState.Approaching -> NoRaid(raid)
                 else -> TwoColumns(
                     wide,
-                    left = { if (raid is RaidState.Passed) PassedInfo(raid, wide) else RaidInfo(wide) },
+                    left = {
+                        when (raid) {
+                            is RaidState.Passed -> PassedInfo(raid, wide)
+                            is RaidState.Solo -> RaidInfo(raid.jam, wide)
+                            is RaidState.Group -> RaidInfo(raid.jam, wide)
+                            else -> Unit
+                        }
+                    },
                     right = { RaidSide(raid, config.raidVisibleAvatars) { dialog = DrivingDialog.PEOPLE } },
                 )
             }
@@ -111,9 +120,9 @@ private fun TopBar(showQr: Boolean, showEnd: Boolean, onQr: () -> Unit, onEnd: (
     if (showEnd) SecondaryButton(stringResource(R.string.home_end), onEnd)
 }
 
-/** S-09-a. 종료 버튼이 없다. */
+/** S-09-a. 종료 버튼이 없다. 앞에 정체가 있으면 한 줄로 알린다(Figma에 없는 상태). */
 @Composable
-private fun NoRaid() = Column {
+private fun NoRaid(ahead: RaidState.Approaching?) = Column {
     HomeText(
         stringResource(R.string.home_today_driving, HomeDemo.TODAY_KM_DRIVING, HomeDemo.TODAY_MIN_DRIVING),
         40,
@@ -124,6 +133,27 @@ private fun NoRaid() = Column {
         BigStat(stringResource(R.string.home_jams_passed), stringResource(R.string.home_places, HomeDemo.DRIVING_JAMS))
         BigStat(stringResource(R.string.home_safety_score), stringResource(R.string.home_points, HomeDemo.DRIVING_SAFETY))
     }
+    if (ahead != null) {
+        HomeText(
+            stringResource(R.string.home_jam_ahead, ahead.aheadM / 1000, roadName(ahead.jam)),
+            36,
+            Modifier.padding(top = 40.fdp),
+            color = AppColors.Error,
+            weight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun roadName(jam: JamView) = jam.road.ifBlank { stringResource(R.string.home_jam_unnamed) }
+
+/** 교차로 이름은 하나만 오거나 둘 다 비어 있을 수 있다. 둘 다 없으면 줄을 그리지 않는다. */
+@Composable
+private fun segmentText(jam: JamView): String? = when {
+    jam.startCross.isNotBlank() && jam.endCross.isNotBlank() -> stringResource(R.string.home_segment_both, jam.startCross, jam.endCross)
+    jam.startCross.isNotBlank() -> stringResource(R.string.home_segment_from, jam.startCross)
+    jam.endCross.isNotBlank() -> stringResource(R.string.home_segment_to, jam.endCross)
+    else -> null
 }
 
 @Composable
@@ -147,21 +177,21 @@ private fun TwoColumns(wide: Boolean, left: @Composable ColumnScope.() -> Unit, 
     }
 }
 
-/** S-09-b, S-09-c 왼쪽: 지나는 중인 정체와 남은 거리. */
+/** S-09-b, S-09-c 왼쪽: 지나는 중인 정체와 남은 거리. 응답마다 남은 거리와 막대가 바뀐다. */
 @Composable
-private fun ColumnScope.RaidInfo(wide: Boolean) {
+private fun ColumnScope.RaidInfo(jam: JamView, wide: Boolean) {
     HomeText(
-        stringResource(R.string.home_regular_jam, HomeDemo.JAM_MEET_COUNT),
+        jam.meetCount?.let { stringResource(R.string.home_regular_jam, it) } ?: stringResource(R.string.home_jam_now),
         30,
         color = AppColors.Error,
         weight = FontWeight.Bold,
     )
-    HomeText(stringResource(R.string.home_demo_road), if (wide) 84 else 64, Modifier.padding(top = 6.fdp), weight = FontWeight.Bold)
-    HomeText(stringResource(R.string.home_demo_segment), 36, Modifier.padding(top = 20.fdp), color = AppColors.TextSub)
-    ProgressTrack(HomeDemo.RAID_PROGRESS, Modifier.padding(top = 31.fdp))
+    HomeText(roadName(jam), if (wide) 84 else 64, Modifier.padding(top = 6.fdp), weight = FontWeight.Bold)
+    segmentText(jam)?.let { HomeText(it, 36, Modifier.padding(top = 20.fdp), color = AppColors.TextSub) }
+    ProgressTrack(jam.progress, Modifier.padding(top = 31.fdp))
     Row(Modifier.fillMaxWidth().padding(top = 12.fdp), verticalAlignment = Alignment.CenterVertically) {
-        HomeText(stringResource(R.string.home_remaining_km, HomeDemo.RAID_REMAINING_KM), 40, Modifier.weight(1f), weight = FontWeight.Bold)
-        HomeText(stringResource(R.string.home_usual_minutes, HomeDemo.RAID_USUAL_MIN), 32, color = AppColors.TextSub)
+        HomeText(stringResource(R.string.home_remaining_km, jam.remainingM / 1000), 40, Modifier.weight(1f), weight = FontWeight.Bold)
+        jam.usualMin?.let { HomeText(stringResource(R.string.home_usual_minutes, it), 32, color = AppColors.TextSub) }
     }
 }
 
@@ -186,13 +216,13 @@ private fun ProgressTrack(fraction: Float, modifier: Modifier) = BoxWithConstrai
 @Composable
 private fun ColumnScope.PassedInfo(raid: RaidState.Passed, wide: Boolean) {
     HomeText(
-        stringResource(R.string.home_passed_title, HomeDemo.JAM_MEET_COUNT),
+        raid.jam.meetCount?.let { stringResource(R.string.home_passed_title, it) } ?: stringResource(R.string.home_passed_plain),
         34,
         color = AppColors.Success,
         weight = FontWeight.Bold,
     )
-    HomeText(stringResource(R.string.home_demo_road), if (wide) 72 else 60, Modifier.padding(top = 6.fdp), weight = FontWeight.Bold)
-    HomeText(stringResource(R.string.home_demo_segment), 34, Modifier.padding(top = 20.fdp), color = AppColors.TextSub)
+    HomeText(roadName(raid.jam), if (wide) 72 else 60, Modifier.padding(top = 6.fdp), weight = FontWeight.Bold)
+    segmentText(raid.jam)?.let { HomeText(it, 34, Modifier.padding(top = 20.fdp), color = AppColors.TextSub) }
     Row(Modifier.padding(top = 39.fdp), horizontalArrangement = Arrangement.spacedBy(23.fdp)) {
         ResultCard(stringResource(R.string.home_took_time)) {
             HomeText(durationText(raid.tookSec), 34, weight = FontWeight.Bold)

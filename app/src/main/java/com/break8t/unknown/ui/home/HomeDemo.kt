@@ -13,10 +13,14 @@ object HomeDemo {
 
     /** Figma S-09-d 견본: 8분 40초. 이 구간 하나로 받을 코인을 계산한다. */
     const val RAID_JAM_SEC = 520L
-    const val RAID_PROGRESS = 258f / 560f
-    const val RAID_REMAINING_KM = 1.6
-    const val RAID_USUAL_MIN = 6
     const val JAM_MEET_COUNT = 14
+
+    /** Figma S-09-b 견본: 1.6 km 남고 막대가 258/560만큼 찼다. */
+    val JAM = JamView("서부간선도로", "성산대교", "목동교", remainingM = 1600.0, progress = 258f / 560f, JAM_MEET_COUNT, usualMin = 6)
+    const val JAM_LONGEST_M = 1600.0 * 560 / 302
+
+    // 레이드 동안 남은 거리. 정체가 앞에서 늘었다 줄었다 하는 것을 시연에서 보이려고 중간에 세 번 늘린다.
+    val FAKE_REMAINING_M = listOf(1600.0, 1500.0, 1420.0, 1480.0, 1560.0, 1450.0, 1300.0, 1180.0, 1240.0, 1100.0, 950.0, 800.0, 860.0, 700.0)
 
     val PARTICIPANTS = listOf(
         Participant("영희", friend = true),
