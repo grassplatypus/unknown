@@ -110,10 +110,10 @@ private fun sample(id: String, a: Author, atMs: Long, text: String) =
 
 internal fun demoGuestbooks(now: Long): Map<String, List<GuestbookEntry>> = mapOf(
     GuestbookStore.MY_ISLAND to listOf(
-        sample("g_me_1", dawn, now - 2 * HOUR_MS, "오늘 서부간선 엄청 막혔죠? 텃밭 당근 잘 자라고 있네요."),
-        sample("g_me_2", acorn, now - 9 * HOUR_MS, "출근길에 들렀어요. 집이 정말 아늑해 보여요. 내일도 같이 버텨요!"),
-        sample("g_me_3", camper, now - 3 * DAY_MS, "주말에 캠핑 다녀왔어요. 다음엔 같이 가요."),
-        sample("g_me_4", dusk, now - 6 * DAY_MS, "정시 퇴근 성공! 섬 구경 잘하고 가요."),
+        sample("g_me_1", dawn, now - 2 * HOUR_MS, "집이 너무 못생겼어요"),
+        sample("g_me_2", acorn, now - 9 * HOUR_MS, "일요일 간술 ㄱ"),
+        sample("g_me_3", camper, now - 3 * DAY_MS, "오늘 할일 돼지 갈비 1kg 사기 사과 1박스 사기"),
+        sample("g_me_4", dusk, now - 6 * DAY_MS, "가나다라마바사아자차카타파하"),
     ),
     "f_acorn" to listOf(
         sample("g_acorn_1", dawn, now - 5 * HOUR_MS, "도토리길님 섬에 사과나무가 예뻐요."),
