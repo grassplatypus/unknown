@@ -64,9 +64,10 @@ fun markerImages(context: Context): Map<String, Bitmap> {
     val dm = res.displayMetrics
     fun px(dp: Float) = (dp * dm.density).roundToInt()
     fun sp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, v, dm)
-    fun pixel(@DrawableRes id: Int, sizePx: Int): Bitmap {
+    val scaled = mutableMapOf<Pair<Int, Int>, Bitmap>()
+    fun pixel(@DrawableRes id: Int, sizePx: Int): Bitmap = scaled.getOrPut(id to sizePx) {
         val src = BitmapFactory.decodeResource(res, id, BitmapFactory.Options().apply { inScaled = false })
-        return Bitmap.createScaledBitmap(src, sizePx, sizePx, false) // 보간 없이
+        Bitmap.createScaledBitmap(src, sizePx, sizePx, false) // 보간 없이
     }
     fun tag(text: String, heightDp: Float, textSp: Float, padDp: Float, radiusPx: Float, fill: Int): Bitmap {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = sp(textSp); typeface = Typeface.DEFAULT_BOLD; color = AppColors.Text.toArgb() }
