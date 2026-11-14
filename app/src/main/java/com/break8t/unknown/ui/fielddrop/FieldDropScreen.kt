@@ -1,13 +1,11 @@
 package com.break8t.unknown.ui.fielddrop
 
-import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,12 +34,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,12 +47,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
@@ -72,6 +64,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import kotlin.math.cos
+import kotlin.math.roundToInt
 import com.break8t.unknown.R
 import com.break8t.unknown.config.BalanceConfig
 import com.break8t.unknown.config.Catalog
@@ -86,14 +88,10 @@ import com.break8t.unknown.ui.components.SecondaryButton
 import com.break8t.unknown.ui.components.SideRail
 import com.break8t.unknown.ui.theme.AppColors
 import com.break8t.unknown.ui.theme.AppTheme
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 // Figma "3. 필드 드랍". Sizes are Figma px x 1.3, see SideRail.kt.
-private const val MAP_PX_W = 2048f
-private const val MAP_PX_H = 1360f
-private const val MAP_ZOOM = 1.3f // 지도가 창보다 커야 가로세로 모두 끌 수 있다.
+private const val SCALE_BAR_MAX_DP = 200.0
 private const val TOAST_MS = 2000L
 private val Margin = 35.dp
 private val MarkerSize = 109.dp
@@ -109,6 +107,12 @@ fun FieldDropScreen() {
     val profile by demo.profile.collectAsState()
     val model = FieldDropStore.model
     val state by model.state.collectAsState()
+    val carSource = FieldDropStore.car
+    DisposableEffect(carSource) {
+        carSource.start()
+        onDispose { carSource.stop() }
+    }
+    val car by carSource.fix.collectAsState()
     var toast by remember { mutableStateOf<Int?>(null) }
     var toastSeq by remember { mutableIntStateOf(0) }
     LaunchedEffect(toastSeq) {
@@ -120,11 +124,12 @@ fun FieldDropScreen() {
     FieldDropContent(
         coins = profile.coins,
         carId = profile.selectedCarId,
+        car = car,
         state = state,
         mushrooms = model.mushrooms,
         config = config,
         toast = toast?.let { stringResource(it) },
-        onTap = { model.tap(it, config) },
+        onTap = { model.tap(it, car.at, config) },
         onDismissCard = model::dismissCard,
         onGuide = { m ->
             toast = if (model.toggleGuide(m)) R.string.fielddrop_toast_guide else R.string.fielddrop_toast_cancel
@@ -139,6 +144,7 @@ fun FieldDropScreen() {
 internal fun FieldDropContent(
     coins: Int,
     carId: String,
+    car: CarFix,
     state: FieldDropState,
     mushrooms: List<Mushroom>,
     config: BalanceConfig,
@@ -150,64 +156,55 @@ internal fun FieldDropContent(
     onCloseReward: () -> Unit,
 ) {
     val atLimit = state.atLimit(config)
-    // 지도 가운데에 오는 지점을 지도 비율로 둔다. 창 크기가 바뀌어도 같은 곳을 본다.
-    var centerX by rememberSaveable { mutableFloatStateOf(FieldDropSamples.CAR_X) }
-    var centerY by rememberSaveable { mutableFloatStateOf(FieldDropSamples.CAR_Y) }
-    BoxWithConstraints(Modifier.fillMaxSize().clipToBounds().background(AppColors.Muted)) {
-        val vw = maxWidth.value
-        val vh = maxHeight.value
-        val scale = maxOf(vw / MAP_PX_W, vh / MAP_PX_H) * MAP_ZOOM
-        val mapW = MAP_PX_W * scale
-        val mapH = MAP_PX_H * scale
-        val offX = clampPan(vw / 2 - centerX * mapW, mapW, vw)
-        val offY = clampPan(vh / 2 - centerY * mapH, mapH, vh)
+    val handle = remember { MapHandle() }
+    val preview = LocalInspectionMode.current
+    BoxWithConstraints(Modifier.fillMaxSize().clipToBounds().background(Color(MapPalette.LAND))) {
+        val density = LocalDensity.current
+        val previewMPerDp = metersPerDp(car.at.lat, defaultZoom(car.at, maxHeight.value.toDouble()))
+        val project: (GeoPoint) -> Offset? = if (preview) {
+            PreviewMap()
+            val center = Offset(constraints.maxWidth / 2f, constraints.maxHeight / 2f)
+            previewProjection(car.at, center, density.density / previewMPerDp)
+        } else {
+            LiveMap(handle, car.at, maxHeight.value.toDouble(), onDismissCard, Modifier.fillMaxSize())
+            handle::project
+        }
+        if (!preview && handle.status == MapStatus.LOADING) {
+            // Liberty 원래 색이 잠깐 보이지 않도록 다시 칠할 때까지 땅 색으로 덮는다.
+            Box(Modifier.fillMaxSize().background(Color(MapPalette.LAND)))
+            CircularProgressIndicator(Modifier.align(Alignment.Center), color = AppColors.Primary)
+        }
 
-        val bitmap = rememberMapBitmap()
-        Box(
-            Modifier
-                .fillMaxSize()
-                .pointerInput(mapW, mapH, vw, vh) {
-                    detectDragGestures { _, drag ->
-                        val x = clampPan(vw / 2 - centerX * mapW + drag.x / density, mapW, vw)
-                        val y = clampPan(vh / 2 - centerY * mapH + drag.y / density, mapH, vh)
-                        centerX = (vw / 2 - x) / mapW
-                        centerY = (vh / 2 - y) / mapH
-                    }
-                }
-                .pointerInput(Unit) { detectTapGestures { onDismissCard() } },
-        ) {
-            // The map node keeps its full size so markers anywhere on it stay inside its hit bounds.
-            Box(
-                Modifier.layout { measurable, constraints ->
-                    val map = measurable.measure(Constraints.fixed(mapW.dp.roundToPx(), mapH.dp.roundToPx()))
-                    layout(constraints.maxWidth, constraints.maxHeight) {
-                        map.place(offX.dp.roundToPx(), offY.dp.roundToPx())
-                    }
-                },
-            ) {
-                if (bitmap != null) {
-                    Image(bitmap, null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
-                }
-                mushrooms.forEach { m ->
-                    MushroomMarker(
-                        m,
-                        enabled = !atLimit,
-                        onClick = { onTap(m) },
-                        modifier = Modifier.offset(mapW.dp * m.x - MarkerSize / 2, mapH.dp * m.y - MarkerSize / 2),
-                    )
-                }
-                CarMarker(
-                    carId,
-                    Modifier.offset(
-                        mapW.dp * FieldDropSamples.CAR_X - CarSize / 2,
-                        mapH.dp * FieldDropSamples.CAR_Y - CarSize / 2,
-                    ),
+        // 차를 먼저 그려서 바로 옆 버섯이 차에 가리지 않게 한다. 차는 눌리지 않는다.
+        project(car.at)?.let { p ->
+            val pivotY = with(density) { CarSize.roundToPx() } / 2
+            CarMarker(carId, car.headingDeg, Modifier.anchorAt(p) { IntOffset(it.width / 2, pivotY) })
+        }
+        mushrooms.forEach { m ->
+            project(m.at)?.let { p ->
+                // 핀처럼 아래 끝이 그 자리를 가리킨다.
+                MushroomMarker(
+                    m,
+                    enabled = !atLimit,
+                    selected = state.selectedId == m.id,
+                    onClick = { onTap(m) },
+                    Modifier.anchorAt(p) { IntOffset(it.width / 2, it.height) },
                 )
             }
         }
-        if (bitmap == null) CircularProgressIndicator(Modifier.align(Alignment.Center), color = AppColors.Primary)
 
         TopChips(coins, state.todayCount, config.mushroomDailyLimit, Modifier.fillMaxWidth().padding(Margin))
+
+        if (handle.status == MapStatus.OFFLINE) {
+            Tag(
+                stringResource(R.string.fielddrop_map_offline),
+                AppColors.Card,
+                Modifier.padding(start = Margin, top = Margin + 99.dp + 24.dp),
+                height = 57.dp,
+                fontSize = 31.sp,
+                padding = 18.dp,
+            )
+        }
 
         val selected = state.selectedId?.let { id -> mushrooms.firstOrNull { it.id == id } }
         if (atLimit) {
@@ -215,6 +212,7 @@ internal fun FieldDropContent(
         } else if (selected != null) {
             MushroomCard(
                 selected,
+                distanceRoundedM(car.at, selected),
                 guiding = state.guidingId == selected.id,
                 onGuide = { onGuide(selected) },
                 modifier = Modifier
@@ -224,12 +222,18 @@ internal fun FieldDropContent(
                     .fillMaxWidth(),
             )
         }
-        LocateButton(
-            onClick = {
-                centerX = FieldDropSamples.CAR_X
-                centerY = FieldDropSamples.CAR_Y
-            },
-            Modifier.align(Alignment.BottomEnd).padding(44.dp),
+        val metersPerDp = if (preview) previewMPerDp else handle.metersPerDp(density.density)
+        metersPerDp?.let {
+            // 현재 위치 버튼 바로 위. 카드는 왼쪽 아래라 좁은 창에서도 겹치지 않는다.
+            ScaleBar(it, Modifier.align(Alignment.BottomEnd).padding(end = 44.dp, bottom = 44.dp + LocateSize + 20.dp))
+        }
+        LocateButton(onClick = { handle.recenter(car.at, maxHeight.value.toDouble()) }, Modifier.align(Alignment.BottomEnd).padding(44.dp))
+        // OpenStreetMap 이용 조건이라 지우지 않는다. 카드와 현재 위치 버튼이 닿지 않는 자리다.
+        Text(
+            stringResource(R.string.fielddrop_map_attribution),
+            Modifier.align(Alignment.BottomEnd).padding(end = 44.dp, bottom = 8.dp).background(AppColors.Card).padding(horizontal = 8.dp),
+            color = AppColors.TextSub,
+            fontSize = 16.sp,
         )
 
         if (toast != null) {
@@ -247,18 +251,33 @@ internal fun FieldDropContent(
     }
 }
 
-/** 큰 지도 그림은 디스크에서 읽어 푸는 데 시간이 걸려서 메인 스레드 밖에서 읽는다. */
+/** 미리보기에는 지도를 띄울 수 없어서 Figma 지도 그림을 깔고, 내 차를 가운데에 둔 평면 투영을 쓴다. */
 @Composable
-private fun rememberMapBitmap(): ImageBitmap? {
-    if (LocalInspectionMode.current) return ImageBitmap.imageResource(R.drawable.fielddrop_map_city)
-    val resources = LocalContext.current.resources
-    val bitmap by produceState<ImageBitmap?>(null, resources) {
-        value = withContext(Dispatchers.IO) {
-            BitmapFactory.decodeResource(resources, R.drawable.fielddrop_map_city).asImageBitmap()
-        }
-    }
-    return bitmap
+private fun PreviewMap() {
+    Image(ImageBitmap.imageResource(R.drawable.fielddrop_map_city), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
 }
+
+private fun previewProjection(car: GeoPoint, center: Offset, pxPerM: Double): (GeoPoint) -> Offset = { p ->
+    val dx = (p.lng - car.lng) * METERS_PER_DEG * cos(Math.toRadians(car.lat))
+    val dy = (p.lat - car.lat) * METERS_PER_DEG
+    Offset(center.x + (dx * pxPerM).toFloat(), center.y - (dy * pxPerM).toFloat())
+}
+
+private const val METERS_PER_DEG = 111_320.0
+
+/** 지도 위 한 점에 [pivot]이 오도록 놓는다. 크기는 지도 전체로 잡아야 어디에 놓여도 눌린다. */
+private fun Modifier.anchorAt(p: Offset, pivot: (IntSize) -> IntOffset) = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+    val at = pivot(IntSize(placeable.width, placeable.height))
+    layout(constraints.maxWidth, constraints.maxHeight) {
+        placeable.place(p.x.roundToInt() - at.x, p.y.roundToInt() - at.y)
+    }
+}
+
+/** 픽셀 그림은 보간 없이 키우고 줄인다. */
+@Composable
+private fun pixelPainter(@DrawableRes id: Int): Painter =
+    BitmapPainter(ImageBitmap.imageResource(id), filterQuality = FilterQuality.None)
 
 @Composable
 private fun TopChips(coins: Int, today: Int, limit: Int, modifier: Modifier) {
@@ -329,7 +348,7 @@ private fun carIcon(carId: String): Int = when (carId) {
 }
 
 @Composable
-private fun MushroomMarker(m: Mushroom, enabled: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun MushroomMarker(m: Mushroom, enabled: Boolean, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
     val shape = RoundedCornerShape(18.dp)
     Column(
         modifier.alpha(if (enabled) 1f else 0.45f),
@@ -341,27 +360,39 @@ private fun MushroomMarker(m: Mushroom, enabled: Boolean, onClick: () -> Unit, m
                 .size(MarkerSize)
                 .clip(shape)
                 .background(AppColors.Card)
-                .border(BorderWidth, AppColors.Line, shape)
+                .border(if (selected) BorderWidth * 2 else BorderWidth, if (selected) AppColors.Selected else AppColors.Line, shape) // S-10-b
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = m.place },
             contentAlignment = Alignment.Center,
         ) {
-            Image(painterResource(mushIcon(m.kind)), null, Modifier.size(83.dp))
+            Image(pixelPainter(mushIcon(m.kind)), null, Modifier.size(83.dp))
         }
         if (m.ad) AdTag(42.dp, 23.sp, 13.dp)
     }
 }
 
 @Composable
-private fun CarMarker(carId: String, modifier: Modifier) {
+private fun CarMarker(carId: String, headingDeg: Float, modifier: Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(
-            painterResource(carIcon(carId)),
-            null,
-            Modifier.size(CarSize).rotate(carRotation(FieldDropSamples.DEMO_HEADING_DEG)),
-        )
+        Image(pixelPainter(carIcon(carId)), null, Modifier.size(CarSize).rotate(carRotation(headingDeg)))
         Spacer(Modifier.height(5.dp))
         Tag(stringResource(R.string.fielddrop_my_car), AppColors.Card, height = 57.dp, fontSize = 31.sp, padding = 18.dp)
+    }
+}
+
+/** 픽셀 그림처럼 모서리가 각진 축척 막대. 줌을 바꾸면 눈금과 길이를 다시 고른다. */
+@Composable
+private fun ScaleBar(metersPerDp: Double, modifier: Modifier) {
+    val (meters, lengthDp) = scaleBar(metersPerDp, SCALE_BAR_MAX_DP)
+    Column(modifier, horizontalAlignment = Alignment.End) {
+        Text(scaleLabel(meters), color = AppColors.Text, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Box(
+            Modifier
+                .width(lengthDp.dp)
+                .height(13.dp)
+                .background(AppColors.Card)
+                .border(BorderWidth, AppColors.Line),
+        )
     }
 }
 
@@ -386,16 +417,16 @@ private fun LocateButton(onClick: () -> Unit, modifier: Modifier) {
 }
 
 @Composable
-private fun MushroomCard(m: Mushroom, guiding: Boolean, onGuide: () -> Unit, modifier: Modifier) {
+private fun MushroomCard(m: Mushroom, distanceM: Int, guiding: Boolean, onGuide: () -> Unit, modifier: Modifier) {
     AppCard(modifier) {
         Column(Modifier.padding(29.dp), verticalArrangement = Arrangement.spacedBy(21.dp)) {
             if (m.ad) AdTag(52.dp, 29.sp, 16.dp)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(21.dp)) {
-                Image(painterResource(mushIcon(m.kind)), null, Modifier.size(MarkerSize))
+                Image(pixelPainter(mushIcon(m.kind)), null, Modifier.size(MarkerSize))
                 Column {
                     Text(m.place, color = AppColors.Text, fontSize = 47.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        stringResource(R.string.fielddrop_distance, distanceText(m.distanceM), m.minutes),
+                        stringResource(R.string.fielddrop_distance, distanceText(distanceM), minutesFor(distanceM)),
                         color = AppColors.TextSub,
                         fontSize = 31.sp,
                     )
@@ -466,7 +497,7 @@ private fun RewardPanel(m: Mushroom, onReceive: () -> Unit, modifier: Modifier =
             Modifier.fillMaxWidth().height(195.dp).clip(ControlShape).background(AppColors.Accent),
             contentAlignment = Alignment.Center,
         ) {
-            Image(painterResource(mushIcon(m.kind)), null, Modifier.size(169.dp))
+            Image(pixelPainter(mushIcon(m.kind)), null, Modifier.size(169.dp))
         }
         Text(
             stringResource(R.string.fielddrop_open_title, color),
@@ -480,7 +511,7 @@ private fun RewardPanel(m: Mushroom, onReceive: () -> Unit, modifier: Modifier =
             RewardTile(stringResource(R.string.fielddrop_coin), m.rewardCoins) { Coin(78.dp) }
             m.rewardSeedId?.let { seed ->
                 RewardTile(Catalog.item(seed)?.name ?: seed, 1) {
-                    if (seed == "seed_carrot") Image(painterResource(R.drawable.fielddrop_seed_carrot), null, Modifier.size(83.dp))
+                    if (seed == "seed_carrot") Image(pixelPainter(R.drawable.fielddrop_seed_carrot), null, Modifier.size(83.dp))
                 }
             }
         }
@@ -516,7 +547,7 @@ private fun PreviewFrame(state: FieldDropState, coins: Int = 240, toast: Int? = 
         SideRail(current = Route.FIELD_DROP, onSelect = {})
         Box(Modifier.weight(1f)) {
             FieldDropContent(
-                coins, "car_red", state, FieldDropSamples.mushrooms, BalanceConfig.DEFAULT,
+                coins, "car_red", FieldDropSamples.CAR, state, FieldDropSamples.mushrooms, BalanceConfig.DEFAULT,
                 toast?.let { stringResource(it) }, {}, {}, {}, {}, {},
             )
         }
