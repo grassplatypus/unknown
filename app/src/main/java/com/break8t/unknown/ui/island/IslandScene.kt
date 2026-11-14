@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -35,8 +36,10 @@ import com.break8t.unknown.ui.iso.PIXEL_DP
 import com.break8t.unknown.ui.iso.PlotStage
 import com.break8t.unknown.ui.iso.VPC
 import com.break8t.unknown.ui.iso.RoadRay
+import com.break8t.unknown.ui.iso.roadCellsInView
 import com.break8t.unknown.ui.iso.rememberIsoViewState
 import com.break8t.unknown.ui.theme.AppColors
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -49,7 +52,16 @@ enum class SceneFocus { MAIN, FARM }
 data class PlotView(val seedId: String?, val grown: Boolean, val progress: Float)
 
 /** 장면에 넘기는 것 전부. 장면은 이것만 보고 그린다. */
-data class IslandSceneState(val night: Boolean, val focus: SceneFocus, val plots: List<PlotView>, val carId: String)
+data class IslandSceneState(
+    val night: Boolean,
+    val focus: SceneFocus,
+    val plots: List<PlotView>,
+    val carId: String,
+    val drive: CarDrive? = CarDrive(TripPhase.PARKED, 1f),
+)
+
+/** Where the car is in its trip; null means no car on the island (the entrance, S-11-a). */
+data class CarDrive(val phase: TripPhase, val progress: Float)
 
 fun plotViews(plots: List<Plot>, now: Long): List<PlotView> =
     plots.map { PlotView(it.seedId, it.isGrown(now), it.progress(now)) }
@@ -79,6 +91,9 @@ internal fun sceneSky(night: Boolean) = if (night) IsoPalette.Night else AppColo
 object IslandMap {
     const val SIZE = 10
     private const val ROAD_X = 4
+
+    /** Where the parked car stands on the road, in cells. */
+    const val PARK_Y = 1.3f
     private const val FARM_X = 5
     private const val FARM_Y = 4
 
@@ -102,7 +117,22 @@ object IslandMap {
         IsoObject(id, shape, x, y, rot, z = z, pickable = pick)
 
     /** The island for the island screens and the island photo. */
-    fun scene(plots: List<PlotView>, carId: String, extra: List<IsoObject> = emptyList()): IsoScene {
+    /** The car parked or on the road; headlights are on while it drives. */
+    fun carObject(carId: String, pose: CarPose, lit: Boolean): IsoObject? {
+        val shape = (if (lit) IsoShapes.litCar(carId) else IsoShapes.of(carId)) ?: return null
+        val y = floor(pose.y).toInt()
+        // The art parks a small car in a one-cell box, so the 2-cell model is scaled down and centred.
+        return IsoObject("car", shape, ROAD_X, y, pose.rotation, ox = 0.15f, oy = pose.y - y, scale = 0.7f, pickable = false)
+    }
+
+    /** First road position past the edge of a [w] x [h] px view, where a drive in starts and a drive out ends. */
+    fun farY(camera: IsoCamera, w: Float, h: Float): Float =
+        SIZE + roadCellsInView(ROAD, IsoScene(SIZE, SIZE, frame = FRAME), camera, w, h).toFloat()
+
+    fun scene(
+        plots: List<PlotView>, carId: String, extra: List<IsoObject> = emptyList(),
+        car: CarPose? = CarPose(PARK_Y, 3), carLit: Boolean = false,
+    ): IsoScene {
         val n = sqrt(plots.size.toDouble()).roundToInt().coerceAtLeast(1)
         val farm = plots.mapIndexed { k, v ->
             o("plot$k", IsoShapes.plot(plotStage(v), cropOf(v.seedId)), FARM_X + k % n, FARM_Y + k / n, pick = true)
@@ -115,8 +145,7 @@ object IslandMap {
             o("stall", IsoScenery.stall, 7, 0, pick = true),
             o("parking", IsoScenery.parking, ROAD_X, 1),
         ) + listOfNotNull(
-            // The art parks a small car in a one-cell box, so the 2-cell model is scaled down and centred.
-            IsoShapes.of(carId)?.let { IsoObject("car", it, ROAD_X, 1, 1, ox = 0.15f, oy = 0.3f, scale = 0.7f, pickable = false) },
+            car?.let { carObject(carId, it, carLit) },
         ) + listOf(
             o("mailbox", IsoScenery.mailbox, 3, 3),
             o("bigtree", IsoScenery.bigTree, 0, 3),
@@ -247,17 +276,25 @@ fun IslandScene(
     val farm = state.focus == SceneFocus.FARM
     // Keyed on what is drawn, not on progress, so the 10 s clock does not re-render the island.
     val stages = state.plots.map { it.seedId to plotStage(it) }
-    val scene = remember(farm, stages, state.carId) {
-        if (farm) IslandMap.farmScene(state.plots) else IslandMap.scene(state.plots, state.carId)
+    val base = remember(farm, stages, state.carId) {
+        if (farm) IslandMap.farmScene(state.plots) else IslandMap.scene(state.plots, state.carId, car = null)
     }
     val view = rememberIsoViewState(night = state.night)
     SideEffect { view.night = state.night }
     val count = state.plots.size
-    Box(modifier.background(sceneSky(state.night))) {
+    BoxWithConstraints(modifier.background(sceneSky(state.night))) {
+        val camera = if (farm) IslandMap.FARM_CAMERA else view.camera
+        val w = constraints.maxWidth.toFloat(); val h = constraints.maxHeight.toFloat()
+        val farY = remember(camera, w, h) { IslandMap.farY(camera, w, h) }
+        // The car is added per frame, so a drive only rebuilds the object list, not the island.
+        val car = if (farm) null else state.drive?.let { d ->
+            IslandMap.carObject(state.carId, carPose(d.phase, d.progress, IslandMap.PARK_Y, farY), lit = d.phase != TripPhase.PARKED)
+        }
+        val scene = if (car == null) base else base.copy(objects = base.objects + car)
         if (!farm) PixelSky(state.night, Modifier.fillMaxSize())
         IsoSceneView(
             scene, view, Modifier.fillMaxSize(),
-            camera = if (farm) IslandMap.FARM_CAMERA else view.camera,
+            camera = camera,
             matchVoxels = farm,
             onTap = { hit ->
                 if (farm) IslandMap.plotAt(hit, count, farmView = true)?.let(onPlot)
