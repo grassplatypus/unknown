@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shop_back">섬으로</string>
+    <string name="shop_title">상점</string>
+    <string name="shop_inventory">보관함</string>
+
+    <string name="shop_tab_seed">씨앗 %1$d</string>
+    <string name="shop_tab_furniture">가구 %1$d</string>
+    <string name="shop_tab_voice">음성팩 %1$d</string>
+    <string name="shop_tab_character">캐릭터 %1$d</string>
+    <string name="shop_section_character">캐릭터</string>
+    <string name="shop_section_pose">사진 포즈</string>
+
+    <string name="shop_count">%1$d개</string>
+    <string name="shop_owned">소유 중</string>
+    <string name="shop_in_use">사용 중</string>
+    <string name="shop_previewing">미리 듣기 중</string>
+    <string name="shop_preview">미리 듣기</string>
+    <string name="shop_preview_stop">미리 듣기 멈추기</string>
+
+    <string name="shop_qty_less">하나 줄이기</string>
+    <string name="shop_qty_more">하나 늘리기</string>
+    <string name="shop_have">보유</string>
+    <string name="shop_total">총액</string>
+    <string name="shop_buy">구매</string>
+    <string name="shop_cancel">취소</string>
+    <!-- %2$s is 을 or 를, chosen by the last syllable of the name. -->
+    <string name="shop_buy_title">%1$s%2$s 구매할까요?</string>
+    <string name="shop_buy_pose_title">%1$s 포즈를 구매할까요?</string>
+
+    <string name="shop_switch_voice">지금 이 목소리로 바꿀까요?</string>
+    <string name="shop_switch_character">대표 캐릭터로 바꿀까요?</string>
+    <string name="shop_later">나중에</string>
+    <string name="shop_switch">바꾸기</string>
+
+    <string name="shop_toast_bought">%1$s %2$d개를 구매했어요</string>
+    <string name="shop_toast_pose">%1$s 포즈를 구매했어요</string>
+</resources>

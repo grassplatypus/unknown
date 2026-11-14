@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inventory_back">섬으로</string>
+    <string name="inventory_shop">상점</string>
+    <string name="inventory_title">보관함</string>
+
+    <string name="inventory_tab_furniture">가구 %1$d</string>
+    <string name="inventory_tab_seed">씨앗 %1$d</string>
+    <string name="inventory_empty_furniture">보관함에 가구가 없어요</string>
+    <string name="inventory_empty_seed">보관함에 씨앗이 없어요</string>
+
+    <string name="inventory_count">%1$d개</string>
+    <string name="inventory_held">보유 %1$d개</string>
+    <string name="inventory_place">방에 놓기</string>
+    <string name="inventory_discard">버리기</string>
+    <string name="inventory_cancel">취소</string>
+    <string name="inventory_discard_note">버리면 되돌릴 수 없고 코인도 돌려받지 못해요.</string>
+    <string name="inventory_toast_discarded">%1$s %2$d개를 버렸어요</string>
+</resources>
