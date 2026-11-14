@@ -8,8 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.FlowRowScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -30,6 +31,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -139,18 +144,38 @@ internal fun IslandMain(scene: IslandSceneState, coins: Int, farmReady: Boolean,
         )
     }
 
-/** 위쪽 칩 줄. 화면을 나눠 좁아지면 오른쪽 칩이 다음 줄로 내려간다. */
+/** 위쪽 칩 줄. 창이 좁아도 한 줄로 두고, 다 들어가지 않으면 줄 전체를 같은 비율로 줄인다. */
 @Composable
-internal fun IslandTopBar(coins: Int, start: @Composable FlowRowScope.() -> Unit, end: @Composable FlowRowScope.() -> Unit = {}) {
-    FlowRow(
-        Modifier.fillMaxWidth().padding(35.dp),
-        horizontalArrangement = Arrangement.spacedBy(35.dp, Alignment.End),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        start()
-        Spacer(Modifier.weight(1f))
-        end()
-        IslandChip(coins.toString(), leading = { Coin() })
+internal fun IslandTopBar(coins: Int, start: @Composable RowScope.() -> Unit, end: @Composable RowScope.() -> Unit = {}) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val wide = maxWidth >= WideLayout
+        Row(
+            Modifier.fillMaxWidth().padding(if (wide) 35.dp else 24.dp).shrinkToFit(),
+            Arrangement.spacedBy(if (wide) 35.dp else 16.dp),
+            Alignment.CenterVertically,
+        ) {
+            start()
+            Spacer(Modifier.weight(1f))
+            end()
+            IslandChip(coins.toString(), leading = { Coin() })
+        }
+    }
+}
+
+private fun Modifier.shrinkToFit() = layout { m, c ->
+    val need = m.maxIntrinsicWidth(c.maxHeight)
+    if (!c.hasBoundedWidth || need <= c.maxWidth) {
+        val p = m.measure(c)
+        return@layout layout(p.width, p.height) { p.place(0, 0) }
+    }
+    val p = m.measure(c.copy(minWidth = 0, maxWidth = need))
+    val k = c.maxWidth.toFloat() / p.width
+    layout(c.maxWidth, (p.height * k).roundToInt()) {
+        p.placeWithLayer(0, 0) {
+            scaleX = k
+            scaleY = k
+            transformOrigin = TransformOrigin(0f, 0f)
+        }
     }
 }
 
@@ -170,6 +195,7 @@ internal fun IslandChip(
     leading: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    val narrow = LocalConfiguration.current.screenWidthDp < WideLayout.value
     Row(
         modifier
             .heightIn(min = 99.dp)
@@ -177,7 +203,7 @@ internal fun IslandChip(
             .background(if (selected) AppColors.Selected else AppColors.Card)
             .border(BorderWidth, AppColors.Line, ControlShape)
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .padding(horizontal = 31.dp),
+            .padding(horizontal = if (narrow) 22.dp else 31.dp),
         horizontalArrangement = Arrangement.spacedBy(13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

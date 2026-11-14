@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import com.break8t.unknown.ui.components.PixelBusy
 import com.break8t.unknown.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +59,9 @@ import kotlin.math.roundToInt
 
 /** Size of one low-resolution pixel on screen at zoom 1, in dp. Larger reads chunkier. */
 const val PIXEL_DP = 3f
+
+/** Gap kept between a scene label and the view edge; the same as the top bar's side padding in a narrow window. */
+private val EdgeMargin = 24.dp
 
 /** What a tap landed on. */
 sealed interface IsoHit {
@@ -177,10 +181,11 @@ class IsoOverlayScope internal constructor(
         layout(p.width, p.height) {
             val s = point(x, y, z, Size(c.maxWidth.toFloat(), c.maxHeight.toFloat()))
             val pin = align.align(IntSize.Zero, IntSize(p.width, p.height), layoutDirection)
-            // Kept inside the view, so a label near the edge of a narrow window is not cut off.
+            // Kept inside the view with the screen's side margin, so a label near the edge is neither cut nor flush.
+            val e = EdgeMargin.roundToPx()
             p.place(
-                (s.x.roundToInt() - pin.x).coerceIn(0, max(0, c.maxWidth - p.width)),
-                (s.y.roundToInt() - pin.y).coerceIn(0, max(0, c.maxHeight - p.height)),
+                (s.x.roundToInt() - pin.x).coerceIn(e, max(e, c.maxWidth - p.width - e)),
+                (s.y.roundToInt() - pin.y).coerceIn(e, max(e, c.maxHeight - p.height - e)),
             )
         }
     }

@@ -43,7 +43,7 @@ object IsoFarm {
         stage == PlotStage.EMPTY -> 0
         stage == PlotStage.SPROUT -> 3
         crop == Crop.WHEAT -> 3
-        crop == Crop.CARROT -> if (stage == PlotStage.GROWN) 5 else 8
+        crop == Crop.CARROT -> if (stage == PlotStage.GROWN) 4 else 5
         else -> if (stage == PlotStage.GROWN) 4 else 6
     }
 

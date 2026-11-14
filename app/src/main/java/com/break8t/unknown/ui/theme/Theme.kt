@@ -1,6 +1,11 @@
 package com.break8t.unknown.ui.theme
 
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
@@ -44,13 +49,22 @@ private val scheme = lightColorScheme(
     error = AppColors.Error,
 )
 
-/** Material 물결 대신 PixelIndication을 앱 전체 누름 표시로 쓴다. */
+/** Material 물결 대신 PixelIndication을 앱 전체 누름 표시로 쓴다. 좁은 창에서는 전체를 같은 비율로 줄인다. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = scheme) {
-    CompositionLocalProvider(
-        LocalIndication provides PixelIndication,
-        LocalRippleConfiguration provides null,
-        content = content,
-    )
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val base = LocalDensity.current
+        val k = windowScale(maxWidth.value)
+        CompositionLocalProvider(
+            LocalDensity provides Density(base.density * k, base.fontScale),
+            LocalIndication provides PixelIndication,
+            LocalRippleConfiguration provides null,
+            content = content,
+        )
+    }
 }
+
+// 841dp 창에서 0.75배: 섬 위쪽 칩 넷이 원래 크기로 한 줄에 들어가고,
+// 사이드 메뉴를 뺀 본문 폭은 1000dp 아래라 화면들은 좁은 배치를 그대로 쓴다.
+internal fun windowScale(widthDp: Float): Float = (widthDp / 1121f).coerceIn(0.75f, 1f)

@@ -66,7 +66,7 @@ import com.break8t.unknown.ui.theme.AppColors
 import kotlinx.coroutines.delay
 
 private const val TOAST_MS = 3_000L
-private val WideLayout = 1000.dp
+internal val WideLayout = 1000.dp
 private val DialogShape = RoundedCornerShape(26.dp)
 
 private val seedArt = mapOf(
